@@ -1,0 +1,40 @@
+{
+  "name": "taskhub-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "TaskHub 前端 - Vue 3 + TypeScript + Vite",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@tiptap/extension-link": "^2.10.4",
+    "@tiptap/extension-placeholder": "^2.10.4",
+    "@tiptap/pm": "^2.10.4",
+    "@tiptap/starter-kit": "^2.10.4",
+    "@tiptap/vue-3": "^2.10.4",
+    "@vueuse/core": "^12.5.0",
+    "axios": "^1.7.9",
+    "dayjs": "^1.11.13",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/tsconfig": "^0.7.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.7.3",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

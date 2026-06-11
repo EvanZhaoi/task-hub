@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   TaskHub 全局样式
+   设计 Token 见 /DESIGN.md
+   ============================================================ */
+
+@layer base {
+  html {
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+/* ---- 状态徽章 ---- */
+@layer components {
+  .badge {
+    @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
+  }
+  .badge-draft     { @apply bg-gray-100 text-gray-600; }
+  .badge-open      { @apply bg-blue-100 text-blue-800; }
+  .badge-assigned  { @apply bg-orange-100 text-orange-800; }
+  .badge-completed { @apply bg-green-100 text-green-800; }
+  .badge-failed    { @apply bg-gray-200 text-gray-700; }
+  .badge-cancelled { @apply bg-gray-50 text-gray-500 line-through; }
+
+  /* ---- 卡片 ---- */
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg p-5 transition-shadow;
+  }
+  .card-hoverable {
+    @apply hover:border-gray-300 hover:shadow-sm cursor-pointer;
+  }
+
+  /* ---- 按钮 ---- */
+  .btn {
+    @apply px-4 py-2 rounded-md text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply bg-white text-gray-900 border border-gray-200 hover:bg-gray-50;
+  }
+  .btn-ghost {
+    @apply text-gray-700 hover:bg-gray-100;
+  }
+  .btn-danger {
+    @apply text-red-600 hover:bg-red-50 border border-gray-200;
+  }
+
+  /* ---- 输入 ---- */
+  .input {
+    @apply w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-white
+           focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20
+           transition-colors;
+  }
+  textarea.input {
+    @apply resize-y min-h-[80px];
+  }
+
+  /* ---- 头像 ---- */
+  .avatar {
+    @apply w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-purple-500
+           text-white inline-flex items-center justify-center text-xs font-medium flex-shrink-0;
+  }
+  .avatar-publisher {
+    @apply bg-gradient-to-br from-orange-500 to-orange-400;
+  }
+  .avatar-boss {
+    @apply bg-gradient-to-br from-gray-900 to-gray-700;
+  }
+}
