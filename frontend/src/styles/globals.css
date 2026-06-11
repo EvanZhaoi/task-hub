@@ -70,4 +70,42 @@
   .badge-completed { @apply bg-green-100 text-green-800; }
   .badge-failed    { @apply bg-gray-200 text-gray-700; }
   .badge-cancelled { @apply bg-gray-50 text-gray-500 line-through; }
+
+  /* 投标状态 */
+  .bid-active    { @apply bg-blue-50 text-blue-700 border border-blue-200; }
+  .bid-accepted  { @apply bg-green-50 text-green-700 border border-green-200; }
+  .bid-lost      { @apply bg-gray-50 text-gray-500 border border-gray-200; }
+  .bid-withdrawn { @apply bg-gray-50 text-gray-400 border border-gray-200 line-through; }
+
+  /* 任务富文本渲染（基础样式） */
+  .prose-task {
+    color: #374151;
+    line-height: 1.75;
+    font-size: 16px;
+  }
+  .prose-task p { margin: 0 0 14px; }
+  .prose-task p:last-child { margin-bottom: 0; }
+  .prose-task ul, .prose-task ol { padding-left: 28px; margin: 0 0 14px; }
+  .prose-task ul { list-style: disc; }
+  .prose-task ol { list-style: decimal; }
+  .prose-task h1, .prose-task h2, .prose-task h3 {
+    @apply font-semibold text-foreground;
+    margin: 20px 0 10px;
+    line-height: 1.4;
+  }
+  .prose-task h1 { font-size: 24px; }
+  .prose-task h2 { font-size: 20px; }
+  .prose-task h3 { font-size: 18px; }
+  .prose-task strong { @apply font-semibold text-foreground; }
+  .prose-task em { font-style: italic; }
+  .prose-task code {
+    @apply bg-muted px-1.5 py-0.5 rounded;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+  }
+  .prose-task blockquote {
+    @apply border-l-4 border-primary bg-muted/30 pl-3 py-1;
+    color: #6b7280;
+    margin: 14px 0;
+  }
 }
