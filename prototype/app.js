@@ -16,6 +16,15 @@ function app() {
     paymentAccounts: MOCK_PAYMENT_ACCOUNTS,
     filter: 'all',
     activeTab: 'published', // profile tab
+    // 任务大厅：搜索 + 分页
+    homeSearch: '',
+    homePage: 1,
+    homePageSize: 4,
+    // 老板视图：搜索 + 按付款账号筛选
+    bossSearch: '',
+    bossFilterAccount: 'all',
+    bossPage: 1,
+    bossPageSize: 10,
     showBidModal: false,
     showDirectModal: false,
     showChangeModal: false,
@@ -34,6 +43,11 @@ function app() {
       window.addEventListener('hashchange', () => { this.route = this.parseRoute(); });
       this.route = this.parseRoute();
       this.initQuill();
+      // 筛选 / 搜索 变更时重置分页
+      this.$watch('filter', () => { this.homePage = 1; });
+      this.$watch('homeSearch', () => { this.homePage = 1; });
+      this.$watch('bossSearch', () => { this.bossPage = 1; });
+      this.$watch('bossFilterAccount', () => { this.bossPage = 1; });
     },
 
     initQuill() {
@@ -130,17 +144,64 @@ function app() {
       return (bytes / 1024 / 1024).toFixed(1) + ' MB';
     },
 
-    // ---- 筛选 ----
-    get filteredTasks() {
+    // ---- 筛选 + 搜索 + 分页（任务大厅）----
+    get homeFiltered() {
       let arr = [...this.tasks];
+      // 状态筛选
       if (this.filter === 'open')      arr = arr.filter(t => t.status === 'OPEN');
       if (this.filter === 'assigned')  arr = arr.filter(t => t.status === 'ASSIGNED');
       if (this.filter === 'completed') arr = arr.filter(t => t.status === 'COMPLETED');
       if (this.filter === 'failed')    arr = arr.filter(t => t.status === 'FAILED' || t.status === 'CANCELLED');
+      // 关键词搜索（标题 + 描述，不区分大小写）
+      const q = this.homeSearch.trim().toLowerCase();
+      if (q) {
+        arr = arr.filter(t => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+      }
       return arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
 
-    setFilter(f) { this.filter = f; },
+    get homeTotalPages() {
+      return Math.max(1, Math.ceil(this.homeFiltered.length / this.homePageSize));
+    },
+
+    get homePaginated() {
+      const start = (this.homePage - 1) * this.homePageSize;
+      return this.homeFiltered.slice(start, start + this.homePageSize);
+    },
+
+    get homePageInfo() {
+      if (this.homeFiltered.length === 0) return { start: 0, end: 0, total: 0 };
+      const start = (this.homePage - 1) * this.homePageSize + 1;
+      const end = Math.min(this.homePage * this.homePageSize, this.homeFiltered.length);
+      return { start, end, total: this.homeFiltered.length };
+    },
+
+    prevHomePage() { if (this.homePage > 1) this.homePage--; },
+    nextHomePage() { if (this.homePage < this.homeTotalPages) this.homePage++; },
+
+    setFilter(f) {
+      this.filter = f;
+      // homePage 重置由 $watch 处理
+    },
+
+    clearHomeSearch() { this.homeSearch = ''; },
+
+    // ---- 老板视图：筛选 + 搜索 ----
+    get bossFiltered() {
+      let arr = this.ganttTasks; // 已排除 DRAFT
+      // 按付款账号筛选
+      if (this.bossFilterAccount !== 'all') {
+        arr = arr.filter(t => t.paymentAccountId === this.bossFilterAccount);
+      }
+      // 按标题搜索
+      const q = this.bossSearch.trim().toLowerCase();
+      if (q) {
+        arr = arr.filter(t => t.title.toLowerCase().includes(q));
+      }
+      return arr;
+    },
+
+    clearBossSearch() { this.bossSearch = ''; },
 
     // ---- 导航 ----
     navClass(path) {

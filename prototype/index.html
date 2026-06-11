@@ -70,17 +70,26 @@
           <h2 class="text-2xl font-semibold">任务大厅</h2>
           <p class="text-sm text-gray-500 mt-1">所有公开任务，可投标</p>
         </div>
-        <div class="flex gap-1 text-sm">
-          <button @click="setFilter('all')"      :class="filter === 'all'      ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">全部</button>
-          <button @click="setFilter('open')"     :class="filter === 'open'     ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">招标中</button>
-          <button @click="setFilter('assigned')" :class="filter === 'assigned' ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">进行中</button>
-          <button @click="setFilter('completed')":class="filter === 'completed' ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">已完成</button>
-          <button @click="setFilter('failed')"   :class="filter === 'failed'   ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">流标/取消</button>
+        <div class="flex items-center gap-3">
+          <!-- 搜索框 -->
+          <div class="relative">
+            <input type="text" x-model="homeSearch" placeholder="搜索标题或描述..." class="input pl-8" style="width: 240px;">
+            <span class="absolute left-2.5 top-2.5 text-gray-400 text-sm">🔍</span>
+            <button x-show="homeSearch" @click="clearHomeSearch()" class="absolute right-2 top-2 text-gray-400 hover:text-gray-600 text-sm" title="清空">✕</button>
+          </div>
+          <!-- 状态筛选 -->
+          <div class="flex gap-1 text-sm">
+            <button @click="setFilter('all')"      :class="filter === 'all'      ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">全部</button>
+            <button @click="setFilter('open')"     :class="filter === 'open'     ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">招标中</button>
+            <button @click="setFilter('assigned')" :class="filter === 'assigned' ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">进行中</button>
+            <button @click="setFilter('completed')":class="filter === 'completed' ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">已完成</button>
+            <button @click="setFilter('failed')"   :class="filter === 'failed'   ? 'btn-secondary border-violet-500 text-violet-600' : 'btn-secondary'">流标/取消</button>
+          </div>
         </div>
       </div>
 
-      <div class="space-y-3" x-show="filteredTasks.length > 0">
-        <template x-for="task in filteredTasks" :key="task.id">
+      <div class="space-y-3" x-show="homePaginated.length > 0">
+        <template x-for="task in homePaginated" :key="task.id">
           <a :href="`#/task/${task.id}`" class="block card card-hoverable no-underline">
             <div class="flex items-start justify-between gap-4 mb-2">
               <div class="flex-1 min-w-0">
@@ -99,8 +108,21 @@
           </a>
         </template>
       </div>
-      <div class="empty-state" x-show="filteredTasks.length === 0">
-        <p class="text-base">当前筛选下没有任务</p>
+
+      <!-- 分页 -->
+      <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100" x-show="homeFiltered.length > homePageSize">
+        <span class="text-sm text-gray-500" x-text="`显示 ${homePageInfo.start}-${homePageInfo.end} / 共 ${homePageInfo.total} 条`"></span>
+        <div class="flex items-center gap-2">
+          <button @click="prevHomePage()" :disabled="homePage === 1" class="btn-secondary text-sm" :class="homePage === 1 ? 'opacity-40 cursor-not-allowed' : ''">‹ 上一页</button>
+          <span class="text-sm text-gray-500 px-2" x-text="`第 ${homePage} / ${homeTotalPages} 页`"></span>
+          <button @click="nextHomePage()" :disabled="homePage === homeTotalPages" class="btn-secondary text-sm" :class="homePage === homeTotalPages ? 'opacity-40 cursor-not-allowed' : ''">下一页 ›</button>
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div class="empty-state" x-show="homeFiltered.length === 0">
+        <p class="text-base" x-text="homeSearch ? `没找到匹配 \u201C${homeSearch}\u201D 的任务` : '当前筛选下没有任务'"></p>
+        <button x-show="homeSearch" @click="clearHomeSearch()" class="btn-secondary text-sm mt-3">清空搜索</button>
       </div>
     </div>
 
@@ -469,11 +491,26 @@
           <h2 class="text-2xl font-semibold">老板视图</h2>
           <p class="text-sm text-gray-500 mt-1">所有任务 · 甘特图 · 按状态着色</p>
         </div>
-        <div class="flex gap-3 text-xs">
-          <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#3b82f6"></span>招标中</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#f97316"></span>进行中</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#10b981"></span>已完成</span>
-          <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#6b7280"></span>流标</span>
+        <div class="flex items-center gap-3">
+          <!-- 按付款账号筛选 -->
+          <select x-model="bossFilterAccount" class="input text-sm" style="width: 200px;">
+            <option value="all">全部付款账号</option>
+            <template x-for="pa in paymentAccounts" :key="pa.id">
+              <option :value="pa.id" x-text="pa.name"></option>
+            </template>
+          </select>
+          <!-- 标题搜索 -->
+          <div class="relative">
+            <input type="text" x-model="bossSearch" placeholder="搜索任务标题..." class="input pl-8" style="width: 220px;">
+            <span class="absolute left-2.5 top-2.5 text-gray-400 text-sm">🔍</span>
+            <button x-show="bossSearch" @click="clearBossSearch()" class="absolute right-2 top-2 text-gray-400 hover:text-gray-600 text-sm">✕</button>
+          </div>
+          <div class="flex gap-3 text-xs">
+            <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#3b82f6"></span>招标中</span>
+            <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#f97316"></span>进行中</span>
+            <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#10b981"></span>已完成</span>
+            <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#6b7280"></span>流标</span>
+          </div>
         </div>
       </div>
 
@@ -486,8 +523,8 @@
         </div>
 
         <!-- 任务行 -->
-        <div class="space-y-1.5" style="min-width: 800px;">
-          <template x-for="task in ganttTasks" :key="task.id">
+        <div class="space-y-1.5" style="min-width: 800px;" x-show="bossFiltered.length > 0">
+          <template x-for="task in bossFiltered" :key="task.id">
             <div class="flex items-center gap-3 h-8">
               <a :href="`#/task/${task.id}`" class="w-56 text-sm text-gray-700 hover:text-violet-600 truncate" x-text="task.title"></a>
               <div class="flex-1 relative h-8 bg-gray-50 rounded">
@@ -501,10 +538,15 @@
             </div>
           </template>
         </div>
+        <div class="empty-state" x-show="bossFiltered.length === 0">
+          <p class="text-base" x-text="bossSearch ? `没找到匹配 \u201C${bossSearch}\u201D 的任务` : '当前筛选下没有任务'"></p>
+          <button x-show="bossSearch" @click="clearBossSearch()" class="btn-secondary text-sm mt-3">清空搜索</button>
+        </div>
       </div>
 
-      <div class="mt-4 text-xs text-gray-500 text-center">
-        💡 点击任务条可跳转到详情 · 横轴单位时间 · 颜色对应状态
+      <div class="mt-4 flex items-center justify-between">
+        <span class="text-sm text-gray-500" x-show="bossFiltered.length > 0" x-text="`共 ${bossFiltered.length} 个任务`"></span>
+        <span class="text-xs text-gray-400" x-show="bossFiltered.length > 0">💡 点击任务条可跳转到详情 · 横轴单位时间 · 颜色对应状态</span>
       </div>
     </div>
 
