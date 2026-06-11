@@ -1,31 +1,73 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ============================================================
+   Tailwind v4 + shadcn 主题
+   v4 改用 CSS-first：@import + @theme，无 tailwind.config.js
+   ============================================================ */
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 240 56% 65%;            /* TaskHub 品牌色 #5e6ad2 */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 240 56% 65%;
-    --radius: 0.5rem;
-  }
+@import "tailwindcss";
+
+/* ---- shadcn 主题变量：直接放在 :root ---- */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 240 56% 65%;            /* TaskHub 品牌色 #5e6ad2 */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 240 56% 65%;
+  --radius: 0.5rem;
 }
 
+/* ---- @theme inline：把 :root 变量映射成 Tailwind tokens ---- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius: var(--radius);
+}
+
+/* ---- 全局基础样式 ---- */
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground; }
+}
+
+/* ---- 状态徽章（项目自定义）---- */
+@layer components {
+  .badge {
+    @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
+  }
+  .badge-draft     { @apply bg-gray-100 text-gray-600; }
+  .badge-open      { @apply bg-blue-100 text-blue-800; }
+  .badge-assigned  { @apply bg-orange-100 text-orange-800; }
+  .badge-completed { @apply bg-green-100 text-green-800; }
+  .badge-failed    { @apply bg-gray-200 text-gray-700; }
+  .badge-cancelled { @apply bg-gray-50 text-gray-500 line-through; }
 }
