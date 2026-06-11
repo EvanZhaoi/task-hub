@@ -209,3 +209,77 @@ textarea.input { resize: vertical; min-height: 80px; font-family: inherit; }
   padding: 60px 20px;
   color: #6b7280;
 }
+
+/* ---- 富文本描述渲染（Quill 输出）---- */
+/* TODO 生产环境需添加 DOMPurify 防止 XSS */
+.task-description {
+  font-size: 16px;
+  line-height: 1.75;
+  color: #374151;
+  word-wrap: break-word;
+}
+.task-description p { margin: 0 0 14px; }
+.task-description p:last-child { margin-bottom: 0; }
+.task-description ul, .task-description ol { padding-left: 28px; margin: 0 0 14px; }
+.task-description ul { list-style: disc; }
+.task-description ol { list-style: decimal; }
+.task-description li { margin-bottom: 4px; }
+.task-description h1, .task-description h2, .task-description h3 {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 20px 0 10px;
+  line-height: 1.4;
+}
+.task-description h1 { font-size: 24px; }
+.task-description h2 { font-size: 20px; }
+.task-description h3 { font-size: 18px; }
+.task-description strong { font-weight: 600; color: #1a1a1a; }
+.task-description em { font-style: italic; }
+.task-description u { text-decoration: underline; }
+.task-description s { text-decoration: line-through; opacity: 0.7; }
+.task-description blockquote {
+  border-left: 3px solid #5e6ad2;
+  padding: 4px 0 4px 16px;
+  margin: 14px 0;
+  color: #6b7280;
+  background: #fafafa;
+}
+.task-description code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+.task-description pre {
+  background: #1a1a1a;
+  color: #e5e7eb;
+  padding: 14px 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 14px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.task-description pre code { background: transparent; padding: 0; color: inherit; }
+.task-description a { color: #5e6ad2; text-decoration: underline; }
+.task-description a:hover { color: #4f46e5; }
+
+/* ---- Quill 工具栏适配设计规范 ---- */
+.ql-toolbar.ql-snow {
+  border: 1px solid #ebebeb !important;
+  border-bottom: none !important;
+  border-radius: 6px 6px 0 0 !important;
+  background: #fafafa;
+}
+.ql-container.ql-snow {
+  border: 1px solid #ebebeb !important;
+  border-radius: 0 0 6px 6px !important;
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 160px;
+  background: white;
+}
+.ql-editor { min-height: 160px; }
+.ql-editor.ql-blank::before { color: #9ca3af; font-style: normal; }

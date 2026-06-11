@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskHub · 内部任务交易平台（原形）</title>
   <link rel="stylesheet" href="styles.css">
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -24,6 +25,7 @@
     }
   </script>
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
   <script src="mock-data.js"></script>
   <script src="app.js"></script>
 </head>
@@ -109,15 +111,32 @@
 
       <template x-if="currentTask">
         <div>
-          <!-- 任务主信息 -->
+          <!-- 任务标题 + 关键元信息 -->
           <div class="card mb-4">
-            <div class="flex items-start justify-between gap-4 mb-3">
-              <h2 class="text-2xl font-semibold flex-1" x-text="currentTask.title"></h2>
+            <div class="flex items-start justify-between gap-4">
+              <h2 class="text-3xl font-bold flex-1 leading-tight" x-text="currentTask.title"></h2>
               <span :class="'badge badge-' + currentTask.status" x-text="statusLabel(currentTask.status)"></span>
             </div>
-            <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap" x-text="currentTask.description"></p>
+            <div class="flex items-center gap-5 text-sm text-gray-600 mt-4 flex-wrap">
+              <span class="flex items-center gap-1.5">
+                <span class="avatar" :class="userRole(currentTask.createdBy) === 'publisher' ? 'avatar-publisher' : (userRole(currentTask.createdBy) === 'boss' ? 'avatar-boss' : '')" style="width:20px;height:20px;font-size:10px;" x-text="userName(currentTask.createdBy).charAt(0)"></span>
+                <span x-text="userName(currentTask.createdBy)"></span>
+              </span>
+              <span>💰 预算 <span class="text-gray-900 font-medium" x-text="'¥' + currentTask.budget.toLocaleString()"></span></span>
+              <span>📅 期望交期 <span class="text-gray-900" x-text="currentTask.expectedDelivery"></span></span>
+              <span>🕐 创建于 <span class="text-gray-900" x-text="currentTask.createdAt"></span></span>
+            </div>
+          </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5 pt-5 border-t border-gray-100">
+          <!-- 需求描述（加大） -->
+          <div class="card mb-4">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">需求描述</div>
+            <div class="task-description" x-html="currentTask.description"></div>
+          </div>
+
+          <!-- 补充信息：金额 / 付款账号 / 交期 -->
+          <div class="card mb-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <div class="text-xs text-gray-500">预算</div>
                 <div class="text-base font-medium mt-0.5" x-text="'¥' + currentTask.budget.toLocaleString()"></div>
@@ -127,31 +146,16 @@
                 <div class="text-base font-medium mt-0.5" x-text="currentTask.finalAmount ? '¥' + currentTask.finalAmount.toLocaleString() : '—'"></div>
               </div>
               <div>
-                <div class="text-xs text-gray-500">期望交期</div>
-                <div class="text-base font-medium mt-0.5" x-text="currentTask.expectedDelivery"></div>
-              </div>
-              <div>
                 <div class="text-xs text-gray-500">最终交期</div>
                 <div class="text-base font-medium mt-0.5" x-text="currentTask.finalDelivery || '—'"></div>
               </div>
               <div>
+                <div class="text-xs text-gray-500">招标截止</div>
+                <div class="text-base font-medium mt-0.5" x-text="currentTask.biddingDeadline || '—'"></div>
+              </div>
+              <div class="col-span-2">
                 <div class="text-xs text-gray-500">付款账号</div>
                 <div class="text-sm mt-0.5" x-text="paymentAccountName(currentTask.paymentAccountId)"></div>
-              </div>
-              <div>
-                <div class="text-xs text-gray-500">招标截止</div>
-                <div class="text-sm mt-0.5" x-text="currentTask.biddingDeadline || '—'"></div>
-              </div>
-              <div>
-                <div class="text-xs text-gray-500">发布者</div>
-                <div class="text-sm mt-0.5 flex items-center gap-1.5">
-                  <span class="avatar" :class="userRole(currentTask.createdBy) === 'publisher' ? 'avatar-publisher' : (userRole(currentTask.createdBy) === 'boss' ? 'avatar-boss' : '')" x-text="userName(currentTask.createdBy).charAt(0)"></span>
-                  <span x-text="userName(currentTask.createdBy)"></span>
-                </div>
-              </div>
-              <div>
-                <div class="text-xs text-gray-500">创建时间</div>
-                <div class="text-sm mt-0.5" x-text="currentTask.createdAt"></div>
               </div>
             </div>
           </div>
@@ -398,27 +402,63 @@
       </div>
 
       <!-- 我接的 -->
-      <div x-show="activeTab === 'assigned'" class="space-y-2">
+      <div x-show="activeTab === 'assigned'" class="space-y-4">
         <template x-if="myAssignedTasks.length === 0">
           <div class="empty-state">还没有接单任务</div>
         </template>
-        <template x-for="t in myAssignedTasks" :key="t.id">
-          <a :href="`#/task/${t.id}`" class="block card card-hoverable">
-            <div class="flex items-center justify-between gap-4">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <h3 class="text-sm font-medium truncate" x-text="t.title"></h3>
-                  <span :class="'badge badge-' + t.status" x-text="statusLabel(t.status)"></span>
-                </div>
-                <div class="text-xs text-gray-500 mt-1">
-                  金额 ¥<span x-text="t.finalAmount.toLocaleString()"></span> ·
-                  交期 <span x-text="t.finalDelivery"></span> ·
-                  发布者 <span x-text="userName(t.createdBy)"></span>
+        <div class="space-y-2" x-show="myAssignedTasks.length > 0">
+          <template x-for="t in myAssignedTasks" :key="t.id">
+            <a :href="`#/task/${t.id}`" class="block card card-hoverable">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-medium truncate" x-text="t.title"></h3>
+                    <span :class="'badge badge-' + t.status" x-text="statusLabel(t.status)"></span>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-1">
+                    金额 ¥<span x-text="t.finalAmount.toLocaleString()"></span> ·
+                    交期 <span x-text="t.finalDelivery"></span> ·
+                    发布者 <span x-text="userName(t.createdBy)"></span>
+                  </div>
                 </div>
               </div>
+            </a>
+          </template>
+        </div>
+
+        <!-- 我的甘特图 -->
+        <div class="card overflow-x-auto" x-show="myAssignedTasks.length > 0">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-base font-semibold">我的任务时间线</h3>
+              <p class="text-xs text-gray-500 mt-0.5">仅显示你接的任务 · 颜色按状态分</p>
             </div>
-          </a>
-        </template>
+            <div class="flex gap-3 text-xs">
+              <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#f97316"></span>进行中</span>
+              <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-3 rounded" style="background:#10b981"></span>已完成</span>
+            </div>
+          </div>
+          <div class="relative h-6 border-b border-gray-200 mb-2" style="min-width: 700px;">
+            <template x-for="m in myGanttMonthMarkers()" :key="'mm-' + m.label">
+              <div class="absolute top-0 bottom-0 border-l border-gray-200 text-xs text-gray-500 pl-1.5" :style="`left: ${m.left}%`" x-text="m.label"></div>
+            </template>
+          </div>
+          <div class="space-y-1.5" style="min-width: 700px;">
+            <template x-for="task in myAssignedTasks" :key="'g-' + task.id">
+              <div class="flex items-center gap-3 h-8">
+                <a :href="`#/task/${task.id}`" class="w-48 text-sm text-gray-700 hover:text-violet-600 truncate" x-text="task.title"></a>
+                <div class="flex-1 relative h-8 bg-gray-50 rounded">
+                  <div :class="'gantt-bar gantt-bar-' + task.status"
+                       :style="`left: ${myGanttLeftPercent(task)}%; width: ${myGanttWidthPercent(task)}%`"
+                       :title="`${task.title} · ${task.createdAt} → ${task.finalDelivery || task.expectedDelivery}`"
+                       @click="window.location.hash = '#/task/' + task.id">
+                    <span x-text="task.title"></span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -482,8 +522,9 @@
           <input type="text" x-model="directForm.title" class="input mt-1" placeholder="简洁描述要做什么">
         </div>
         <div>
-          <label class="text-sm text-gray-700">详细描述</label>
-          <textarea x-model="directForm.description" class="input mt-1" rows="4" placeholder="需求、验收标准、注意事项等"></textarea>
+          <label class="text-sm text-gray-700">详细描述（支持富文本）</label>
+          <div id="quill-editor" class="mt-1" style="background: white;"></div>
+          <p class="text-xs text-gray-500 mt-1">支持粗体、列表、代码块、链接、标题等</p>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>

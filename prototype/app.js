@@ -33,6 +33,45 @@ function app() {
       }
       window.addEventListener('hashchange', () => { this.route = this.parseRoute(); });
       this.route = this.parseRoute();
+      this.initQuill();
+    },
+
+    initQuill() {
+      if (typeof Quill === 'undefined') {
+        console.warn('Quill 未加载，富文本编辑器不可用');
+        return;
+      }
+      // Quill 需要在可见状态下才能获取尺寸，避开 display:none 问题
+      // 这里 Quill.snow theme 会自动适应
+      this.quill = new Quill('#quill-editor', {
+        theme: 'snow',
+        placeholder: '描述任务需求、验收标准、注意事项等…',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['blockquote', 'code-block'],
+            ['link'],
+            ['clean']
+          ]
+        }
+      });
+    },
+
+    getQuillHtml() {
+      if (this.quill) {
+        const html = this.quill.root.innerHTML;
+        // 如果是空编辑器（只有 <p><br></p>），返回空字符串
+        return html === '<p><br></p>' ? '' : html;
+      }
+      return '';
+    },
+
+    resetQuill() {
+      if (this.quill) {
+        this.quill.setText('');
+      }
     },
 
     parseRoute() {
@@ -203,6 +242,7 @@ function app() {
 
     openDirectModal() {
       this.directForm = { title: '', description: '', paymentAccountId: this.paymentAccounts[0].id, budget: '', expectedDelivery: '', assigneeId: this.users.find(u => u.role === 'developer').id };
+      this.resetQuill();
       this.showDirectModal = true;
     },
 
@@ -212,7 +252,7 @@ function app() {
       const newTask = {
         id: 't_' + Date.now(),
         title: f.title,
-        description: f.description,
+        description: this.getQuillHtml() || f.description,
         paymentAccountId: f.paymentAccountId,
         budget: parseInt(f.budget) || 0,
         finalAmount: parseInt(f.budget) || 0,
@@ -232,6 +272,7 @@ function app() {
 
     openCreateModal() {
       this.directForm = { title: '', description: '', paymentAccountId: this.paymentAccounts[0].id, budget: '', expectedDelivery: '', assigneeId: '' };
+      this.resetQuill();
       this.showDirectModal = true;
     },
 
@@ -241,7 +282,7 @@ function app() {
       const newTask = {
         id: 't_' + Date.now(),
         title: f.title,
-        description: f.description,
+        description: this.getQuillHtml() || f.description,
         paymentAccountId: f.paymentAccountId,
         budget: parseInt(f.budget) || 0,
         finalAmount: null,
@@ -356,6 +397,54 @@ function app() {
 
     ganttMonthMarkers() {
       const { start, end } = this.ganttDateRange();
+      const markers = [];
+      const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (cur <= end) {
+        const left = ((cur.getTime() - start.getTime()) / (end.getTime() - start.getTime())) * 100;
+        markers.push({ label: `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`, left });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return markers;
+    },
+
+    // ---- 个人甘特图（我接的任务）----
+    myGanttDateRange() {
+      const tasks = this.myAssignedTasks;
+      if (tasks.length === 0) {
+        const today = new Date();
+        return { start: today, end: new Date(today.getTime() + 30 * 86400000) };
+      }
+      const dates = tasks.flatMap(t => {
+        const s = new Date(t.createdAt);
+        const e = t.finalDelivery || t.expectedDelivery || t.createdAt;
+        return [s, new Date(e)];
+      });
+      const minD = new Date(Math.min(...dates.map(d => d.getTime())));
+      const maxD = new Date(Math.max(...dates.map(d => d.getTime())));
+      minD.setDate(minD.getDate() - 7);
+      maxD.setDate(maxD.getDate() + 7);
+      return { start: minD, end: maxD };
+    },
+
+    myGanttLeftPercent(task) {
+      const { start, end } = this.myGanttDateRange();
+      const total = end.getTime() - start.getTime();
+      const tStart = new Date(task.createdAt).getTime();
+      return Math.max(0, ((tStart - start.getTime()) / total) * 100);
+    },
+
+    myGanttWidthPercent(task) {
+      const { start, end } = this.myGanttDateRange();
+      const total = end.getTime() - start.getTime();
+      const tStart = new Date(task.createdAt).getTime();
+      const tEndDate = task.finalDelivery || task.expectedDelivery || task.createdAt;
+      const tEnd = new Date(tEndDate).getTime();
+      const w = ((tEnd - tStart) / total) * 100;
+      return Math.max(3, w);
+    },
+
+    myGanttMonthMarkers() {
+      const { start, end } = this.myGanttDateRange();
       const markers = [];
       const cur = new Date(start.getFullYear(), start.getMonth(), 1);
       while (cur <= end) {
