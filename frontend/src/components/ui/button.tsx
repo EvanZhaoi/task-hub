@@ -1,19 +1,17 @@
-<script setup lang="ts">
-/**
- * Button 组件（shadcn-vue 风格）
- *
- * 学习要点：
- *   1. cva (class-variance-authority) 定义变体：variant + size 组合
- *   2. cn() 工具：合并默认变体类 + 外部传入的类（外部类优先级最高）
- *   3. withDefaults + 泛型 Props：类型安全 + 默认值
- *   4. <slot />：Vue 的插槽，让父组件传任意内容
- */
+import * as React from 'react'
+import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
-// 变体定义：varian t (外观) + size (大小)
+/**
+ * Button 组件（React 版）
+ *
+ * React vs Vue 关键差异：
+ *   - props 用 interface + 泛型（无 defineProps 宏）
+ *   - forwardRef 用于父组件拿 ref
+ *   - Slot 让父组件传任意元素作为 Button（实现 asChild 模式）
+ */
 const buttonVariants = cva(
-  // 基础类（所有变体共享）
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
@@ -32,37 +30,28 @@ const buttonVariants = cva(
         icon: 'h-10 w-10',
       },
     },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
+    defaultVariants: { variant: 'default', size: 'default' },
   },
 )
 
-type ButtonVariants = VariantProps<typeof buttonVariants>
-
-interface Props {
-  variant?: ButtonVariants['variant']
-  size?: ButtonVariants['size']
-  class?: string
-  disabled?: boolean
-  type?: 'button' | 'submit' | 'reset'
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
-  variant: 'default',
-  size: 'default',
-  disabled: false,
-  type: 'button',
-})
-</script>
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button'
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
+  },
+)
+Button.displayName = 'Button'
 
-<template>
-  <button
-    :type="type"
-    :disabled="disabled"
-    :class="cn(buttonVariants({ variant, size }), $attrs.class as string)"
-  >
-    <slot />
-  </button>
-</template>
+export { Button, buttonVariants }

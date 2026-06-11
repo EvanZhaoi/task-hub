@@ -1,20 +1,19 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
+import react from '@vitejs/plugin-react'
+import path from 'node:path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@': path.resolve(__dirname, './src'),
     },
   },
   server: {
     port: 5173,
     host: '0.0.0.0',
     proxy: {
-      // 开发期代理：前端 /api/* → 后端 :8080
       '/api': {
         target: process.env.VITE_API_PROXY || 'http://localhost:8080',
         changeOrigin: true,
@@ -24,6 +23,5 @@ export default defineConfig({
   build: {
     target: 'es2020',
     sourcemap: true,
-    chunkSizeWarningLimit: 1500,
   },
 })

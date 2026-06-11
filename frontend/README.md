@@ -1,41 +1,34 @@
-# TaskHub Frontend
+# TaskHub Frontend (React 版)
 
-> Vue 3 + TypeScript + Vite + Pinia + Tailwind + TipTap
+> React 19 + TypeScript + Vite + React Router 7 + Zustand + shadcn/ui
+
+> 📦 旧版 Vue 3 架子在 `../frontend-vue-archive/`（仅作对照，不维护）
 
 ## 🚀 快速开始
 
 ```bash
-# 安装依赖（推荐 pnpm，npm 也行）
 npm install
-
-# 启动开发服务器
-npm run dev
-# 访问 http://localhost:5173
-
-# 类型检查
-npm run type-check
-
-# 构建生产包
-npm run build
-
-# 预览生产包
-npm run preview
+npm run dev          # http://localhost:5173
+npm run type-check    # tsc --noEmit
+npm run build        # 产物在 dist/
+npm run preview      # 预览生产包
 ```
 
-## 📦 依赖（全部最新稳定版）
+## 📦 依赖（全部最新稳定）
 
 | 包 | 版本 | 用途 |
 |---|---|---|
-| `vue` | 3.5.x | 框架 |
-| `vue-router` | 4.5.x | 路由（hash 模式） |
-| `pinia` | 2.3.x | 状态管理 |
+| `react` / `react-dom` | 19.x | 框架 |
+| `react-router` | 7.x | 路由（数据路由模式） |
+| `zustand` | 5.x | 状态管理 |
 | `axios` | 1.7.x | HTTP 客户端 |
-| `@tiptap/vue-3` + 扩展 | 2.10.x | 富文本编辑器 |
-| `@vueuse/core` | 12.5.x | Vue 组合式工具集 |
-| `dayjs` | 1.11.x | 日期处理 |
-| `vite` | 6.0.x | 构建工具 |
-| `typescript` | 5.7.x | 类型系统 |
+| `@radix-ui/react-*` | 1.1.x | 无样式可访问性原语 |
+| `class-variance-authority` | 0.7.x | 变体系统 |
+| `clsx` + `tailwind-merge` | latest | className 工具 |
+| `lucide-react` | 0.469.x | 图标 |
 | `tailwindcss` | 3.4.x | CSS 框架 |
+| `vite` | 6.x | 构建工具 |
+| `typescript` | 5.7.x | 类型系统 |
 
 ## 📁 目录结构
 
@@ -43,94 +36,95 @@ npm run preview
 frontend/
 ├── public/                  # 静态资源
 ├── src/
-│   ├── api/                 # API 客户端
-│   │   ├── client.ts        # Axios 实例 + 拦截器
+│   ├── api/                 # API 客户端（Axios）
+│   │   ├── client.ts        # Axios + 拦截器
 │   │   ├── types.ts         # 共享类型
-│   │   ├── task.ts          # 任务 API
-│   │   ├── bid.ts           # 投标 API
-│   │   ├── user.ts          # 用户 API
-│   │   └── attachment.ts    # 附件 API
-│   ├── stores/              # Pinia stores
-│   │   ├── user.ts
+│   │   ├── task.ts / bid.ts / user.ts
+│   ├── stores/              # Zustand stores
+│   │   ├── user.ts          # 用户（含 persist 中间件）
 │   │   ├── tasks.ts
 │   │   └── bids.ts
 │   ├── views/               # 页面级组件
-│   │   ├── HomeView.vue
-│   │   ├── TaskDetailView.vue
-│   │   ├── CreateTaskView.vue
-│   │   ├── ProfileView.vue
-│   │   └── BossGanttView.vue
-│   ├── components/          # 通用组件
-│   │   └── AppHeader.vue
-│   ├── router/              # 路由配置
-│   ├── utils/               # 工具
-│   ├── composables/         # 组合式函数（待填）
-│   ├── styles/              # 全局样式
-│   ├── types/               # 全局类型
-│   ├── App.vue
-│   └── main.ts
+│   │   ├── HomeView.tsx
+│   │   ├── TaskDetailView.tsx
+│   │   ├── CreateTaskView.tsx
+│   │   ├── ProfileView.tsx
+│   │   └── BossGanttView.tsx
+│   ├── components/
+│   │   ├── AppHeader.tsx
+│   │   └── ui/              # shadcn/ui 组件
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── input.tsx
+│   │       └── dialog.tsx
+│   ├── lib/
+│   │   └── utils.ts         # cn() 工具
+│   ├── router/
+│   │   └── index.tsx        # React Router 7 配置
+│   ├── utils/
+│   │   └── format.ts
+│   ├── styles/
+│   │   └── globals.css
+│   ├── main.tsx
+│   ├── App.tsx              (Layout 在 router 内)
+│   └── vite-env.d.ts
 ├── index.html
 ├── vite.config.ts
 ├── tailwind.config.js
 ├── postcss.config.js
 ├── tsconfig.json
+├── components.json          # shadcn/ui 配置
 ├── env.d.ts
-├── .env.example
 └── package.json
 ```
 
-## 🔧 环境配置
+## 🔄 Vue → React 关键差异速查
 
-复制 `.env.example` 为 `.env.local` 并按需修改：
-
-```bash
-cp .env.example .env.local
-```
-
-| 变量 | 默认值 | 说明 |
+| 概念 | Vue | React |
 |---|---|---|
-| `VITE_API_BASE` | `/api` | API 基础地址 |
-| `VITE_API_PROXY` | `http://localhost:8080` | 开发期后端代理目标 |
-
-## 🎨 设计规范
-
-设计 Token 见 [`../DESIGN.md`](../DESIGN.md)（Linear + Vercel 风格）。
-
-主要颜色：
-- **主色**：`#5e6ad2`（紫罗兰，Tailwind: `brand-500`）
-- **状态色**：`blue-100/800`（OPEN）/ `orange-100/800`（ASSIGNED）/ `green-100/800`（COMPLETED）/ `gray-200/700`（FAILED）/ `gray-50/500`（CANCELLED）
+| 组件文件 | `.vue` SFC | `.tsx` 函数组件 |
+| 模板 | `<template>` | `return <JSX>` |
+| 响应式 | `ref()` | `useState()` |
+| 计算属性 | `computed()` | `useMemo()` 或直接算 |
+| 副作用 | `watch()` | `useEffect()` |
+| Props | `defineProps<{...}>()` | `interface Props { ... }` + 函数参数 |
+| 事件 | `defineEmits<{...}>()` + `emit('xxx')` | `props.onXxx` 回调 |
+| 双向绑定 | `v-model` | `value` + `onChange` 显式 |
+| 插槽 | `<slot />` | `children` prop |
+| 路由链接 | `<router-link to="/">` | `<Link to="/">` |
+| 路由出口 | `<router-view />` | `<Outlet />` |
+| 状态管理 | Pinia (ref + computed) | Zustand (state + actions) |
 
 ## 🛣 路由
 
-| Path | View | 备注 |
-|---|---|---|
-| `/` | HomeView | 任务大厅 |
-| `/task/:id` | TaskDetailView | 任务详情 |
-| `/create` | CreateTaskView | 发布任务 |
-| `/profile` | ProfileView | 我的主页 |
-| `/boss` | BossGanttView | 老板视图（需 boss 角色） |
+| Path | Component |
+|---|---|
+| `/` | HomeView |
+| `/task/:id` | TaskDetailView |
+| `/create` | CreateTaskView |
+| `/profile` | ProfileView |
+| `/boss` | BossGanttView |
 
 ## 🚧 当前状态
 
-✅ **架构已就位**：
-- 构建配置（Vite + TS + Tailwind）
-- 路由（5 个 views）
-- Pinia stores（user / tasks / bids）
-- API 客户端（Axios + 拦截器）
-- 类型定义（与后端 DTO 对齐）
-- 全局样式（Tailwind + 状态徽章等组件类）
-- AppHeader 组件
+✅ **架构就位**：
+- Vite + TS + Tailwind 构建配置
+- React Router 7 数据路由 + 路由级 lazy
+- Zustand 3 个 store（带 persist 中间件）
+- Axios + 拦截器
+- shadcn/ui 4 个组件（Button / Card / Input / Dialog）
+- AppHeader 完整可用
 
 ⏳ **待 Phase 1 实现**：
-- 任务列表 + 搜索 + 筛选 + 分页
-- 任务详情 + 投标流程
-- 发布任务 + TipTap 富文本
-- 个人主页 + 甘特图
-- 老板视图 + 全局甘特图
+- 5 个 view 的真实内容
+- TipTap 富文本集成
+- 通用 GanttChart 组件
+- 业务组件（TaskCard / BidListItem / AttachmentItem 等）
 
 ## 📚 相关文档
 
 - [需求文档 v0.4](../docs/需求文档.md)
-- [技术选型 v0.5](../docs/技术选型.md)
+- [技术选型 v0.5](../docs/技术选型.md)（v0.5.4 已含 React 切换）
 - [模块与数据库设计 v0.6](../docs/模块与数据库设计.md)
-- [原型（可点击演示）](../prototype/)
+- [原型](../prototype/)（Vanilla HTML + Alpine.js，保留作为设计参照）
+- [Vue 版架子在 ../frontend-vue-archive/](../frontend-vue-archive/)

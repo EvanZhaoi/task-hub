@@ -1,15 +1,8 @@
-/**
- * TaskHub 共享类型定义
- * 与后端 DTO 保持一致
- */
-
-// ========== 枚举 ==========
 export type TaskStatus = 'DRAFT' | 'OPEN' | 'ASSIGNED' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 export type BidStatus = 'ACTIVE' | 'WITHDRAWN' | 'ACCEPTED' | 'LOST'
 export type ChangeType = 'AMOUNT' | 'DELIVERY' | 'DESCRIPTION' | 'EXTENSION' | 'CANCEL'
 export type UserRole = 'developer' | 'publisher' | 'boss'
 
-// ========== 实体 ==========
 export interface Task {
   id: string
   title: string
@@ -36,7 +29,7 @@ export interface Bid {
   deliveryDate: string
   proposal?: string
   status: BidStatus
-  collaborators?: string[] // user_id 数组
+  collaborators?: string[]
   createdAt: string
 }
 
@@ -71,13 +64,14 @@ export interface User {
   avatar?: string
 }
 
-export interface PaymentAccount {
-  id: string
-  name: string
-  managerId: string
+export interface PageResponse<T> {
+  items: T[]
+  total: number
+  page: number
+  size: number
+  totalPages: number
 }
 
-// ========== 请求 DTO ==========
 export interface CreateTaskRequest {
   title: string
   description?: string
@@ -96,31 +90,4 @@ export interface BidRequest {
   deliveryDate: string
   proposal?: string
   collaborators?: string[]
-}
-
-export interface ExtensionRequest {
-  newDelivery: string
-  reason: string
-}
-
-export interface TaskQueryRequest {
-  page?: number
-  size?: number
-  q?: string
-  status?: TaskStatus | 'all'
-}
-
-// ========== 响应 ==========
-export interface PageResponse<T> {
-  items: T[]
-  total: number
-  page: number
-  size: number
-  totalPages: number
-}
-
-export interface ApiResponse<T> {
-  code: number
-  message: string
-  data: T
 }

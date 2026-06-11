@@ -1,135 +1,94 @@
-/**
- * 任务 Store
- * 任务列表、详情、CRUD actions
- */
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { Task, TaskQueryRequest, TaskStatus } from '@/api/types'
+import { create } from 'zustand'
 import * as taskApi from '@/api/task'
+import type { Task, TaskStatus } from '@/api/types'
 
-export const useTasksStore = defineStore('tasks', () => {
-  // ---- state ----
-  const list = ref<Task[]>([])
-  const detail = ref<Task | null>(null)
-  const total = ref(0)
-  const page = ref(1)
-  const size = ref(10)
-  const totalPages = ref(1)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+interface TasksState {
+  list: Task[]
+  detail: Task | null
+  total: number
+  page: number
+  size: number
+  totalPages: number
+  loading: boolean
+  error: string | null
+  filterStatus: TaskStatus | 'all'
+  searchQuery: string
 
-  // 筛选状态
-  const filterStatus = ref<TaskStatus | 'all'>('all')
-  const searchQuery = ref('')
+  fetchList: (params?: { page?: number; size?: number }) => Promise<void>
+  fetchDetail: (id: string) => Promise<void>
+  createTask: (data: Parameters<typeof taskApi.createTask>[0]) => Promise<Task>
+  completeTask: (id: string) => Promise<void>
+  cancelTask: (id: string) => Promise<void>
+  setFilter: (status: TaskStatus | 'all') => void
+  setSearch: (q: string) => void
+  reset: () => void
+}
 
-  // ---- getters ----
-  const hasMore = computed(() => page.value < totalPages.value)
+export const useTasksStore = create<TasksState>((set, get) => ({
+  list: [],
+  detail: null,
+  total: 0,
+  page: 1,
+  size: 10,
+  totalPages: 1,
+  loading: false,
+  error: null,
+  filterStatus: 'all',
+  searchQuery: '',
 
-  // ---- actions ----
-  async function fetchList(params: Partial<TaskQueryRequest> = {}) {
-    loading.value = true
-    error.value = null
+  async fetchList(params = {}) {
+    set({ loading: true, error: null })
     try {
       const res = await taskApi.listTasks({
-        page: params.page ?? page.value,
-        size: params.size ?? size.value,
-        q: params.q ?? searchQuery.value,
-        status: params.status ?? filterStatus.value,
+        page: params.page ?? get().page,
+        size: params.size ?? get().size,
+        q: get().searchQuery,
+        status: get().filterStatus,
       })
-      list.value = res.items
-      total.value = res.total
-      page.value = res.page
-      size.value = res.size
-      totalPages.value = res.totalPages
-      return res
+      set({
+        list: res.items,
+        total: res.total,
+        page: res.page,
+        size: res.size,
+        totalPages: res.totalPages,
+        loading: false,
+      })
     } catch (e) {
-      error.value = (e as Error).message
-      throw e
-    } finally {
-      loading.value = false
+      set({ error: (e as Error).message, loading: false })
     }
-  }
+  },
 
-  async function fetchDetail(id: string) {
-    loading.value = true
-    error.value = null
+  async fetchDetail(id) {
+    set({ loading: true, error: null })
     try {
-      detail.value = await taskApi.getTask(id)
-      return detail.value
+      const task = await taskApi.getTask(id)
+      set({ detail: task, loading: false })
     } catch (e) {
-      error.value = (e as Error).message
-      throw e
-    } finally {
-      loading.value = false
+      set({ error: (e as Error).message, loading: false })
     }
-  }
+  },
 
-  async function createTask(data: Parameters<typeof taskApi.createTask>[0]) {
+  async createTask(data) {
     const task = await taskApi.createTask(data)
-    list.value.unshift(task)
+    set((s) => ({ list: [task, ...s.list] }))
     return task
-  }
+  },
 
-  async function directAssign(data: Parameters<typeof taskApi.directAssign>[0]) {
-    const task = await taskApi.directAssign(data)
-    list.value.unshift(task)
-    return task
-  }
-
-  async function completeTask(id: string) {
+  async completeTask(id) {
     await taskApi.completeTask(id)
-    if (detail.value?.id === id) {
-      detail.value.status = 'COMPLETED'
-    }
-  }
+    set((s) => ({
+      detail: s.detail?.id === id ? { ...s.detail, status: 'COMPLETED' as const } : s.detail,
+    }))
+  },
 
-  async function cancelTask(id: string) {
+  async cancelTask(id) {
     await taskApi.cancelTask(id)
-    if (detail.value?.id === id) {
-      detail.value.status = 'CANCELLED'
-    }
-  }
+    set((s) => ({
+      detail: s.detail?.id === id ? { ...s.detail, status: 'CANCELLED' as const } : s.detail,
+    }))
+  },
 
-  function setFilter(status: TaskStatus | 'all') {
-    filterStatus.value = status
-    page.value = 1
-  }
-
-  function setSearch(q: string) {
-    searchQuery.value = q
-    page.value = 1
-  }
-
-  function resetList() {
-    list.value = []
-    detail.value = null
-    page.value = 1
-    total.value = 0
-  }
-
-  return {
-    // state
-    list,
-    detail,
-    total,
-    page,
-    size,
-    totalPages,
-    loading,
-    error,
-    filterStatus,
-    searchQuery,
-    // getters
-    hasMore,
-    // actions
-    fetchList,
-    fetchDetail,
-    createTask,
-    directAssign,
-    completeTask,
-    cancelTask,
-    setFilter,
-    setSearch,
-    resetList,
-  }
-})
+  setFilter: (status) => set({ filterStatus: status, page: 1 }),
+  setSearch: (q) => set({ searchQuery: q, page: 1 }),
+  reset: () => set({ list: [], detail: null, page: 1, total: 0 }),
+}))

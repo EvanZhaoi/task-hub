@@ -1,80 +1,65 @@
-/**
- * 投标 Store
- * 投标列表、提交投标、选标
- */
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import type { Bid } from '@/api/types'
+import { create } from 'zustand'
 import * as bidApi from '@/api/bid'
+import type { Bid } from '@/api/types'
 
-export const useBidsStore = defineStore('bids', () => {
-  // ---- state ----
-  // 按 taskId 分组缓存
-  const bidsByTaskId = ref<Record<string, Bid[]>>({})
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+interface BidsState {
+  bidsByTaskId: Record<string, Bid[]>
+  loading: boolean
+  error: string | null
 
-  // ---- actions ----
-  async function fetchBidsForTask(taskId: string) {
-    loading.value = true
-    error.value = null
+  fetchBidsForTask: (taskId: string) => Promise<void>
+  submitBid: (taskId: string, data: Parameters<typeof bidApi.submitBid>[1]) => Promise<Bid>
+  acceptBid: (taskId: string, bidId: string) => Promise<void>
+  withdrawBid: (taskId: string, bidId: string) => Promise<void>
+}
+
+export const useBidsStore = create<BidsState>((set) => ({
+  bidsByTaskId: {},
+  loading: false,
+  error: null,
+
+  async fetchBidsForTask(taskId) {
+    set({ loading: true, error: null })
     try {
       const bids = await bidApi.listBidsForTask(taskId)
-      bidsByTaskId.value[taskId] = bids
-      return bids
+      set((s) => ({ bidsByTaskId: { ...s.bidsByTaskId, [taskId]: bids }, loading: false }))
     } catch (e) {
-      error.value = (e as Error).message
-      throw e
-    } finally {
-      loading.value = false
+      set({ error: (e as Error).message, loading: false })
     }
-  }
+  },
 
-  async function submitBid(taskId: string, data: Parameters<typeof bidApi.submitBid>[1]) {
+  async submitBid(taskId, data) {
     const bid = await bidApi.submitBid(taskId, data)
-    if (bidsByTaskId.value[taskId]) {
-      bidsByTaskId.value[taskId].push(bid)
-    } else {
-      bidsByTaskId.value[taskId] = [bid]
-    }
+    set((s) => ({
+      bidsByTaskId: {
+        ...s.bidsByTaskId,
+        [taskId]: [...(s.bidsByTaskId[taskId] ?? []), bid],
+      },
+    }))
     return bid
-  }
+  },
 
-  async function acceptBid(taskId: string, bidId: string) {
+  async acceptBid(taskId, bidId) {
     await bidApi.acceptBid(taskId, bidId)
-    // 刷新该任务的投标列表
-    if (bidsByTaskId.value[taskId]) {
-      bidsByTaskId.value[taskId] = bidsByTaskId.value[taskId].map((b) =>
-        b.id === bidId ? { ...b, status: 'ACCEPTED' as const } : { ...b, status: 'LOST' as const },
-      )
-    }
-  }
+    set((s) => ({
+      bidsByTaskId: {
+        ...s.bidsByTaskId,
+        [taskId]: (s.bidsByTaskId[taskId] ?? []).map((b) =>
+          b.id === bidId ? { ...b, status: 'ACCEPTED' as const } : { ...b, status: 'LOST' as const },
+        ),
+      },
+    }))
+  },
 
-  async function withdrawBid(taskId: string, bidId: string) {
+  async withdrawBid(taskId, bidId) {
     await bidApi.withdrawBid(taskId, bidId)
-    if (bidsByTaskId.value[taskId]) {
-      bidsByTaskId.value[taskId] = bidsByTaskId.value[taskId].map((b) =>
-        b.id === bidId ? { ...b, status: 'WITHDRAWN' as const } : b,
-      )
-    }
-  }
-
-  function clearCache(taskId?: string) {
-    if (taskId) {
-      delete bidsByTaskId.value[taskId]
-    } else {
-      bidsByTaskId.value = {}
-    }
-  }
-
-  return {
-    bidsByTaskId,
-    loading,
-    error,
-    fetchBidsForTask,
-    submitBid,
-    acceptBid,
-    withdrawBid,
-    clearCache,
-  }
-})
+    set((s) => ({
+      bidsByTaskId: {
+        ...s.bidsByTaskId,
+        [taskId]: (s.bidsByTaskId[taskId] ?? []).map((b) =>
+          b.id === bidId ? { ...b, status: 'WITHDRAWN' as const } : b,
+        ),
+      },
+    }))
+  },
+}))

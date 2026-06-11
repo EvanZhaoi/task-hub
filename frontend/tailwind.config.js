@@ -1,15 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ['class'],
-  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     container: {
       center: true,
       padding: '2rem',
+      screens: { '2xl': '1400px' },
     },
     extend: {
       colors: {
-        // shadcn-vue 主题色（通过 CSS 变量）
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -35,15 +35,19 @@ export default {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
-        // TaskHub 状态色（项目自定义）
-        status: {
-          draft: { bg: '#f3f4f6', text: '#6b7280' },
-          open: { bg: '#dbeafe', text: '#1e40af' },
-          assigned: { bg: '#fed7aa', text: '#9a3412' },
-          completed: { bg: '#d1fae5', text: '#065f46' },
-          failed: { bg: '#e5e7eb', text: '#4b5563' },
-          cancelled: { bg: '#f9fafb', text: '#9ca3af' },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
+        // TaskHub 状态色
+        'status-open': { bg: '#dbeafe', text: '#1e40af' },
+        'status-assigned': { bg: '#fed7aa', text: '#9a3412' },
+        'status-completed': { bg: '#d1fae5', text: '#065f46' },
+        'status-failed': { bg: '#e5e7eb', text: '#4b5563' },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -62,14 +66,8 @@ export default {
         ],
       },
       keyframes: {
-        'accordion-down': {
-          from: { height: '0' },
-          to: { height: 'var(--reka-accordion-content-height)' },
-        },
-        'accordion-up': {
-          from: { height: 'var(--reka-accordion-content-height)' },
-          to: { height: '0' },
-        },
+        'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
+        'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -77,5 +75,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-animate')],
 }

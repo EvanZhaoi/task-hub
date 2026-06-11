@@ -1,109 +1,61 @@
-/**
- * 用户 Store
- * 当前用户信息、角色判断、登录态管理
- */
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { User, UserRole } from '@/api/types'
 import { getCurrentUser } from '@/api/user'
 
-const STORAGE_KEY = 'taskhub.currentUser'
-const STORAGE_TOKEN_KEY = 'taskhub.token'
+interface UserState {
+  currentUser: User | null
+  loading: boolean
+  error: string | null
+  // getters
+  isLoggedIn: () => boolean
+  isBoss: () => boolean
+  isDeveloper: () => boolean
+  isPublisher: () => boolean
+  // actions
+  fetchCurrentUser: () => Promise<void>
+  setUser: (user: User | null) => void
+  hasRole: (...roles: UserRole[]) => boolean
+  logout: () => void
+}
 
-export const useUserStore = defineStore('user', () => {
-  // ---- state ----
-  const currentUser = ref<User | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+export const useUserStore = create<UserState>()(
+  persist(
+    (set, get) => ({
+      currentUser: null,
+      loading: false,
+      error: null,
 
-  // ---- getters ----
-  const isLoggedIn = computed(() => currentUser.value !== null)
-  const isBoss = computed(() => currentUser.value?.role === 'boss')
-  const isDeveloper = computed(() => currentUser.value?.role === 'developer')
-  const isPublisher = computed(() => currentUser.value?.role === 'publisher')
-  const userId = computed(() => currentUser.value?.id ?? '')
-  const userName = computed(() => currentUser.value?.name ?? '')
+      isLoggedIn: () => get().currentUser !== null,
+      isBoss: () => get().currentUser?.role === 'boss',
+      isDeveloper: () => get().currentUser?.role === 'developer',
+      isPublisher: () => get().currentUser?.role === 'publisher',
 
-  // ---- actions ----
-  async function fetchCurrentUser() {
-    loading.value = true
-    error.value = null
-    try {
-      const user = await getCurrentUser()
-      currentUser.value = user
-      saveToStorage()
-      return user
-    } catch (e) {
-      error.value = (e as Error).message
-      throw e
-    } finally {
-      loading.value = false
-    }
-  }
+      async fetchCurrentUser() {
+        set({ loading: true, error: null })
+        try {
+          const user = await getCurrentUser()
+          set({ currentUser: user, loading: false })
+        } catch (e) {
+          set({ error: (e as Error).message, loading: false })
+        }
+      },
 
-  function setUser(user: User | null) {
-    currentUser.value = user
-    saveToStorage()
-  }
+      setUser: (user) => set({ currentUser: user }),
 
-  function hasRole(...roles: UserRole[]): boolean {
-    return currentUser.value ? roles.includes(currentUser.value.role) : false
-  }
+      hasRole: (...roles) => {
+        const u = get().currentUser
+        return u ? roles.includes(u.role) : false
+      },
 
-  function setToken(token: string) {
-    localStorage.setItem(STORAGE_TOKEN_KEY, token)
-  }
-
-  function clearToken() {
-    localStorage.removeItem(STORAGE_TOKEN_KEY)
-  }
-
-  function saveToStorage() {
-    if (currentUser.value) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser.value))
-      localStorage.setItem('taskhub.isBoss', String(currentUser.value.role === 'boss'))
-    } else {
-      localStorage.removeItem(STORAGE_KEY)
-      localStorage.removeItem('taskhub.isBoss')
-    }
-  }
-
-  function restoreFromStorage() {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        currentUser.value = JSON.parse(stored)
-      } catch {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }
-  }
-
-  function logout() {
-    currentUser.value = null
-    clearToken()
-    saveToStorage()
-  }
-
-  return {
-    // state
-    currentUser,
-    loading,
-    error,
-    // getters
-    isLoggedIn,
-    isBoss,
-    isDeveloper,
-    isPublisher,
-    userId,
-    userName,
-    // actions
-    fetchCurrentUser,
-    setUser,
-    hasRole,
-    setToken,
-    clearToken,
-    restoreFromStorage,
-    logout,
-  }
-})
+      logout: () => {
+        set({ currentUser: null })
+        localStorage.removeItem('taskhub.token')
+      },
+    }),
+    {
+      name: 'taskhub-user',
+      partialize: (state) => ({ currentUser: state.currentUser }),
+    },
+  ),
+)

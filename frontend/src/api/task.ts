@@ -1,52 +1,20 @@
-/**
- * 任务相关 API
- */
-import api from './client'
-import type {
-  Task,
-  CreateTaskRequest,
-  DirectAssignRequest,
-  ExtensionRequest,
-  TaskQueryRequest,
-  PageResponse,
-} from './types'
+import { api } from './client'
+import type { Task, CreateTaskRequest, DirectAssignRequest, PageResponse } from './types'
 
-// 任务大厅（分页 + 搜索 + 筛选）
-export function listTasks(params: TaskQueryRequest = {}): Promise<PageResponse<Task>> {
-  return api.get('/tasks', { params })
-}
+export const listTasks = (params: { page?: number; size?: number; q?: string; status?: string } = {}) =>
+  api.get<unknown, PageResponse<Task>>('/tasks', { params })
 
-// 任务详情
-export function getTask(id: string): Promise<Task> {
-  return api.get(`/tasks/${id}`)
-}
+export const getTask = (id: string) =>
+  api.get<unknown, Task>(`/tasks/${id}`)
 
-// 发布任务（招标）
-export function createTask(data: CreateTaskRequest): Promise<Task> {
-  return api.post('/tasks', data)
-}
+export const createTask = (data: CreateTaskRequest) =>
+  api.post<unknown, Task>('/tasks', data)
 
-// 直接指名
-export function directAssign(data: DirectAssignRequest): Promise<Task> {
-  return api.post('/tasks/direct', data)
-}
+export const directAssign = (data: DirectAssignRequest) =>
+  api.post<unknown, Task>('/tasks/direct', data)
 
-// 取消任务
-export function cancelTask(id: string): Promise<void> {
-  return api.post(`/tasks/${id}/cancel`)
-}
+export const cancelTask = (id: string) =>
+  api.post<unknown, void>(`/tasks/${id}/cancel`)
 
-// 确认完成
-export function completeTask(id: string): Promise<void> {
-  return api.post(`/tasks/${id}/complete`)
-}
-
-// 复制新建（流标后）
-export function cloneTask(id: string): Promise<Task> {
-  return api.post(`/tasks/${id}/clone`)
-}
-
-// 申请延期
-export function requestExtension(id: string, data: ExtensionRequest): Promise<void> {
-  return api.post(`/tasks/${id}/extend`, data)
-}
+export const completeTask = (id: string) =>
+  api.post<unknown, void>(`/tasks/${id}/complete`)
