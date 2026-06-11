@@ -3,22 +3,66 @@
 @tailwind utilities;
 
 /* ============================================================
-   TaskHub 全局样式
-   设计 Token 见 /DESIGN.md
+   shadcn-vue CSS 变量（设计 Token）
+   - 通过 hsl() 数值控制，可在 tailwind.config.js 引用
+   - 改一行，全站颜色变（这就是设计系统的力量）
    ============================================================ */
 
 @layer base {
+  :root {
+    /* 背景与文字 */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    /* 卡片 */
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    /* 主色（品牌紫罗兰 #5e6ad2 → hsl(240, 56%, 65%)） */
+    --primary: 240 56% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    /* 次色（中性灰） */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* 弱化（淡灰背景） */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    /* 强调（同 muted，hover 用） */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* 危险 */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* 边框 / 输入框 / 焦点环 */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 240 56% 65%;
+
+    /* 圆角（设计 Token） */
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
   html {
     font-family: theme('fontFamily.sans');
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-background text-foreground;
   }
 }
 
-/* ---- 状态徽章 ---- */
+/* ---- 状态徽章（项目自定义）---- */
 @layer components {
   .badge {
     @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
@@ -29,51 +73,4 @@
   .badge-completed { @apply bg-green-100 text-green-800; }
   .badge-failed    { @apply bg-gray-200 text-gray-700; }
   .badge-cancelled { @apply bg-gray-50 text-gray-500 line-through; }
-
-  /* ---- 卡片 ---- */
-  .card {
-    @apply bg-white border border-gray-200 rounded-lg p-5 transition-shadow;
-  }
-  .card-hoverable {
-    @apply hover:border-gray-300 hover:shadow-sm cursor-pointer;
-  }
-
-  /* ---- 按钮 ---- */
-  .btn {
-    @apply px-4 py-2 rounded-md text-sm font-medium transition-colors;
-  }
-  .btn-primary {
-    @apply bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700;
-  }
-  .btn-secondary {
-    @apply bg-white text-gray-900 border border-gray-200 hover:bg-gray-50;
-  }
-  .btn-ghost {
-    @apply text-gray-700 hover:bg-gray-100;
-  }
-  .btn-danger {
-    @apply text-red-600 hover:bg-red-50 border border-gray-200;
-  }
-
-  /* ---- 输入 ---- */
-  .input {
-    @apply w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-white
-           focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20
-           transition-colors;
-  }
-  textarea.input {
-    @apply resize-y min-h-[80px];
-  }
-
-  /* ---- 头像 ---- */
-  .avatar {
-    @apply w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-purple-500
-           text-white inline-flex items-center justify-center text-xs font-medium flex-shrink-0;
-  }
-  .avatar-publisher {
-    @apply bg-gradient-to-br from-orange-500 to-orange-400;
-  }
-  .avatar-boss {
-    @apply bg-gradient-to-br from-gray-900 to-gray-700;
-  }
 }
