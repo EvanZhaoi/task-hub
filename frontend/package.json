@@ -1,42 +1,44 @@
 {
-  "name": "taskhub-frontend",
+  "name": "frontend",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.0.0",
   "type": "module",
-  "description": "TaskHub 前端 - React 19 + TypeScript + Vite + shadcn/ui",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "type-check": "tsc --noEmit"
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.4",
-    "@radix-ui/react-slot": "^1.1.1",
-    "axios": "^1.7.9",
+    "@radix-ui/react-dialog": "^1.1.16",
+    "@radix-ui/react-slot": "^1.2.5",
+    "axios": "^1.17.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dayjs": "^1.11.13",
+    "dayjs": "^1.11.21",
     "lucide-react": "^0.469.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router": "^7.1.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router": "^7.17.0",
     "tailwind-merge": "^3.6.0",
-    "zustand": "^5.0.2"
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "@types/react": "^19.0.4",
-    "@types/react-dom": "^19.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
-    "tailwindcss-animate": "^1.0.7",
-    "typescript": "~5.7.3",
-    "vite": "^6.0.7"
-  },
-  "engines": {
-    "node": ">=20.0.0"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12"
   }
 }

@@ -3,11 +3,7 @@ export default {
   darkMode: ['class'],
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
-    container: {
-      center: true,
-      padding: '2rem',
-      screens: { '2xl': '1400px' },
-    },
+    container: { center: true, padding: '2rem' },
     extend: {
       colors: {
         border: 'hsl(var(--border))',
@@ -35,19 +31,10 @@ export default {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
-        },
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // TaskHub 状态色
-        'status-open': { bg: '#dbeafe', text: '#1e40af' },
-        'status-assigned': { bg: '#fed7aa', text: '#9a3412' },
-        'status-completed': { bg: '#d1fae5', text: '#065f46' },
-        'status-failed': { bg: '#e5e7eb', text: '#4b5563' },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -55,23 +42,7 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: [
-          '-apple-system',
-          'BlinkMacSystemFont',
-          'Segoe UI',
-          'PingFang SC',
-          'Microsoft YaHei',
-          'Roboto',
-          'sans-serif',
-        ],
-      },
-      keyframes: {
-        'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
-        'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } },
-      },
-      animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Roboto', 'sans-serif'],
       },
     },
   },
