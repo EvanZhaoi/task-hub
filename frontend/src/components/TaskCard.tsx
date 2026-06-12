@@ -10,17 +10,29 @@ interface TaskCardProps {
   task: Task
 }
 
+const STATUS_ACCENT: Record<Task['status'], string> = {
+  DRAFT:     'bg-gray-400',
+  OPEN:      'bg-blue-500',
+  ASSIGNED:  'bg-orange-500',
+  COMPLETED: 'bg-emerald-500',
+  FAILED:    'bg-gray-500',
+  CANCELLED: 'bg-gray-300',
+}
+
 export function TaskCard({ task }: TaskCardProps) {
   return (
     <Link
       to={`/task/${task.id}`}
       className={cn(
-        'group block rounded-lg bg-card p-5',
+        'group relative block rounded-lg bg-card pl-4 pr-5 py-5',
         'shadow-[0_1px_2px_rgba(15,23,42,0.04),0_1px_3px_rgba(15,23,42,0.06)]',
-        'transition-shadow duration-150',
-        'hover:shadow-[0_4px_12px_rgba(15,23,42,0.08),0_2px_4px_rgba(15,23,42,0.05)]',
+        'transition-all duration-150',
+        'hover:shadow-[0_4px_14px_rgba(15,23,42,0.08),0_2px_4px_rgba(15,23,42,0.05)]',
+        'hover:-translate-y-px',
       )}
     >
+      {/* 状态色侧边条 */}
+      <span className={cn('absolute left-0 top-3 bottom-3 w-0.5 rounded-r-full', STATUS_ACCENT[task.status])} />
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">

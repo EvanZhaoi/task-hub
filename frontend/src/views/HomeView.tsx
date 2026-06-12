@@ -17,6 +17,18 @@ const FILTERS: { key: TaskStatus | 'all'; label: string }[] = [
 
 const COMPLEXITIES: Complexity[] = ['LOW', 'MEDIUM', 'HIGH']
 
+function StatCard({ label, value, accent }: { label: string; value: number; accent: string }) {
+  return (
+    <div className="rounded-lg bg-card px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_1px_3px_rgba(15,23,42,0.06)]">
+      <div className="flex items-center gap-2">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full ${accent.split(' ')[0]}`} />
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+      <div className="text-2xl font-semibold tabular-nums tracking-tight text-foreground mt-1.5">{value}</div>
+    </div>
+  )
+}
+
 export function HomeView() {
   const list = useTasksStore((s) => s.list)
   const filter = useTasksStore((s) => s.filterStatus)
@@ -57,7 +69,7 @@ export function HomeView() {
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 page-enter">
       {/* 页面标题 + 状态/搜索筛选 */}
-      <div className="mb-5">
+      <div className="mb-6">
         <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-[26px] font-semibold tracking-tight text-foreground">任务大厅</h1>
@@ -75,6 +87,14 @@ export function HomeView() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Stats 概览 */}
+      <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="总任务" value={list.length} accent="bg-foreground/10 text-foreground" />
+        <StatCard label="招标中" value={list.filter((t) => t.status === 'OPEN').length} accent="bg-blue-500/10 text-blue-700" />
+        <StatCard label="进行中" value={list.filter((t) => t.status === 'ASSIGNED').length} accent="bg-orange-500/10 text-orange-700" />
+        <StatCard label="已完成" value={list.filter((t) => t.status === 'COMPLETED').length} accent="bg-emerald-500/10 text-emerald-700" />
       </div>
 
       {/* 状态筛选 */}
@@ -132,19 +152,24 @@ export function HomeView() {
 
       {/* 任务列表 */}
       {pageItems.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {pageItems.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
         </div>
       ) : (
-        <div className="py-20 text-center">
-          <Inbox className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">
+        <div className="py-24 text-center">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/40 mb-4">
+            <Inbox className="h-7 w-7 text-muted-foreground/40" />
+          </div>
+          <p className="text-sm font-medium text-foreground">
             {search ? `没找到匹配 “${search}” 的任务` : '当前筛选下没有任务'}
           </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {search ? '试试调整搜索词或筛选条件' : '切换一个状态筛选试试'}
+          </p>
           {search && (
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => setSearch('')}>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => setSearch('')}>
               清空搜索
             </Button>
           )}

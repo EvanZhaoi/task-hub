@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
-import { LogOut, ChevronDown, Layers } from 'lucide-react'
+import { LogOut, ChevronDown, Hexagon } from 'lucide-react'
 import { useUserStore } from '@/stores/user'
 import { useTasksStore } from '@/stores/tasks'
 import { MOCK_USERS } from '@/mocks'
@@ -44,11 +44,11 @@ export function AppHeader() {
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md shadow-[0_1px_0_rgba(15,23,42,0.04)]">
       <div className="mx-auto max-w-7xl flex items-center justify-between px-6 h-14">
         <div className="flex items-center gap-8">
-          <Link to="/" className="flex items-center gap-2 no-underline">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-primary to-purple-500 text-sm font-bold text-white shadow-sm">
-              <Layers className="h-3.5 w-3.5" />
+          <Link to="/" className="flex items-center gap-2.5 no-underline group">
+            <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-primary to-purple-600 text-white shadow-sm shadow-primary/20 group-hover:shadow-primary/30 transition-shadow">
+              <Hexagon className="h-3.5 w-3.5 fill-white/20" />
             </div>
-            <h1 className="text-base font-semibold tracking-tight text-foreground">TaskHub</h1>
+            <h1 className="text-[15px] font-semibold tracking-tight text-foreground">TaskHub</h1>
           </Link>
 
           <nav className="flex items-center gap-0.5 text-sm">
@@ -57,13 +57,16 @@ export function AppHeader() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'h-8 px-3 inline-flex items-center rounded-md no-underline transition-colors',
+                  'relative h-8 px-3 inline-flex items-center rounded-md no-underline transition-colors',
                   isActive(item.path)
-                    ? 'bg-foreground/[0.06] text-foreground font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]',
+                    ? 'text-foreground font-medium'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {item.label}
+                {isActive(item.path) && (
+                  <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />
+                )}
               </NavLink>
             ))}
           </nav>

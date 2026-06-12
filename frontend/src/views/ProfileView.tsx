@@ -52,10 +52,12 @@ export function ProfileView() {
                 {currentUser.department} · {roleLabel[currentUser.role]}
               </p>
             </div>
-            <div className="flex gap-6 text-center text-sm">
+            <div className="flex gap-8 text-sm">
               <Stat label="发布" value={myPublished.length} />
+              <div className="w-px bg-border" />
               <Stat label="投标" value={myBidded.length} />
-              <Stat label="接单" value={myAssigned.length} />
+              <div className="w-px bg-border" />
+              <Stat label="接单" value={myAssigned.length} accent="text-primary" />
             </div>
           </div>
         </CardContent>
@@ -149,10 +151,10 @@ export function ProfileView() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, accent }: { label: string; value: number; accent?: string }) {
   return (
     <div>
-      <div className="text-2xl font-semibold text-foreground tabular-nums">{value}</div>
+      <div className={`text-2xl font-semibold tabular-nums tracking-tight ${accent ?? 'text-foreground'}`}>{value}</div>
       <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
     </div>
   )
