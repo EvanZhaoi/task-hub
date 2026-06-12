@@ -85,7 +85,7 @@ export function AppHeader() {
               <select
                 value={currentUser.id}
                 onChange={(e) => handleSwitch(e.target.value)}
-                className="appearance-none h-8 pl-3 pr-7 rounded-md border border-input bg-background text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+                className="appearance-none h-8 pl-3 pr-7 rounded-md border border-transparent bg-muted/30 hover:bg-muted/50 text-sm cursor-pointer focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
                 title="切换身份（demo 用）"
               >
                 {MOCK_USERS.map((u) => (

@@ -43,7 +43,7 @@ export function BossGanttView() {
           <select
             value={accountFilter}
             onChange={(e) => setAccountFilter(e.target.value)}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+            className="h-9 rounded-md border border-transparent bg-muted/30 px-3 text-sm transition-colors hover:bg-muted/50 focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
           >
             <option value="all">全部付款账号</option>
             {MOCK_PAYMENT_ACCOUNTS.map((pa) => (

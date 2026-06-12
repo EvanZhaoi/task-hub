@@ -82,7 +82,7 @@ export function HomeView() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="搜索标题或描述..."
-                className="h-9 w-60 rounded-md border border-input bg-background pl-8 pr-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+                className="h-9 w-60 rounded-md border border-transparent bg-muted/30 pl-8 pr-3 text-sm placeholder:text-muted-foreground/70 transition-colors hover:bg-muted/50 focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
               />
             </div>
           </div>

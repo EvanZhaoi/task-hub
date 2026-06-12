@@ -203,7 +203,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
               <select
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+                className="flex h-10 w-full rounded-md border border-transparent bg-muted/30 px-3 py-2 text-sm transition-colors hover:bg-muted/50 focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
               >
                 {MOCK_PAYMENT_ACCOUNTS.map((pa) => (
                   <option key={pa.id} value={pa.id}>{pa.name}</option>
@@ -229,7 +229,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
                         : c === 'HIGH'
                         ? 'border-red-500 bg-red-50 text-red-800 shadow-sm'
                         : 'border-primary bg-primary/10 text-primary shadow-sm'
-                      : 'border-input bg-background hover:bg-accent',
+                      : 'border-transparent bg-muted/30 hover:bg-muted/50',
                   )}
                 >
                   {complexityLabel[c]}
@@ -246,7 +246,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
                 <select
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+                  className="flex h-10 w-full rounded-md border border-transparent bg-muted/30 px-3 py-2 text-sm transition-colors hover:bg-muted/50 focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
                 >
                   {developers.map((u) => (
                     <option key={u.id} value={u.id}>{u.name} · {u.department}</option>
@@ -256,7 +256,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
             )}
           </div>
           <Field label="附件">
-            <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-input bg-muted/20 text-sm text-muted-foreground gap-2">
+            <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-transparent bg-muted/20 text-sm text-muted-foreground gap-2">
               <Paperclip className="h-4 w-4" />
               <span>点击上传（原型不实现实际存储）</span>
             </div>
