@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import type { TaskStatus, BidStatus, UserRole, Difficulty } from '@/api/types'
+import type { TaskStatus, BidStatus, UserRole, Complexity } from '@/api/types'
 
 export const formatMoney = (amount?: number) =>
   amount === undefined || amount === null ? '—' : `¥${amount.toLocaleString('zh-CN')}`
@@ -31,8 +31,8 @@ export const taskStatusLabel: Record<TaskStatus, string> = {
   COMPLETED: '已完成', FAILED: '流标', CANCELLED: '已取消',
 }
 
-export const difficultyLabel: Record<Difficulty, string> = {
-  EASY: '简单', NORMAL: '普通', HARD: '困难',
+export const complexityLabel: Record<Complexity, string> = {
+  LOW: '简单', MEDIUM: '中等复杂', HIGH: '高度复杂',
 }
 
 export const bidStatusLabel: Record<BidStatus, string> = {

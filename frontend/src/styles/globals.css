@@ -71,10 +71,10 @@
   .badge-failed    { @apply bg-gray-200 text-gray-700; }
   .badge-cancelled { @apply bg-gray-50 text-gray-500 line-through; }
 
-  /* 难度徽章 */
-  .badge-easy      { @apply bg-green-100 text-green-800; }
-  .badge-normal    { @apply bg-gray-100 text-gray-700; }
-  .badge-hard      { @apply bg-red-100 text-red-800; }
+  /* 复杂度徽章 */
+  .badge-low      { @apply bg-green-100 text-green-800; }
+  .badge-medium   { @apply bg-gray-100 text-gray-700; }
+  .badge-high     { @apply bg-red-100 text-red-800; }
 
   /* 投标状态 */
   .bid-active    { @apply bg-blue-50 text-blue-700 border border-blue-200; }

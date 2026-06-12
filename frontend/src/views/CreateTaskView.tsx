@@ -9,8 +9,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import type { Task, User, Difficulty } from '@/api/types'
-import { difficultyLabel } from '@/utils/format'
+import type { Task, User, Complexity } from '@/api/types'
+import { complexityLabel } from '@/utils/format'
 
 export function CreateTaskView() {
   const navigate = useNavigate()
@@ -118,7 +118,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
   const [accountId, setAccountId] = useState(MOCK_PAYMENT_ACCOUNTS[0].id)
   const [budget, setBudget] = useState('')
   const [delivery, setDelivery] = useState('')
-  const [difficulty, setDifficulty] = useState<Difficulty>('NORMAL')
+  const [complexity, setComplexity] = useState<Complexity>('MEDIUM')
   const [assigneeId, setAssigneeId] = useState<User['id']>(developers[0]?.id ?? '')
 
   const reset = () => {
@@ -126,7 +126,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
     setDescription('')
     setBudget('')
     setDelivery('')
-    setDifficulty('NORMAL')
+    setComplexity('MEDIUM')
   }
 
   const submit = () => {
@@ -147,7 +147,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
       biddingDeadline: mode === 'direct' ? today : delivery,
       status: mode === 'direct' ? 'ASSIGNED' : 'OPEN',
       isDirect: mode === 'direct',
-      difficulty,
+      complexity,
       createdBy: currentUser.id,
       assignedBidId: undefined,
       createdAt: today,
@@ -192,22 +192,22 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
               <Input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="例如 800" />
             </Field>
           </div>
-          <Field label="任务难度 *">
+          <Field label="任务复杂度 *">
             <div className="grid grid-cols-3 gap-2">
-              {(['EASY', 'NORMAL', 'HARD'] as Difficulty[]).map((d) => (
+              {(['LOW', 'MEDIUM', 'HIGH'] as Complexity[]).map((c) => (
                 <button
-                  key={d}
+                  key={c}
                   type="button"
-                  onClick={() => setDifficulty(d)}
+                  onClick={() => setComplexity(c)}
                   className={`h-10 rounded-md border text-sm font-medium transition-colors ${
-                    difficulty === d
-                      ? d === 'EASY' ? 'border-green-500 bg-green-50 text-green-800'
-                        : d === 'HARD' ? 'border-red-500 bg-red-50 text-red-800'
+                    complexity === c
+                      ? c === 'LOW' ? 'border-green-500 bg-green-50 text-green-800'
+                        : c === 'HIGH' ? 'border-red-500 bg-red-50 text-red-800'
                         : 'border-primary bg-primary/10 text-primary'
                       : 'border-input bg-background hover:bg-accent'
                   }`}
                 >
-                  {difficultyLabel[d]}
+                  {complexityLabel[c]}
                 </button>
               ))}
             </div>

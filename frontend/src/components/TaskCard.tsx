@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { formatMoney, formatDate } from '@/utils/format'
 import { StatusBadge } from './StatusBadge'
-import { DifficultyBadge } from './DifficultyBadge'
+import { ComplexityBadge } from './ComplexityBadge'
 import type { Task } from '@/api/types'
 
 interface TaskCardProps {
@@ -18,7 +18,7 @@ export function TaskCard({ task }: TaskCardProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-medium text-foreground">{task.title}</h3>
-            <DifficultyBadge difficulty={task.difficulty} />
+            <ComplexityBadge complexity={task.complexity} />
           </div>
           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
             {stripHtml(task.description)}

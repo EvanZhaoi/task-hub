@@ -26,7 +26,7 @@ CREATE TABLE `task` (
   `bidding_deadline`   DATETIME                              COMMENT '招标截止时间（流标判定依据）',
   `status`             TINYINT          NOT NULL DEFAULT 0   COMMENT '0=DRAFT / 1=OPEN / 2=ASSIGNED / 3=COMPLETED / 4=FAILED / 5=CANCELLED',
   `is_direct`          TINYINT(1)       NOT NULL DEFAULT 0   COMMENT '是否直接指名 0=否 1=是',
-  `difficulty`         TINYINT          NOT NULL DEFAULT 1   COMMENT '0=EASY 简单 / 1=NORMAL 普通 / 2=HARD 困难',
+  `complexity`         TINYINT          NOT NULL DEFAULT 1   COMMENT '0=LOW 简单 / 1=MEDIUM 中等复杂 / 2=HIGH 高度复杂',
   `created_by`         BIGINT UNSIGNED  NOT NULL             COMMENT '发布者 user_id',
   `assigned_bid_id`    BIGINT UNSIGNED                       COMMENT '中标投标 ID（冗余）',
   `created_at`         DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -37,7 +37,7 @@ CREATE TABLE `task` (
   KEY `IDX_status_created`    (`status`, `created_at`),
   KEY `IDX_created_by_status`  (`created_by`, `status`),
   KEY `IDX_payment_account`    (`payment_account_id`, `status`),
-  KEY `IDX_difficulty_status`   (`difficulty`, `status`),
+  KEY `IDX_complexity_status`   (`complexity`, `status`),
   KEY `IDX_deleted`            (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='任务主表';

@@ -7,7 +7,7 @@ import { useAttachmentsStore } from '@/stores/attachments'
 import { useChangeLogsStore } from '@/stores/changelogs'
 import { useUserStore } from '@/stores/user'
 import { StatusBadge } from '@/components/StatusBadge'
-import { DifficultyBadge } from '@/components/DifficultyBadge'
+import { ComplexityBadge } from '@/components/ComplexityBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -149,7 +149,7 @@ export function TaskDetailView() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-3xl font-bold text-foreground leading-tight">{task.title}</h1>
-              <DifficultyBadge difficulty={task.difficulty} size="md" />
+              <ComplexityBadge complexity={task.complexity} size="md" />
             </div>
           </div>
           <StatusBadge status={task.status} />
@@ -183,8 +183,8 @@ export function TaskDetailView() {
             <Field label="最终金额" value={formatMoney(task.finalAmount)} />
             <Field label="最终交期" value={formatDate(task.finalDelivery)} />
             <Field label="招标截止" value={formatDate(task.biddingDeadline)} />
-            <Field label="难度">
-              <DifficultyBadge difficulty={task.difficulty} />
+            <Field label="复杂度">
+              <ComplexityBadge complexity={task.complexity} />
             </Field>
           </div>
         </CardContent>

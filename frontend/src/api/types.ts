@@ -4,7 +4,7 @@ export type TaskStatus = 'DRAFT' | 'OPEN' | 'ASSIGNED' | 'COMPLETED' | 'FAILED' 
 export type BidStatus = 'ACTIVE' | 'WITHDRAWN' | 'ACCEPTED' | 'LOST'
 export type ChangeType = 'AMOUNT' | 'DELIVERY' | 'DESCRIPTION' | 'EXTENSION' | 'CANCEL'
 export type UserRole = 'developer' | 'publisher' | 'boss'
-export type Difficulty = 'EASY' | 'NORMAL' | 'HARD'
+export type Complexity = 'LOW' | 'MEDIUM' | 'HIGH'
 
 export interface User {
   id: string
@@ -33,7 +33,7 @@ export interface Task {
   biddingDeadline?: string
   status: TaskStatus
   isDirect: boolean
-  difficulty: Difficulty
+  complexity: Complexity
   createdBy: string
   assignedBidId?: string
   createdAt: string
@@ -81,7 +81,7 @@ export interface CreateTaskRequest {
   budget: number
   expectedDelivery: string
   biddingDeadline?: string
-  difficulty?: Difficulty
+  complexity?: Complexity
 }
 
 export interface DirectAssignRequest extends CreateTaskRequest {
