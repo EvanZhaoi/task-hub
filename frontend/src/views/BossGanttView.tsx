@@ -59,7 +59,7 @@ export function BossGanttView() {
         </div>
       </div>
 
-      <Card className="border-border/60">
+      <Card>
         <CardContent>
           <GanttChart tasks={filtered} mode="boss" />
         </CardContent>

@@ -60,19 +60,19 @@ export function GanttChart({ tasks, mode = 'boss' }: GanttChartProps) {
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-card overflow-x-auto">
-      <div className="relative h-6 border-b border-border/60" style={{ minWidth: 700 }}>
+    <div className="rounded-lg bg-card overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04),0_1px_3px_rgba(15,23,42,0.06)]">
+      <div className="relative h-7 px-3" style={{ minWidth: 700 }}>
         {monthMarkers.map((m) => (
           <div
             key={m.label}
-            className="absolute top-0 bottom-0 border-l border-border/60 text-xs text-muted-foreground pl-1.5"
-            style={{ left: `${m.left}%` }}
+            className="absolute top-0 bottom-0 text-[11px] text-muted-foreground/70 pl-1.5 pt-1.5"
+            style={{ left: `calc(${m.left}% + 0.75rem)` }}
           >
             {m.label}
           </div>
         ))}
       </div>
-      <div className="space-y-1.5 p-3" style={{ minWidth: 700 }}>
+      <div className="space-y-1 p-3" style={{ minWidth: 700 }}>
         {tasks.map((task) => {
           const tStart = new Date(task.createdAt).getTime()
           const tEndDate = task.finalDelivery || task.expectedDelivery || task.createdAt
@@ -88,9 +88,9 @@ export function GanttChart({ tasks, mode = 'boss' }: GanttChartProps) {
               >
                 {task.title}
               </Link>
-              <div className="flex-1 relative h-8 bg-muted/30 rounded">
+              <div className="flex-1 relative h-8 rounded">
                 <div
-                  className={`absolute h-6 rounded ${STATUS_BAR_CLASS[task.status]} flex items-center px-2 text-xs text-white whitespace-nowrap overflow-hidden cursor-pointer transition-transform hover:translate-y-[-1px]`}
+                  className={`absolute h-6 rounded ${STATUS_BAR_CLASS[task.status]} flex items-center px-2 text-xs text-white whitespace-nowrap overflow-hidden cursor-pointer shadow-sm transition-all hover:shadow-md`}
                   style={{ left: `${left}%`, width: `${width}%`, top: 4 }}
                   title={`${task.title} · ${formatDate(task.createdAt)} → ${formatDate(tEndDate)}`}
                 >

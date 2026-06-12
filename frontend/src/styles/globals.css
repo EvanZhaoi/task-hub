@@ -126,7 +126,4 @@
 
   /* 柔和分割线：用 spacing 代替硬分割线的备选 */
   .divider-soft { @apply h-px bg-border/60; }
-
-  /* 时间线小圆点：用于变更记录等 */
-  .timeline-dot { @apply absolute -left-[3.5px] top-2 h-1.5 w-1.5 rounded-full bg-primary/70 ring-4 ring-background; }
 }

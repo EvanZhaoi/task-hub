@@ -189,7 +189,7 @@ export function TaskDetailView() {
       </div>
 
       {/* 需求描述（富文本渲染） */}
-      <Card className="mb-4 border-border">
+      <Card className="mb-4">
         <CardHeader className="pb-3">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">需求描述</div>
         </CardHeader>
@@ -202,7 +202,7 @@ export function TaskDetailView() {
       </Card>
 
       {/* 补充信息 */}
-      <Card className="mb-4 border-border/60">
+      <Card className="mb-4">
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Field label="预算" value={formatMoney(task.budget)} />
@@ -218,7 +218,7 @@ export function TaskDetailView() {
 
       {/* 附件 */}
       {attachments.length > 0 && (
-        <Card className="mb-4 border-border/60">
+        <Card className="mb-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">附件 ({attachments.length})</CardTitle>
           </CardHeader>
@@ -247,7 +247,7 @@ export function TaskDetailView() {
 
       {/* 投标列表 */}
       {(bids.length > 0 || task.status === 'OPEN') && (
-        <Card className="mb-4 border-border/60">
+        <Card className="mb-4">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base">投标 ({bids.length})</CardTitle>
             {task.status === 'OPEN' && (
@@ -310,7 +310,7 @@ export function TaskDetailView() {
 
       {/* 变更记录 */}
       {changeLogs.length > 0 && (
-        <Card className="mb-4 border-border/60">
+        <Card className="mb-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <History className="h-4 w-4" /> 变更记录 ({changeLogs.length})
@@ -343,7 +343,7 @@ export function TaskDetailView() {
       )}
 
       {/* 操作按钮 */}
-      <Card className="mb-4 border-border/60">
+      <Card className="mb-4">
         <CardContent className="flex flex-wrap items-center gap-2">
           {canBid && (
             <Dialog open={bidOpen} onOpenChange={setBidOpen}>

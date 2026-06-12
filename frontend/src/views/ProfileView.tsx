@@ -42,7 +42,7 @@ export function ProfileView() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8 page-enter">
-      <Card className="mb-6 border-border/60">
+      <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <UserAvatar user={currentUser} size="lg" />
@@ -133,7 +133,7 @@ export function ProfileView() {
                   />
                 ))}
               </div>
-              <Card className="border-border/60">
+              <Card className="">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">我的任务时间线</CardTitle>
                 </CardHeader>
@@ -171,7 +171,7 @@ function TaskRow({ task, sub }: { task: any; sub: React.ReactNode }) {
   return (
     <Link
       to={`/task/${task.id}`}
-      className="group block rounded-lg border border-border/60 bg-card p-4 transition-colors hover:border-foreground/15"
+      className="group block rounded-lg bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-shadow hover:shadow-[0_4px_10px_rgba(15,23,42,0.06)]"
     >
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">

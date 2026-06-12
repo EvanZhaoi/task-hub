@@ -153,7 +153,7 @@ export function HomeView() {
 
       {/* 分页 */}
       {filtered.length > pageSize && (
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+        <div className="flex items-center justify-between mt-8">
           <span className="text-sm text-muted-foreground">
             显示 {start + 1}-{Math.min(start + pageSize, filtered.length)} / 共 {filtered.length} 条
           </span>

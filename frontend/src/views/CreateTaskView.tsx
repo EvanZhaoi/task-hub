@@ -262,7 +262,7 @@ function CreateTaskDialog({ open, mode, onClose, onSubmit }: CreateTaskDialogPro
             </div>
           </Field>
         </div>
-        <div className="flex gap-2 justify-end mt-4 pt-3 border-t border-border">
+        <div className="flex gap-2 justify-end mt-6">
           <Button variant="outline" onClick={() => { reset(); onClose() }}>取消</Button>
           <Button onClick={submit} className="gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
