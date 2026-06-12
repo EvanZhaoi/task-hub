@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Search, Inbox, ListFilter } from 'lucide-react'
 import { useTasksStore } from '@/stores/tasks'
+import { useUserStore } from '@/stores/user'
 import { TaskCard } from '@/components/TaskCard'
 import { Button } from '@/components/ui/button'
 import type { TaskStatus, Complexity } from '@/api/types'
@@ -31,6 +32,7 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
 
 export function HomeView() {
   const list = useTasksStore((s) => s.list)
+  const currentUser = useUserStore((s) => s.currentUser)
   const filter = useTasksStore((s) => s.filterStatus)
   const complexityFilter = useTasksStore((s) => s.filterComplexity)
   const search = useTasksStore((s) => s.searchQuery)
@@ -68,12 +70,15 @@ export function HomeView() {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8 page-enter">
-      {/* 页面标题 + 状态/搜索筛选 */}
-      <div className="mb-6">
-        <div className="flex items-end justify-between flex-wrap gap-3">
+      {/* Hero 概览卡 */}
+      <div className="mb-6 relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/[0.07] via-background to-purple-500/[0.05] p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_1px_3px_rgba(15,23,42,0.06)]">
+        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/10 blur-2xl" />
+        <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-purple-400/10 blur-2xl" />
+        <div className="relative flex items-end justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-[26px] font-semibold tracking-tight text-foreground">任务大厅</h1>
-            <p className="text-sm text-muted-foreground mt-1">所有公开任务，可投标</p>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-primary/70 mb-2">任务大厅</div>
+            <h1 className="text-[28px] font-semibold tracking-tight text-foreground">你好、{currentUser?.name || '访客'} 👋</h1>
+            <p className="text-sm text-muted-foreground mt-1.5">这里有 <span className="font-semibold text-foreground">{list.filter((t) => t.status === 'OPEN').length}</span> 个新任务可以投标</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
@@ -82,7 +87,7 @@ export function HomeView() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="搜索标题或描述..."
-                className="h-9 w-60 rounded-md border border-transparent bg-muted/30 pl-8 pr-3 text-sm placeholder:text-muted-foreground/70 transition-colors hover:bg-muted/50 focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+                className="h-9 w-60 rounded-md border border-transparent bg-card pl-8 pr-3 text-sm placeholder:text-muted-foreground/70 transition-colors hover:bg-background focus:outline-none focus:bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
               />
             </div>
           </div>

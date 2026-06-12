@@ -126,4 +126,12 @@
 
   /* 柔和分割线：用 spacing 代替硬分割线的备选 */
   .divider-soft { @apply h-px bg-border/60; }
+
+  /* body 背景：极微妙的渐变 + 网格点状（只起到给纯色一点质感的作用） */
+  body {
+    background-color: #fafafa;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(94, 106, 210, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
+  }
 }
