@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router'
 import { useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import {
   ArrowLeft, FileText, Download, History, User as UserIcon, Wallet, Calendar,
   Clock, Check, X, CopyPlus, Hourglass, HandCoins, Inbox,
@@ -23,14 +24,15 @@ import { cn } from '@/lib/utils'
 export function TaskDetailView() {
   const { id } = useParams<{ id: string }>()
   const task = useTasksStore((s) => (id ? s.getById(id) : undefined))
-  const bids = useBidsStore((s) => (id ? s.getByTaskId(id) : []))
-  const attachments = useAttachmentsStore((s) => (id ? s.getByTaskId(id) : []))
-  const changeLogs = useChangeLogsStore((s) => (id ? s.getByTaskId(id) : []))
+  const bids = useBidsStore(useShallow((s) => (id ? s.getByTaskId(id) : [])))
+  const attachments = useAttachmentsStore(useShallow((s) => (id ? s.getByTaskId(id) : [])))
+  const changeLogs = useChangeLogsStore(useShallow((s) => (id ? s.getByTaskId(id) : [])))
 
   const currentUser = useUserStore((s) => s.currentUser)
   const acceptBid = useBidsStore((s) => s.markOthersLost)
   const setStatus = useTasksStore((s) => s.setStatus)
   const updateTask = useTasksStore((s) => s.updateTask)
+  const addTask = useTasksStore((s) => s.addTask)
   const addBid = useBidsStore((s) => s.addBid)
   const addLog = useChangeLogsStore((s) => s.addLog)
   const navigate = useNavigate()
@@ -133,13 +135,16 @@ export function TaskDetailView() {
   }
 
   const handleClone = () => {
-    updateTask(task.id, {
+    // 真正新建一条 DRAFT 任务，保留原任务的模板字段，清掉执行相关字段
+    addTask({
       ...task,
       id: 't_' + Date.now(),
       status: 'DRAFT',
       finalAmount: undefined,
       finalDelivery: undefined,
       assignedBidId: undefined,
+      createdAt: new Date().toISOString().slice(0, 10),
+      updatedAt: new Date().toISOString().slice(0, 10),
     })
     navigate('/')
   }
