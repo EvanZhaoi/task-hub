@@ -15,9 +15,9 @@ export function TaskCard({ task }: TaskCardProps) {
     <Link
       to={`/task/${task.id}`}
       className={cn(
-        'group block rounded-lg border border-border bg-card p-5',
-        'transition-all duration-150',
-        'hover:border-foreground/15 hover:shadow-[0_4px_12px_rgba(15,23,42,0.06)]',
+        'group block rounded-lg border border-border/60 bg-card p-5',
+        'transition-colors duration-150',
+        'hover:border-foreground/15',
       )}
     >
       <div className="flex items-start justify-between gap-4 mb-3">

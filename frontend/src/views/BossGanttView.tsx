@@ -23,7 +23,7 @@ export function BossGanttView() {
   if (!isBoss) {
     return (
       <div className="mx-auto max-w-7xl px-6 py-16 text-center page-enter">
-        <div className="rounded-lg border border-dashed bg-card p-12 inline-block">
+        <div className="inline-block py-12">
           <Lock className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
           <p className="text-sm text-muted-foreground">老板视图仅限 boss 角色访问</p>
           <p className="text-xs text-muted-foreground mt-2">请在右上角切换到 Evan（老板）身份</p>
@@ -59,7 +59,7 @@ export function BossGanttView() {
         </div>
       </div>
 
-      <Card className="border-border">
+      <Card className="border-border/60">
         <CardContent>
           <GanttChart tasks={filtered} mode="boss" />
         </CardContent>

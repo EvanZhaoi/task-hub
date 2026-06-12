@@ -53,19 +53,19 @@ export function GanttChart({ tasks, mode = 'boss' }: GanttChartProps) {
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground text-sm">
+      <div className="py-12 text-center text-sm text-muted-foreground">
         没有任务可以显示
       </div>
     )
   }
 
   return (
-    <div className="rounded-lg border bg-card overflow-x-auto">
-      <div className="relative h-6 border-b border-border" style={{ minWidth: 700 }}>
+    <div className="rounded-lg border border-border/60 bg-card overflow-x-auto">
+      <div className="relative h-6 border-b border-border/60" style={{ minWidth: 700 }}>
         {monthMarkers.map((m) => (
           <div
             key={m.label}
-            className="absolute top-0 bottom-0 border-l border-border text-xs text-muted-foreground pl-1.5"
+            className="absolute top-0 bottom-0 border-l border-border/60 text-xs text-muted-foreground pl-1.5"
             style={{ left: `${m.left}%` }}
           >
             {m.label}

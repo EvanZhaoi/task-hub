@@ -78,16 +78,16 @@ export function HomeView() {
       </div>
 
       {/* 状态筛选 */}
-      <div className="mb-3 flex items-center gap-1 p-1 rounded-lg border border-border bg-card w-fit">
+      <div className="mb-4 flex items-center gap-0.5">
         {FILTERS.map((f) => (
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={cn(
-              'h-7 px-3 rounded-md text-sm font-medium transition-all',
+              'h-7 px-3 rounded-md text-sm font-medium transition-colors',
               filter === f.key
-                ? 'bg-foreground text-background shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {f.label}
@@ -104,10 +104,10 @@ export function HomeView() {
         <button
           onClick={() => setComplexityFilter('all')}
           className={cn(
-            'h-7 px-3 rounded-full border text-xs font-medium transition-all',
+            'h-7 px-3 rounded-full text-xs font-medium transition-colors',
             complexityFilter === 'all'
-              ? 'border-foreground bg-foreground text-background'
-              : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30',
+              ? 'bg-foreground text-background'
+              : 'bg-muted/50 text-muted-foreground hover:text-foreground',
           )}
         >
           全部
@@ -119,14 +119,9 @@ export function HomeView() {
               key={c}
               onClick={() => setComplexityFilter(c)}
               className={cn(
-                'badge transition-all',
-                active
-                  ? c === 'LOW'
-                    ? 'badge-low ring-1 ring-green-300'
-                    : c === 'HIGH'
-                    ? 'badge-high ring-1 ring-red-300'
-                    : 'badge-medium ring-1 ring-gray-300'
-                  : 'opacity-50 hover:opacity-100',
+                'badge transition-opacity',
+                active ? c === 'LOW' ? 'badge-low' : c === 'HIGH' ? 'badge-high' : 'badge-medium'
+                       : 'opacity-50 hover:opacity-80',
               )}
             >
               {complexityLabel[c]}
@@ -137,14 +132,14 @@ export function HomeView() {
 
       {/* 任务列表 */}
       {pageItems.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {pageItems.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed bg-card p-16 text-center">
-          <Inbox className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+        <div className="py-20 text-center">
+          <Inbox className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
           <p className="text-sm text-muted-foreground">
             {search ? `没找到匹配 “${search}” 的任务` : '当前筛选下没有任务'}
           </p>

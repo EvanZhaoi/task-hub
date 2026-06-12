@@ -23,7 +23,7 @@ export function CreateTaskView() {
   if (currentUser?.role === 'developer') {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center page-enter">
-        <div className="rounded-lg border border-dashed bg-card p-12">
+        <div className="py-12">
           <p className="text-sm text-muted-foreground">只有发布者（publisher）和老板（boss）可以发布任务</p>
           <p className="text-xs text-muted-foreground mt-2">请在右上角切换到发布者身份</p>
         </div>

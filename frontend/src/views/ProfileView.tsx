@@ -42,7 +42,7 @@ export function ProfileView() {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8 page-enter">
-      <Card className="mb-6 border-border">
+      <Card className="mb-6 border-border/60">
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <UserAvatar user={currentUser} size="lg" />
@@ -133,7 +133,7 @@ export function ProfileView() {
                   />
                 ))}
               </div>
-              <Card className="border-border">
+              <Card className="border-border/60">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">我的任务时间线</CardTitle>
                 </CardHeader>
@@ -160,8 +160,8 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed bg-card p-12 text-center">
-      <Inbox className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+    <div className="py-16 text-center">
+      <Inbox className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
       <p className="text-sm text-muted-foreground">{text}</p>
     </div>
   )
@@ -171,7 +171,7 @@ function TaskRow({ task, sub }: { task: any; sub: React.ReactNode }) {
   return (
     <Link
       to={`/task/${task.id}`}
-      className="group block rounded-lg border border-border bg-card p-4 transition-all hover:border-foreground/15 hover:shadow-[0_2px_8px_rgba(15,23,42,0.04)]"
+      className="group block rounded-lg border border-border/60 bg-card p-4 transition-colors hover:border-foreground/15"
     >
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">

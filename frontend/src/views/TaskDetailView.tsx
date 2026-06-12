@@ -151,7 +151,7 @@ export function TaskDetailView() {
       </Link>
 
       {/* 标题 + 状态 */}
-      <div className="rounded-lg border border-border bg-card p-6 mb-4">
+      <div className="rounded-lg border border-border/60 bg-card p-6 mb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap mb-1">
@@ -163,7 +163,7 @@ export function TaskDetailView() {
           </div>
           <StatusBadge status={task.status} />
         </div>
-        <div className="flex items-center gap-5 text-sm text-muted-foreground mt-5 flex-wrap pt-4 border-t border-border">
+        <div className="flex items-center gap-5 text-sm text-muted-foreground mt-4 flex-wrap">
           <span className="inline-flex items-center gap-1.5">
             <UserIcon className="h-3.5 w-3.5" />
             {userName(task.createdBy)}
@@ -197,7 +197,7 @@ export function TaskDetailView() {
       </Card>
 
       {/* 补充信息 */}
-      <Card className="mb-4 border-border">
+      <Card className="mb-4 border-border/60">
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Field label="预算" value={formatMoney(task.budget)} />
@@ -213,7 +213,7 @@ export function TaskDetailView() {
 
       {/* 附件 */}
       {attachments.length > 0 && (
-        <Card className="mb-4 border-border">
+        <Card className="mb-4 border-border/60">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">附件 ({attachments.length})</CardTitle>
           </CardHeader>
@@ -242,7 +242,7 @@ export function TaskDetailView() {
 
       {/* 投标列表 */}
       {(bids.length > 0 || task.status === 'OPEN') && (
-        <Card className="mb-4 border-border">
+        <Card className="mb-4 border-border/60">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base">投标 ({bids.length})</CardTitle>
             {task.status === 'OPEN' && (
@@ -254,7 +254,7 @@ export function TaskDetailView() {
           </CardHeader>
           <CardContent>
             {bids.length === 0 ? (
-              <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+              <div className="py-8 text-center text-sm text-muted-foreground">
                 还没有人投标
               </div>
             ) : (
@@ -263,10 +263,10 @@ export function TaskDetailView() {
                   <div
                     key={bid.id}
                     className={cn(
-                      'flex items-start gap-3 p-3 rounded-md border transition-colors',
-                      bid.status === 'ACCEPTED' ? 'border-emerald-200 bg-emerald-50/50'
-                        : bid.status === 'LOST' ? 'border-border bg-muted/30 opacity-60'
-                        : 'border-border',
+                      'flex items-start gap-3 p-3 rounded-md transition-colors',
+                      bid.status === 'ACCEPTED' ? 'bg-emerald-50/60'
+                        : bid.status === 'LOST' ? 'bg-muted/20 opacity-60'
+                        : 'hover:bg-accent/30',
                     )}
                   >
                     <UserAvatar user={{ name: userName(bid.bidderId), role: 'developer' }} size="md" />
@@ -305,16 +305,19 @@ export function TaskDetailView() {
 
       {/* 变更记录 */}
       {changeLogs.length > 0 && (
-        <Card className="mb-4 border-border">
+        <Card className="mb-4 border-border/60">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <History className="h-4 w-4" /> 变更记录 ({changeLogs.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4 relative">
+              {/* 柔和的连续时间线 */}
+              <div className="absolute left-[5px] top-2 bottom-2 w-px bg-border/80" />
               {changeLogs.map((log) => (
-                <div key={log.id} className="border-l-2 border-primary/40 pl-3 py-1.5">
+                <div key={log.id} className="relative pl-7">
+                  <div className="timeline-dot" />
                   <div className="flex items-center gap-2 text-sm">
                     <span className="font-medium">{changeTypeLabel[log.changeType]}</span>
                     <span className="text-xs text-muted-foreground">{log.createdAt}</span>
@@ -335,7 +338,7 @@ export function TaskDetailView() {
       )}
 
       {/* 操作按钮 */}
-      <Card className="mb-4 border-border">
+      <Card className="mb-4 border-border/60">
         <CardContent className="flex flex-wrap items-center gap-2">
           {canBid && (
             <Dialog open={bidOpen} onOpenChange={setBidOpen}>
