@@ -3,7 +3,8 @@ import { useTasksStore } from '@/stores/tasks'
 import { TaskCard } from '@/components/TaskCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { TaskStatus } from '@/api/types'
+import type { TaskStatus, Difficulty } from '@/api/types'
+import { difficultyLabel } from '@/utils/format'
 
 const FILTERS: { key: TaskStatus | 'all'; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -13,13 +14,17 @@ const FILTERS: { key: TaskStatus | 'all'; label: string }[] = [
   { key: 'FAILED', label: '流标/取消' },
 ]
 
+const DIFFICULTIES: Difficulty[] = ['EASY', 'NORMAL', 'HARD']
+
 export function HomeView() {
   const list = useTasksStore((s) => s.list)
   const filter = useTasksStore((s) => s.filterStatus)
+  const diffFilter = useTasksStore((s) => s.filterDifficulty)
   const search = useTasksStore((s) => s.searchQuery)
   const page = useTasksStore((s) => s.page)
   const pageSize = useTasksStore((s) => s.pageSize)
   const setFilter = useTasksStore((s) => s.setFilter)
+  const setDiffFilter = useTasksStore((s) => s.setDifficultyFilter)
   const setSearch = useTasksStore((s) => s.setSearch)
   const setPage = useTasksStore((s) => s.setPage)
 
@@ -28,6 +33,9 @@ export function HomeView() {
     if (filter !== 'all') {
       if (filter === 'FAILED') arr = arr.filter((t) => t.status === 'FAILED' || t.status === 'CANCELLED')
       else arr = arr.filter((t) => t.status === filter)
+    }
+    if (diffFilter !== 'all') {
+      arr = arr.filter((t) => t.difficulty === diffFilter)
     }
     const q = search.trim().toLowerCase()
     if (q) {
@@ -38,7 +46,7 @@ export function HomeView() {
       )
     }
     return arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [list, filter, search])
+  }, [list, filter, diffFilter, search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage = Math.min(page, totalPages)
@@ -52,7 +60,7 @@ export function HomeView() {
           <h1 className="text-2xl font-semibold text-foreground">任务大厅</h1>
           <p className="text-sm text-muted-foreground mt-1">所有公开任务，可投标</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -72,6 +80,34 @@ export function HomeView() {
             ))}
           </div>
         </div>
+      </div>
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">难度：</span>
+        <button
+          onClick={() => setDiffFilter('all')}
+          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+            diffFilter === 'all'
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border bg-background hover:bg-accent'
+          }`}
+        >
+          全部
+        </button>
+        {DIFFICULTIES.map((d) => (
+          <button
+            key={d}
+            onClick={() => setDiffFilter(d)}
+            className={`badge border ${
+              diffFilter === d
+                ? d === 'EASY' ? 'badge-easy border-green-300 ring-1 ring-green-300'
+                  : d === 'HARD' ? 'badge-hard border-red-300 ring-1 ring-red-300'
+                  : 'badge-normal border-gray-300 ring-1 ring-gray-300'
+                : 'opacity-60 hover:opacity-100 border-transparent'
+            }`}
+          >
+            {difficultyLabel[d]}
+          </button>
+        ))}
       </div>
 
       {pageItems.length > 0 ? (

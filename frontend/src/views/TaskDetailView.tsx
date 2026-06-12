@@ -7,6 +7,7 @@ import { useAttachmentsStore } from '@/stores/attachments'
 import { useChangeLogsStore } from '@/stores/changelogs'
 import { useUserStore } from '@/stores/user'
 import { StatusBadge } from '@/components/StatusBadge'
+import { DifficultyBadge } from '@/components/DifficultyBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -145,7 +146,12 @@ export function TaskDetailView() {
       {/* 标题 + 状态 */}
       <div className="rounded-lg border bg-card p-6 mb-4">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-3xl font-bold text-foreground leading-tight flex-1">{task.title}</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold text-foreground leading-tight">{task.title}</h1>
+              <DifficultyBadge difficulty={task.difficulty} size="md" />
+            </div>
+          </div>
           <StatusBadge status={task.status} />
         </div>
         <div className="flex items-center gap-5 text-sm text-muted-foreground mt-4 flex-wrap">
@@ -172,11 +178,14 @@ export function TaskDetailView() {
       {/* 补充信息 */}
       <Card className="mb-4">
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Field label="预算" value={formatMoney(task.budget)} />
             <Field label="最终金额" value={formatMoney(task.finalAmount)} />
             <Field label="最终交期" value={formatDate(task.finalDelivery)} />
             <Field label="招标截止" value={formatDate(task.biddingDeadline)} />
+            <Field label="难度">
+              <DifficultyBadge difficulty={task.difficulty} />
+            </Field>
           </div>
         </CardContent>
       </Card>
@@ -376,11 +385,11 @@ export function TaskDetailView() {
   )
 }
 
-function Field({ label, value }: { label: string; value?: string }) {
+function Field({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-base font-medium mt-0.5">{value || '—'}</div>
+      <div className="text-base font-medium mt-0.5">{children ?? (value || '—')}</div>
     </div>
   )
 }

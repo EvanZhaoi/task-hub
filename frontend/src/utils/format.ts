@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import type { TaskStatus, BidStatus, UserRole } from '@/api/types'
+import type { TaskStatus, BidStatus, UserRole, Difficulty } from '@/api/types'
 
 export const formatMoney = (amount?: number) =>
   amount === undefined || amount === null ? '—' : `¥${amount.toLocaleString('zh-CN')}`
@@ -29,6 +29,10 @@ export const fileSizeFmt = (bytes: number): string => {
 export const taskStatusLabel: Record<TaskStatus, string> = {
   DRAFT: '草稿', OPEN: '招标中', ASSIGNED: '进行中',
   COMPLETED: '已完成', FAILED: '流标', CANCELLED: '已取消',
+}
+
+export const difficultyLabel: Record<Difficulty, string> = {
+  EASY: '简单', NORMAL: '普通', HARD: '困难',
 }
 
 export const bidStatusLabel: Record<BidStatus, string> = {
