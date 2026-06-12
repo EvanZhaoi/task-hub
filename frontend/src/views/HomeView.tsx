@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
+import { Search, Inbox, ListFilter } from 'lucide-react'
 import { useTasksStore } from '@/stores/tasks'
 import { TaskCard } from '@/components/TaskCard'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import type { TaskStatus, Complexity } from '@/api/types'
 import { complexityLabel } from '@/utils/format'
+import { cn } from '@/lib/utils'
 
 const FILTERS: { key: TaskStatus | 'all'; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -54,62 +55,87 @@ export function HomeView() {
   const pageItems = filtered.slice(start, start + pageSize)
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">任务大厅</h1>
-          <p className="text-sm text-muted-foreground mt-1">所有公开任务，可投标</p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索标题或描述..."
-            className="w-60"
-          />
-          <div className="flex gap-1">
-            {FILTERS.map((f) => (
-              <Button
-                key={f.key}
-                size="sm"
-                variant={filter === f.key ? 'default' : 'outline'}
-                onClick={() => setFilter(f.key)}
-              >
-                {f.label}
-              </Button>
-            ))}
+    <div className="mx-auto max-w-7xl px-6 py-8 page-enter">
+      {/* 页面标题 + 状态/搜索筛选 */}
+      <div className="mb-5">
+        <div className="flex items-end justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-[26px] font-semibold tracking-tight text-foreground">任务大厅</h1>
+            <p className="text-sm text-muted-foreground mt-1">所有公开任务，可投标</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="搜索标题或描述..."
+                className="h-9 w-60 rounded-md border border-input bg-background pl-8 pr-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+              />
+            </div>
           </div>
         </div>
       </div>
-      <div className="mb-4 flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-muted-foreground">复杂度：</span>
-        <button
-          onClick={() => setComplexityFilter('all')}
-          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-            complexityFilter === 'all'
-              ? 'border-foreground bg-foreground text-background'
-              : 'border-border bg-background hover:bg-accent'
-          }`}
-        >
-          全部
-        </button>
-        {COMPLEXITIES.map((c) => (
+
+      {/* 状态筛选 */}
+      <div className="mb-3 flex items-center gap-1 p-1 rounded-lg border border-border bg-card w-fit">
+        {FILTERS.map((f) => (
           <button
-            key={c}
-            onClick={() => setComplexityFilter(c)}
-            className={`badge border ${
-              complexityFilter === c
-                ? c === 'LOW' ? 'badge-low border-green-300 ring-1 ring-green-300'
-                  : c === 'HIGH' ? 'badge-high border-red-300 ring-1 ring-red-300'
-                  : 'badge-medium border-gray-300 ring-1 ring-gray-300'
-                : 'opacity-60 hover:opacity-100 border-transparent'
-            }`}
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={cn(
+              'h-7 px-3 rounded-md text-sm font-medium transition-all',
+              filter === f.key
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+            )}
           >
-            {complexityLabel[c]}
+            {f.label}
           </button>
         ))}
       </div>
 
+      {/* 复杂度筛选 */}
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <ListFilter className="h-3.5 w-3.5" />
+          复杂度
+        </span>
+        <button
+          onClick={() => setComplexityFilter('all')}
+          className={cn(
+            'h-7 px-3 rounded-full border text-xs font-medium transition-all',
+            complexityFilter === 'all'
+              ? 'border-foreground bg-foreground text-background'
+              : 'border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30',
+          )}
+        >
+          全部
+        </button>
+        {COMPLEXITIES.map((c) => {
+          const active = complexityFilter === c
+          return (
+            <button
+              key={c}
+              onClick={() => setComplexityFilter(c)}
+              className={cn(
+                'badge transition-all',
+                active
+                  ? c === 'LOW'
+                    ? 'badge-low ring-1 ring-green-300'
+                    : c === 'HIGH'
+                    ? 'badge-high ring-1 ring-red-300'
+                    : 'badge-medium ring-1 ring-gray-300'
+                  : 'opacity-50 hover:opacity-100',
+              )}
+            >
+              {complexityLabel[c]}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* 任务列表 */}
       {pageItems.length > 0 ? (
         <div className="space-y-3">
           {pageItems.map((task) => (
@@ -117,8 +143,11 @@ export function HomeView() {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border bg-card p-12 text-center text-muted-foreground">
-          <p>{search ? `没找到匹配 “${search}” 的任务` : '当前筛选下没有任务'}</p>
+        <div className="rounded-lg border border-dashed bg-card p-16 text-center">
+          <Inbox className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">
+            {search ? `没找到匹配 “${search}” 的任务` : '当前筛选下没有任务'}
+          </p>
           {search && (
             <Button variant="outline" size="sm" className="mt-3" onClick={() => setSearch('')}>
               清空搜索
@@ -127,6 +156,7 @@ export function HomeView() {
         </div>
       )}
 
+      {/* 分页 */}
       {filtered.length > pageSize && (
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
           <span className="text-sm text-muted-foreground">

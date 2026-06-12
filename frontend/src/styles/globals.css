@@ -56,7 +56,10 @@
 /* ---- 全局基础样式 ---- */
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground; }
+  body {
+    @apply text-foreground;
+    background-color: #fafafa;
+  }
 }
 
 /* ---- 状态徽章（项目自定义）---- */
@@ -112,5 +115,12 @@
     @apply border-l-4 border-primary bg-muted/30 pl-3 py-1;
     color: #6b7280;
     margin: 14px 0;
+  }
+
+  /* 页面与卡片交互动效（Linear 风格：克制、但顺滑） */
+  .page-enter { animation: fadeUp 200ms ease-out; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 }

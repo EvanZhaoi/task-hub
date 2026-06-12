@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
+import { Wallet, Calendar, Clock, Pin, User as UserIcon } from 'lucide-react'
 import { formatMoney, formatDate } from '@/utils/format'
 import { StatusBadge } from './StatusBadge'
 import { ComplexityBadge } from './ComplexityBadge'
 import type { Task } from '@/api/types'
+import { cn } from '@/lib/utils'
 
 interface TaskCardProps {
   task: Task
@@ -12,32 +14,52 @@ export function TaskCard({ task }: TaskCardProps) {
   return (
     <Link
       to={`/task/${task.id}`}
-      className="block rounded-lg border bg-card p-5 transition-shadow hover:border-foreground/20 hover:shadow-sm"
+      className={cn(
+        'group block rounded-lg border border-border bg-card p-5',
+        'transition-all duration-150',
+        'hover:border-foreground/15 hover:shadow-[0_4px_12px_rgba(15,23,42,0.06)]',
+      )}
     >
-      <div className="flex items-start justify-between gap-4 mb-2">
+      <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-medium text-foreground">{task.title}</h3>
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+              {task.title}
+            </h3>
             <ComplexityBadge complexity={task.complexity} />
           </div>
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
             {stripHtml(task.description)}
           </p>
         </div>
         <StatusBadge status={task.status} />
       </div>
-      <div className="flex items-center gap-5 text-xs text-muted-foreground mt-3 flex-wrap">
-        <span>💰 预算 <span className="text-foreground font-medium">{formatMoney(task.budget)}</span></span>
-        <span>📅 期望 <span className="text-foreground">{formatDate(task.expectedDelivery)}</span></span>
-        {task.status === 'OPEN' && (
-          <span>⏰ 招标截止 <span className="text-foreground">{formatDate(task.biddingDeadline)}</span></span>
+
+      <div className="flex items-center gap-x-5 gap-y-2 text-xs text-muted-foreground flex-wrap pt-1">
+        <Meta icon={Wallet} label="预算" value={formatMoney(task.budget)} highlight />
+        <Meta icon={Calendar} label="期望" value={formatDate(task.expectedDelivery)} />
+        {task.status === 'OPEN' && task.biddingDeadline && (
+          <Meta icon={Clock} label="截止" value={formatDate(task.biddingDeadline)} />
         )}
         {(task.status === 'ASSIGNED' || task.status === 'COMPLETED') && task.finalDelivery && (
-          <span>📌 交期 <span className="text-foreground">{formatDate(task.finalDelivery)}</span></span>
+          <Meta icon={Pin} label="交期" value={formatDate(task.finalDelivery)} />
         )}
-        <span className="ml-auto">👤 {userName(task.createdBy)}</span>
+        <span className="ml-auto inline-flex items-center gap-1.5">
+          <UserIcon className="h-3 w-3" />
+          {userName(task.createdBy)}
+        </span>
       </div>
     </Link>
+  )
+}
+
+function Meta({ icon: Icon, label, value, highlight }: { icon: typeof Wallet; label: string; value: string; highlight?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Icon className="h-3 w-3" />
+      {label}
+      <span className={cn('font-medium', highlight ? 'text-foreground' : 'text-foreground/90')}>{value}</span>
+    </span>
   )
 }
 

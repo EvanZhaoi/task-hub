@@ -1,6 +1,9 @@
 import { useParams, Link, useNavigate } from 'react-router'
 import { useState } from 'react'
-import { ArrowLeft, FileText, Download, History } from 'lucide-react'
+import {
+  ArrowLeft, FileText, Download, History, User as UserIcon, Wallet, Calendar,
+  Clock, Check, X, CopyPlus, Hourglass, HandCoins, Inbox,
+} from 'lucide-react'
 import { useTasksStore } from '@/stores/tasks'
 import { useBidsStore } from '@/stores/bids'
 import { useAttachmentsStore } from '@/stores/attachments'
@@ -8,6 +11,7 @@ import { useChangeLogsStore } from '@/stores/changelogs'
 import { useUserStore } from '@/stores/user'
 import { StatusBadge } from '@/components/StatusBadge'
 import { ComplexityBadge } from '@/components/ComplexityBadge'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -41,9 +45,12 @@ export function TaskDetailView() {
 
   if (!task) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-8 text-center text-muted-foreground">
-        <p>任务不存在</p>
-        <Link to="/" className="text-primary hover:underline mt-2 inline-block">返回任务大厅</Link>
+      <div className="mx-auto max-w-5xl px-6 py-16 text-center page-enter">
+        <Inbox className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+        <p className="text-sm text-muted-foreground">任务不存在</p>
+        <Link to="/" className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-3">
+          <ArrowLeft className="h-3 w-3" /> 返回任务大厅
+        </Link>
       </div>
     )
   }
@@ -138,34 +145,48 @@ export function TaskDetailView() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-6 py-8 page-enter">
       <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-4">
         <ArrowLeft className="h-3 w-3" /> 返回任务大厅
       </Link>
 
       {/* 标题 + 状态 */}
-      <div className="rounded-lg border bg-card p-6 mb-4">
+      <div className="rounded-lg border border-border bg-card p-6 mb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-bold text-foreground leading-tight">{task.title}</h1>
+            <div className="flex items-center gap-2.5 flex-wrap mb-1">
               <ComplexityBadge complexity={task.complexity} size="md" />
+              <h1 className="text-[28px] font-semibold tracking-tight text-foreground leading-tight">
+                {task.title}
+              </h1>
             </div>
           </div>
           <StatusBadge status={task.status} />
         </div>
-        <div className="flex items-center gap-5 text-sm text-muted-foreground mt-4 flex-wrap">
-          <span>👤 {userName(task.createdBy)}</span>
-          <span>💰 预算 <span className="text-foreground font-medium">{formatMoney(task.budget)}</span></span>
-          <span>📅 期望 <span className="text-foreground">{formatDate(task.expectedDelivery)}</span></span>
-          <span>🕐 创建于 <span className="text-foreground">{formatDate(task.createdAt)}</span></span>
+        <div className="flex items-center gap-5 text-sm text-muted-foreground mt-5 flex-wrap pt-4 border-t border-border">
+          <span className="inline-flex items-center gap-1.5">
+            <UserIcon className="h-3.5 w-3.5" />
+            {userName(task.createdBy)}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Wallet className="h-3.5 w-3.5" />
+            预算 <span className="text-foreground font-semibold">{formatMoney(task.budget)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5" />
+            期望 <span className="text-foreground">{formatDate(task.expectedDelivery)}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 ml-auto">
+            <Clock className="h-3.5 w-3.5" />
+            创建于 <span className="text-foreground">{formatDate(task.createdAt)}</span>
+          </span>
         </div>
       </div>
 
       {/* 需求描述（富文本渲染） */}
-      <Card className="mb-4">
+      <Card className="mb-4 border-border">
         <CardHeader className="pb-3">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">需求描述</div>
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">需求描述</div>
         </CardHeader>
         <CardContent>
           <div
@@ -176,7 +197,7 @@ export function TaskDetailView() {
       </Card>
 
       {/* 补充信息 */}
-      <Card className="mb-4">
+      <Card className="mb-4 border-border">
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <Field label="预算" value={formatMoney(task.budget)} />
@@ -192,15 +213,15 @@ export function TaskDetailView() {
 
       {/* 附件 */}
       {attachments.length > 0 && (
-        <Card className="mb-4">
+        <Card className="mb-4 border-border">
           <CardHeader className="pb-3">
-            <CardTitle>附件 ({attachments.length})</CardTitle>
+            <CardTitle className="text-base">附件 ({attachments.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {attachments.map((att) => (
-                <div key={att.id} className="flex items-center gap-3 p-2 hover:bg-accent/50 rounded">
-                  <div className="flex h-9 w-9 items-center justify-center rounded bg-primary/10 text-primary text-xs font-semibold">
+                <div key={att.id} className="flex items-center gap-3 p-2.5 hover:bg-accent/50 rounded-md transition-colors">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -209,8 +230,8 @@ export function TaskDetailView() {
                       {fileSizeFmt(att.fileSize)} · {userName(att.uploadedBy)} 上传于 {formatDate(att.uploadedAt)}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-3 w-3" />
+                  <Button variant="ghost" size="icon-sm" title="下载">
+                    <Download className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               ))}
@@ -221,43 +242,54 @@ export function TaskDetailView() {
 
       {/* 投标列表 */}
       {(bids.length > 0 || task.status === 'OPEN') && (
-        <Card className="mb-4">
+        <Card className="mb-4 border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle>投标 ({bids.length})</CardTitle>
+            <CardTitle className="text-base">投标 ({bids.length})</CardTitle>
             {task.status === 'OPEN' && (
-              <span className="text-xs text-muted-foreground">💡 投标记录互相不可见（防串标）</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Hourglass className="h-3 w-3" />
+                投标记录互相不可见（防串标）
+              </span>
             )}
           </CardHeader>
           <CardContent>
             {bids.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-3">还没有人投标</p>
+              <div className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
+                还没有人投标
+              </div>
             ) : (
               <div className="space-y-2">
                 {bids.map((bid) => (
                   <div
                     key={bid.id}
                     className={cn(
-                      'flex items-start gap-3 p-3 rounded border',
-                      bid.status === 'ACCEPTED' ? 'border-green-200 bg-green-50'
-                        : bid.status === 'LOST' ? 'border-gray-200 bg-gray-50 opacity-60'
+                      'flex items-start gap-3 p-3 rounded-md border transition-colors',
+                      bid.status === 'ACCEPTED' ? 'border-emerald-200 bg-emerald-50/50'
+                        : bid.status === 'LOST' ? 'border-border bg-muted/30 opacity-60'
                         : 'border-border',
                     )}
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                      {userName(bid.bidderId).charAt(0)}
-                    </div>
+                    <UserAvatar user={{ name: userName(bid.bidderId), role: 'developer' }} size="md" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium">{userName(bid.bidderId)}</span>
                         <span className={cn('text-xs px-2 py-0.5 rounded-full', bidStatusClass(bid.status))}>
                           {bidStatusLabel[bid.status]}
                         </span>
-                        {bid.proposal && <span className="text-xs text-muted-foreground">· {formatRelative(bid.createdAt)}</span>}
+                        {bid.proposal && (
+                          <span className="text-xs text-muted-foreground">· {formatRelative(bid.createdAt)}</span>
+                        )}
                       </div>
-                      {bid.proposal && <p className="text-sm text-foreground mt-1">{bid.proposal}</p>}
-                      <div className="text-xs text-muted-foreground mt-1.5 flex gap-4">
-                        <span>报价 <span className="text-foreground font-medium">{formatMoney(bid.amount)}</span></span>
-                        <span>交期 <span className="text-foreground">{formatDate(bid.deliveryDate)}</span></span>
+                      {bid.proposal && <p className="text-sm text-foreground mt-1.5">{bid.proposal}</p>}
+                      <div className="text-xs text-muted-foreground mt-1.5 flex gap-4 flex-wrap">
+                        <span className="inline-flex items-center gap-1">
+                          <HandCoins className="h-3 w-3" />
+                          报价 <span className="text-foreground font-medium">{formatMoney(bid.amount)}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          交期 <span className="text-foreground">{formatDate(bid.deliveryDate)}</span>
+                        </span>
                       </div>
                     </div>
                     {canSelectBid && bid.status === 'ACTIVE' && (
@@ -273,16 +305,16 @@ export function TaskDetailView() {
 
       {/* 变更记录 */}
       {changeLogs.length > 0 && (
-        <Card className="mb-4">
+        <Card className="mb-4 border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
               <History className="h-4 w-4" /> 变更记录 ({changeLogs.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {changeLogs.map((log) => (
-                <div key={log.id} className="border-l-2 border-primary/30 pl-3 py-1.5">
+                <div key={log.id} className="border-l-2 border-primary/40 pl-3 py-1.5">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="font-medium">{changeTypeLabel[log.changeType]}</span>
                     <span className="text-xs text-muted-foreground">{log.createdAt}</span>
@@ -303,12 +335,12 @@ export function TaskDetailView() {
       )}
 
       {/* 操作按钮 */}
-      <Card className="mb-4">
+      <Card className="mb-4 border-border">
         <CardContent className="flex flex-wrap items-center gap-2">
           {canBid && (
             <Dialog open={bidOpen} onOpenChange={setBidOpen}>
               <DialogTrigger asChild>
-                <Button>💰 投标</Button>
+                <Button><HandCoins className="h-4 w-4" />投标</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -337,13 +369,15 @@ export function TaskDetailView() {
           )}
 
           {canComplete && (
-            <Button onClick={handleComplete}>✓ 确认完成</Button>
+            <Button onClick={handleComplete} className="bg-emerald-600 hover:bg-emerald-700">
+              <Check className="h-4 w-4" />确认完成
+            </Button>
           )}
 
           {canRequestExtension && (
             <Dialog open={extOpen} onOpenChange={setExtOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">📅 申请延期</Button>
+                <Button variant="outline"><Calendar className="h-4 w-4" />申请延期</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -369,11 +403,15 @@ export function TaskDetailView() {
           )}
 
           {canCancel && (
-            <Button variant="destructive" onClick={handleCancel}>✕ 取消任务</Button>
+            <Button variant="outline" onClick={handleCancel} className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200">
+              <X className="h-4 w-4" />取消任务
+            </Button>
           )}
 
           {canClone && (
-            <Button variant="outline" onClick={handleClone}>📋 复制新建</Button>
+            <Button variant="outline" onClick={handleClone}>
+              <CopyPlus className="h-4 w-4" />复制新建
+            </Button>
           )}
 
           {!canBid && !canComplete && !canRequestExtension && !canCancel && !canClone && (
@@ -388,8 +426,8 @@ export function TaskDetailView() {
 function Field({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-base font-medium mt-0.5">{children ?? (value || '—')}</div>
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
+      <div className="text-base font-medium">{children ?? (value || '—')}</div>
     </div>
   )
 }
@@ -402,7 +440,7 @@ function userName(id: string): string {
 function bidStatusClass(status: string): string {
   return {
     ACTIVE: 'bg-blue-100 text-blue-700',
-    ACCEPTED: 'bg-green-100 text-green-700',
+    ACCEPTED: 'bg-emerald-100 text-emerald-700',
     LOST: 'bg-gray-100 text-gray-500',
     WITHDRAWN: 'bg-gray-100 text-gray-400',
   }[status] || ''

@@ -1,8 +1,9 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
-import { LogOut, User as UserIcon } from 'lucide-react'
+import { LogOut, ChevronDown, Layers } from 'lucide-react'
 import { useUserStore } from '@/stores/user'
 import { useTasksStore } from '@/stores/tasks'
 import { MOCK_USERS } from '@/mocks'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { roleLabel } from '@/utils/format'
 import { cn } from '@/lib/utils'
@@ -40,55 +41,62 @@ export function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-background/95 px-6 py-3 backdrop-blur">
-      <div className="flex items-center gap-8">
-        <Link to="/" className="flex items-center gap-2 no-underline">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-            T
-          </div>
-          <h1 className="text-base font-semibold text-foreground">TaskHub</h1>
-        </Link>
-
-        <nav className="flex gap-1 text-sm">
-          {visibleNav.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-muted-foreground no-underline transition-colors hover:bg-accent hover:text-accent-foreground',
-                isActive(item.path) && 'bg-accent text-accent-foreground font-medium',
-              )}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {currentUser && (
-          <>
-            <div className="flex items-center gap-2 text-sm">
-              <UserIcon className="h-4 w-4 text-muted-foreground" />
-              <span className="text-foreground">{currentUser.name}</span>
-              <span className="text-xs text-muted-foreground">· {currentUser.department}</span>
+    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+      <div className="mx-auto max-w-7xl flex items-center justify-between px-6 h-14">
+        <div className="flex items-center gap-8">
+          <Link to="/" className="flex items-center gap-2 no-underline">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-primary to-purple-500 text-sm font-bold text-white shadow-sm">
+              <Layers className="h-3.5 w-3.5" />
             </div>
-            <select
-              value={currentUser.id}
-              onChange={(e) => handleSwitch(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              title="切换身份（demo 用）"
-            >
-              {MOCK_USERS.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} · {roleLabel[u.role]}
-                </option>
-              ))}
-            </select>
-            <Button variant="ghost" size="sm" title="退出（demo）">
-              <LogOut className="h-4 w-4" />
+            <h1 className="text-base font-semibold tracking-tight text-foreground">TaskHub</h1>
+          </Link>
+
+          <nav className="flex items-center gap-0.5 text-sm">
+            {visibleNav.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'h-8 px-3 inline-flex items-center rounded-md no-underline transition-colors',
+                  isActive(item.path)
+                    ? 'bg-foreground/[0.06] text-foreground font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04]',
+                )}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+
+        {currentUser && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <UserAvatar user={currentUser} size="sm" />
+              <div className="hidden sm:flex flex-col leading-tight">
+                <span className="text-foreground text-sm">{currentUser.name}</span>
+                <span className="text-[11px] text-muted-foreground">{currentUser.department}</span>
+              </div>
+            </div>
+            <div className="relative">
+              <select
+                value={currentUser.id}
+                onChange={(e) => handleSwitch(e.target.value)}
+                className="appearance-none h-8 pl-3 pr-7 rounded-md border border-input bg-background text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-primary/50 transition-colors"
+                title="切换身份（demo 用）"
+              >
+                {MOCK_USERS.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    切换 · {u.name} · {roleLabel[u.role]}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            </div>
+            <Button variant="ghost" size="icon-sm" title="退出（demo）" className="text-muted-foreground">
+              <LogOut className="h-3.5 w-3.5" />
             </Button>
-          </>
+          </div>
         )}
       </div>
     </header>
