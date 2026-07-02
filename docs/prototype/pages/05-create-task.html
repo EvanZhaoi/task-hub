@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P05 · 发布任务 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P05 · 发布任务</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link active">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>陈PM · 发布者 · 产品研发部</option>
+        <option>李雷 · 开发者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-form">
+
+    <!-- 标题 + 步骤 -->
+    <div class="mb-6">
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">发布招标任务</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">填写任务信息，开发者投标后你来选 · 也支持 <a href="06-direct-assign.html" style="color: var(--color-primary);">直接指名</a></p>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="row mb-6" style="gap: 8px;">
+      <div class="row-tight" style="color: var(--color-primary);">
+        <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">1</div>
+        <span class="font-medium">基础信息</span>
+      </div>
+      <i data-lucide="chevron-right" width="14" height="14" style="color: #d1d5db;"></i>
+      <div class="row-tight text-muted">
+        <div style="width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #d1d5db; color: #d1d5db; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">2</div>
+        <span>描述与附件</span>
+      </div>
+      <i data-lucide="chevron-right" width="14" height="14" style="color: #d1d5db;"></i>
+      <div class="row-tight text-muted">
+        <div style="width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #d1d5db; color: #d1d5db; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">3</div>
+        <span>金额与时间</span>
+      </div>
+      <i data-lucide="chevron-right" width="14" height="14" style="color: #d1d5db;"></i>
+      <div class="row-tight text-muted">
+        <div style="width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #d1d5db; color: #d1d5db; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">4</div>
+        <span>确认发布</span>
+      </div>
+    </div>
+
+    <form>
+
+      <!-- 1. 标题 -->
+      <div class="card mb-4">
+        <div class="field">
+          <label class="field-label">任务标题 <span class="req">*</span></label>
+          <input type="text" class="input" value="用户登录页 UI 重构" placeholder="简洁描述要做什么">
+          <div class="field-hint">建议 10-30 字 · 例如「登录页 UI 重构」「订单导出 Excel」</div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">付款账号 <span class="req">*</span></label>
+          <select class="select">
+            <option>产品研发部·2026Q2 预算 · 管理员：陈PM</option>
+            <option>市场部·数字营销专项 · 管理员：张总</option>
+            <option>运维部·基础设施 · 管理员：王运维</option>
+            <option>战略项目·新业务孵化 · 管理员：Evan</option>
+          </select>
+          <div class="field-hint" style="color: #c2410c;">
+            <i data-lucide="alert-triangle" width="12" height="12" style="vertical-align: -1px;"></i>
+            <strong style="color: #9a3412;">发布后金额变更需线下再次找管理员确认</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 详细描述（富文本） -->
+      <div class="card mb-4">
+        <div class="row-between mb-2">
+          <label class="field-label" style="margin-bottom: 0;">详细描述 <span class="req">*</span></label>
+          <span class="text-subtle text-sm" style="font-size: 12px;">支持富文本 · Markdown · 上传截图</span>
+        </div>
+        <div style="margin-top: 8px;">
+          <!-- 工具栏 mock（Quill / TipTap 风格）-->
+          <div class="richtext-toolbar">
+            <select><option>正文</option><option>标题 1</option><option>标题 2</option><option>标题 3</option></select>
+            <div class="divider-v"></div>
+            <button style="font-weight: 700;">B</button>
+            <button style="font-style: italic;">I</button>
+            <button style="text-decoration: underline;">U</button>
+            <button style="text-decoration: line-through;">S</button>
+            <div class="divider-v"></div>
+            <button><i data-lucide="list" width="14" height="14"></i></button>
+            <button><i data-lucide="list-ordered" width="14" height="14"></i></button>
+            <button><i data-lucide="quote" width="14" height="14"></i></button>
+            <div class="divider-v"></div>
+            <button><i data-lucide="code" width="14" height="14"></i></button>
+            <button><i data-lucide="link-2" width="14" height="14"></i></button>
+            <div class="divider-v"></div>
+            <button><i data-lucide="image" width="14" height="14"></i></button>
+            <button><i data-lucide="paperclip" width="14" height="14"></i></button>
+          </div>
+          <div class="richtext-content">
+            <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 10px; color: #1a1a1a;">背景</h2>
+            <p style="margin: 0 0 10px;">现有登录页样式陈旧，且体验较差。我们想参考 <a href="#" style="color: var(--color-primary);">Linear 风格</a> 做一次重设计，统一公司内部多个产品（CRM、工单系统、演示站）的登录入口。</p>
+            <h2 style="font-size: 18px; font-weight: 600; margin: 16px 0 10px; color: #1a1a1a;">需要支持</h2>
+            <ul style="padding-left: 24px; margin: 0 0 10px;">
+              <li>手机号 + 验证码登录（主）</li>
+              <li>邮箱 + 密码登录（次）</li>
+              <li>SSO 跳转入口（公司内部 SSO）</li>
+            </ul>
+            <blockquote style="border-left: 3px solid var(--color-primary); padding-left: 14px; color: #6b7280; background: #fafafa; margin: 14px 0; padding: 10px 14px;">
+              <strong>参考</strong>：Linear / Vercel / Notion 登录页
+            </blockquote>
+            <p style="margin: 0;"><span style="color: #9ca3af;">|</span></p>
+          </div>
+        </div>
+        <div class="field-hint" style="margin-top: 6px;">
+          HTML 存储 · 上限 50,000 字符 · 生产环境务必走 DOMPurify 防 XSS
+        </div>
+
+        <!-- 附件上传 -->
+        <div class="field" style="margin-top: 20px; margin-bottom: 0;">
+          <label class="field-label">附件</label>
+          <div style="border: 2px dashed var(--color-border); border-radius: 6px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.borderColor='var(--color-primary)'" onmouseout="this.style.borderColor='var(--color-border)'">
+            <i data-lucide="upload-cloud" width="32" height="32" style="color: #9ca3af;"></i>
+            <div class="font-medium mt-2" style="font-size: 13px;">点击或拖拽文件到此处上传</div>
+            <div class="text-subtle mt-1" style="font-size: 12px;">支持 PDF / FIG / PNG / DOCX / ZIP · 单文件 ≤ 20MB</div>
+          </div>
+          <div class="row mt-3" style="gap: 8px;">
+            <div class="attachment-row" style="flex: 1; border: 1px solid var(--color-border); border-radius: 6px; padding: 8px 12px;">
+              <div class="attachment-icon fig">FIG</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13px; font-weight: 500;">登录页设计稿.fig</div>
+                <div class="text-subtle" style="font-size: 11px;">2.3 MB · 上传完成</div>
+              </div>
+              <button class="btn btn-ghost btn-sm"><i data-lucide="trash-2" width="12" height="12"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 金额 + 时间 -->
+      <div class="card mb-4">
+        <div class="grid-3" style="gap: 16px;">
+          <div class="field" style="margin-bottom: 0;">
+            <label class="field-label">预算金额（¥） <span class="req">*</span></label>
+            <input type="number" class="input" value="800">
+            <div class="field-hint">建议参考历史任务均价</div>
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label class="field-label">期望交期 <span class="req">*</span></label>
+            <input type="date" class="input" value="2026-06-25">
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label class="field-label">招标截止 <span class="req">*</span></label>
+            <input type="date" class="input" value="2026-06-15">
+            <div class="field-hint">建议 7-14 天</div>
+          </div>
+        </div>
+
+        <div class="field mt-5" style="margin-bottom: 0;">
+          <label class="field-label">任务复杂度 <span class="req">*</span></label>
+          <div class="row-tight mt-2">
+            <label style="cursor: pointer;">
+              <input type="radio" name="complexity" style="margin-right: 6px;">
+              <span class="complexity complexity-LOW">简单</span>
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="complexity" checked style="margin-right: 6px;">
+              <span class="complexity complexity-MEDIUM">中等复杂</span>
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="complexity" style="margin-right: 6px;">
+              <span class="complexity complexity-HIGH">高度复杂</span>
+            </label>
+          </div>
+          <div class="field-hint">仅作标签 + 任务大厅筛选 · 不影响定价</div>
+        </div>
+      </div>
+
+      <!-- 4. 发布前确认 -->
+      <div class="alert alert-warning">
+        <i data-lucide="alert-triangle" width="16" height="16" class="alert-icon"></i>
+        <div class="alert-body" style="font-size: 12px;">
+          <strong>发布前确认</strong>：
+          · 任务发布后将 <strong style="color: #9a3412;">全员可见</strong>，无法撤回修改（如需改需取消后重发）<br>
+          · 付款账号「产品研发部·2026Q2 预算」管理员为陈PM · 金额发布后变更需线下再次找管理员确认
+        </div>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="row-end mt-6" style="gap: 8px;">
+        <button class="btn btn-secondary">
+          <i data-lucide="save" width="14" height="14"></i>
+          保存为草稿
+        </button>
+        <a href="03-task-hall.html" class="btn btn-secondary">取消</a>
+        <button class="btn btn-primary btn-lg">
+          <i data-lucide="send" width="16" height="16"></i>
+          发布任务
+        </button>
+      </div>
+
+    </form>
+
+    <!-- 备注 -->
+    <div class="alert alert-info mt-6">
+      <i data-lucide="lightbulb" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>流程 A · 任务发布</strong>（需求 §5.1）：
+        ① 填写任务信息 → ② 线下与付款账号管理员确认金额 → ③ 点击「发布」→ 状态变 OPEN · 全员可见<br>
+        MVP 草稿（DRAFT）状态保留为可选：先保存草稿 → 后续再发布。<strong style="color: #9a3412;">不发布 = 任务不可见</strong>。
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="04-task-detail.html"><i data-lucide="arrow-left" width="12" height="12"></i> 4</a>
+    <a href="06-direct-assign.html">6 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

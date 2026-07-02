@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P14 · 通知中心 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P14 · 通知中心</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="13-boss-gantt.html" class="nav-link">老板视图</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>韩梅梅 · 开发者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-narrow">
+
+    <!-- 标题 -->
+    <div class="row-between mb-6">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 0;">
+          通知中心
+          <span class="badge" style="background: var(--color-primary); color: white; margin-left: 8px; font-size: 13px;">3 未读</span>
+        </h1>
+        <p class="text-muted mt-1" style="margin: 4px 0 0; font-size: 14px;">站内消息 + 邮件（企微 / 钉钉：二期）</p>
+      </div>
+      <button class="btn btn-secondary">
+        <i data-lucide="check-check" width="14" height="14"></i>
+        全部标记已读
+      </button>
+    </div>
+
+    <!-- 标签 + 筛选 -->
+    <div class="card mb-4" style="padding: 12px 16px;">
+      <div class="row" style="gap: 16px;">
+        <div class="row-tight">
+          <button class="filter-pill active">全部</button>
+          <button class="filter-pill">
+            未读
+            <span class="badge" style="background: #dc2626; color: white; margin-left: 4px; font-size: 10px; padding: 0 6px;">3</span>
+          </button>
+          <button class="filter-pill">@提及我</button>
+          <button class="filter-pill">任务相关</button>
+        </div>
+        <div class="row-tight ml-auto">
+          <span class="text-sm text-muted" style="font-size: 12px;">按时间倒序</span>
+          <button class="filter-pill">
+            <i data-lucide="settings-2" width="12" height="12"></i>
+            通知设置
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 今天：3 条未读 -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- 通知：被选标（未读 · 高优先级） -->
+      <div class="card card-hoverable" style="border-left: 3px solid var(--color-primary);">
+        <div class="row" style="gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="check-circle" width="16" height="16" style="color: #10b981;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div class="row-tight" style="gap: 8px;">
+              <span class="font-medium" style="font-size: 14px;">你被选中中标！</span>
+              <span class="badge" style="background: #dbeafe; color: #1e40af; font-size: 10px;">站内 + 邮件</span>
+              <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 10px;">未读</span>
+            </div>
+            <p class="mt-1 mb-2" style="font-size: 13px; color: #6e6e80;">
+              陈PM 在「用户登录页 UI 重构」任务中选了你的投标 · 最终金额 <strong style="color: #1a1a1a;">¥800</strong> · 交期 <strong style="color: #1a1a1a;">2026-06-25</strong>
+            </p>
+            <div class="row-tight">
+              <a href="04-task-detail.html" class="btn btn-primary btn-sm">
+                查看任务
+                <i data-lucide="arrow-right" width="12" height="12"></i>
+              </a>
+              <button class="btn btn-secondary btn-sm">标记已读</button>
+              <span class="text-subtle text-sm ml-auto" style="font-size: 12px;">
+                <i data-lucide="clock" width="12" height="12"></i>
+                2 分钟前
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 通知：协商延期被同意 -->
+      <div class="card card-hoverable" style="border-left: 3px solid #f97316;">
+        <div class="row" style="gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #fed7aa; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="clock" width="16" height="16" style="color: #f97316;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div class="row-tight" style="gap: 8px;">
+              <span class="font-medium" style="font-size: 14px;">延期申请已通过</span>
+              <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 10px;">未读</span>
+            </div>
+            <p class="mt-1 mb-2" style="font-size: 13px; color: #6e6e80;">
+              你提交的「【老板加塞】CEO 演示数据准备」延期申请已通过 · 新交期 <strong style="color: #1a1a1a;">2026-06-16</strong>
+            </p>
+            <div class="row-tight">
+              <a href="09-extension.html" class="btn btn-secondary btn-sm">查看记录</a>
+              <span class="text-subtle text-sm ml-auto" style="font-size: 12px;">
+                <i data-lucide="clock" width="12" height="12"></i>
+                30 分钟前
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 通知：收到新投标（你是发布者） -->
+      <div class="card card-hoverable" style="border-left: 3px solid var(--color-primary);">
+        <div class="row" style="gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #f5f3ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="circle-dollar-sign" width="16" height="16" style="color: var(--color-primary);"></i>
+          </div>
+          <div style="flex: 1;">
+            <div class="row-tight" style="gap: 8px;">
+              <span class="font-medium" style="font-size: 14px;">你发布的任务收到新投标</span>
+              <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 10px;">未读</span>
+            </div>
+            <p class="mt-1 mb-2" style="font-size: 13px; color: #6e6e80;">
+              <strong>王运维</strong> 投标了「数据库慢查询优化」· 金额 <strong style="color: #1a1a1a;">¥900</strong> · 交期 <strong style="color: #1a1a1a;">2026-06-26</strong>
+            </p>
+            <div class="row-tight">
+              <a href="08-select-bid.html" class="btn btn-primary btn-sm">查看</a>
+              <span class="text-subtle text-sm ml-auto" style="font-size: 12px;">
+                <i data-lucide="clock" width="12" height="12"></i>
+                1 小时前
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已读：昨天下午 -->
+      <div class="text-subtle text-sm mt-6" style="font-size: 13px;">昨天</div>
+
+      <!-- 已读：完成确认 -->
+      <div class="card" style="opacity: 0.65;">
+        <div class="row" style="gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="check-circle" width="16" height="16" style="color: #6b7280;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div class="row-tight" style="gap: 8px;">
+              <span style="font-size: 14px; color: #6e6e80;">任务「支付链路压测」已完成</span>
+            </div>
+            <p class="mt-1 mb-0" style="font-size: 13px; color: #6e6e80;">
+              王运维 确认完成 · 金额 <strong>¥800</strong> 已结算 · 进入已完结列表
+            </p>
+            <span class="text-subtle text-sm" style="font-size: 12px;">
+              <i data-lucide="clock" width="12" height="12"></i>
+              昨天下午 16:30 · 已读
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已读：流标（如果你是发布者） -->
+      <div class="card" style="opacity: 0.65;">
+        <div class="row" style="gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: #f3f4f6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="x-octagon" width="16" height="16" style="color: #6b7280;"></i>
+          </div>
+          <div style="flex: 1;">
+            <div class="row-tight" style="gap: 8px;">
+              <span style="font-size: 14px; color: #6e6e80;">「内部论坛功能」已流标</span>
+            </div>
+            <p class="mt-1 mb-0" style="font-size: 13px; color: #6e6e80;">
+              招标截止 · 零投标 · 王运维 可复制新建或调整金额重新发布
+            </p>
+            <span class="text-subtle text-sm" style="font-size: 12px;">
+              <i data-lucide="clock" width="12" height="12"></i>
+              2026-06-10 18:00 · 已读
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 通知规则 -->
+    <div class="card mt-6">
+      <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 12px;">
+        <i data-lucide="settings" width="14" height="14"></i>
+        通知规则（MVP）
+      </h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <th style="text-align: left; padding: 6px 8px; color: #8f8f99; font-weight: 500;">事件</th>
+            <th style="text-align: left; padding: 6px 8px; color: #8f8f99; font-weight: 500;">通知对象</th>
+            <th style="text-align: left; padding: 6px 8px; color: #8f8f99; font-weight: 500;">通道</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 6px 8px;">收到投标</td>
+            <td style="padding: 6px 8px;">发布者</td>
+            <td style="padding: 6px 8px;">站内 + 邮件</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 6px 8px;">被选中</td>
+            <td style="padding: 6px 8px;">中标者</td>
+            <td style="padding: 6px 8px;">站内 + 邮件</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 8px;">协商延期 / 状态变更</td>
+            <td style="padding: 6px 8px;">双方</td>
+            <td style="padding: 6px 8px;">站内</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="text-subtle text-sm mt-3" style="font-size: 12px; margin-bottom: 0;">
+        <i data-lucide="info" width="12" height="12"></i>
+        企微 / 钉钉集成：二期 · 邮件发送策略：每日汇总（不实时打扰）
+      </p>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="13-boss-gantt.html"><i data-lucide="arrow-left" width="12" height="12"></i> 13</a>
+    <a href="15-flow-diagrams.html">15 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

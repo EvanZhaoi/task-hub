@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P06 · 直接指名 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P06 · 直接指名</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>Evan · 老板 · CEO办公室</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-form">
+
+    <div class="mb-6">
+      <div class="row-tight mb-2" style="color: #f97316;">
+        <i data-lucide="zap" width="20" height="20"></i>
+        <span class="text-sm font-medium" style="font-size: 13px;">流程 D · 直接指名</span>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">直接指派给指定开发者</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">跳过招标阶段 · 任务直接进入 <span class="badge badge-ASSIGNED">进行中</span> · 被指名人收到通知</p>
+    </div>
+
+    <div class="alert alert-info mb-4">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 13px;">
+        <strong>关于直接指名</strong>：
+        MVP 简化版——指名后任务<strong style="color: #9a3412;">自动生效</strong>，无需被指名人确认。
+        适用场景：你已经知道找谁做（比如"老板加塞"任务、紧急任务、信任的同事）。
+      </div>
+    </div>
+
+    <form>
+
+      <!-- 1. 被指名人 -->
+      <div class="card mb-4">
+        <div class="field">
+          <label class="field-label">被指名人 <span class="req">*</span></label>
+          <div style="position: relative;">
+            <input type="text" class="input" value="韩梅梅" style="padding-left: 36px;">
+            <div class="avatar avatar-sm" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%);">韩</div>
+          </div>
+          <div style="position: relative; margin-top: -1px;">
+            <div style="position: absolute; top: 4px; left: 0; right: 0; background: white; border: 1px solid var(--color-border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); z-index: 10;">
+              <div class="row-tight p-3" style="padding: 8px 12px; cursor: pointer; background: #f5f3ff;">
+                <div class="avatar avatar-sm">韩</div>
+                <span style="font-size: 13px; font-weight: 500; color: var(--color-primary);">韩梅梅 · 产品研发部 · 开发者</span>
+              </div>
+              <div class="row-tight" style="padding: 8px 12px; cursor: pointer; border-top: 1px solid var(--color-border);">
+                <div class="avatar avatar-sm">李</div>
+                <span style="font-size: 13px;">李雷 · 产品研发部 · 开发者</span>
+              </div>
+              <div class="row-tight" style="padding: 8px 12px; cursor: pointer; border-top: 1px solid var(--color-border);">
+                <div class="avatar avatar-sm">王</div>
+                <span style="font-size: 13px;">王运维 · 运维部 · 开发者</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-hint">
+            <i data-lucide="users" width="12" height="12" style="vertical-align: -1px;"></i>
+            从外部人员接口拉取（实时查询 + Redis 缓存 1h）
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom: 0;">
+          <label class="field-label">协作成员（可选）</label>
+          <div class="row-tight" style="flex-wrap: wrap;">
+            <div class="row-tight" style="background: #f5f3ff; padding: 4px 10px; border-radius: 6px;">
+              <div class="avatar avatar-xs">王</div>
+              <span style="font-size: 12px;">王运维</span>
+              <i data-lucide="x" width="12" height="12" style="color: #6e6e80; cursor: pointer;"></i>
+            </div>
+            <button class="btn btn-secondary btn-sm">
+              <i data-lucide="plus" width="12" height="12"></i>
+              添加成员
+            </button>
+          </div>
+          <div class="field-hint">MVP：协作成员只需被加入，无需二次确认</div>
+        </div>
+      </div>
+
+      <!-- 2. 任务信息 -->
+      <div class="card mb-4">
+        <div class="field">
+          <label class="field-label">任务标题 <span class="req">*</span></label>
+          <input type="text" class="input" value="【老板加塞】CEO 演示数据准备">
+        </div>
+
+        <div class="field">
+          <label class="field-label">详细描述</label>
+          <div style="margin-top: 4px;">
+            <div class="richtext-toolbar">
+              <button style="font-weight: 700;">B</button>
+              <button style="font-style: italic;">I</button>
+              <div class="divider-v"></div>
+              <button><i data-lucide="list" width="14" height="14"></i></button>
+              <button><i data-lucide="quote" width="14" height="14"></i></button>
+              <div class="divider-v"></div>
+              <button><i data-lucide="code" width="14" height="14"></i></button>
+              <button><i data-lucide="link-2" width="14" height="14"></i></button>
+            </div>
+            <div class="richtext-content">
+              <p style="margin: 0 0 10px;">老板下周要见客户，准备 <strong style="color: #1a1a1a;">demo 数据</strong>。</p>
+              <p style="margin: 0 0 10px;">需要覆盖：</p>
+              <ul style="padding-left: 24px; margin: 0 0 10px;">
+                <li>5 个不同状态的用户</li>
+                <li>20 个任务样本（OPEN / ASSIGNED / COMPLETED 各占 1/3）</li>
+                <li>若干投标 / 变更记录</li>
+              </ul>
+              <p style="margin: 0;"><span style="color: #9ca3af;">|</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3 mt-4" style="gap: 16px;">
+          <div class="field" style="margin-bottom: 0;">
+            <label class="field-label">付款账号 <span class="req">*</span></label>
+            <select class="select">
+              <option>战略项目·新业务孵化 · 管理员：Evan</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label class="field-label">金额（¥） <span class="req">*</span></label>
+            <input type="number" class="input" value="1200">
+          </div>
+          <div class="field" style="margin-bottom: 0;">
+            <label class="field-label">交期 <span class="req">*</span></label>
+            <input type="date" class="input" value="2026-06-14">
+          </div>
+        </div>
+
+        <div class="field mt-5" style="margin-bottom: 0;">
+          <label class="field-label">任务复杂度 <span class="req">*</span></label>
+          <div class="row-tight mt-2">
+            <label style="cursor: pointer;">
+              <input type="radio" name="complexity" checked style="margin-right: 6px;">
+              <span class="complexity complexity-LOW">简单</span>
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="complexity" style="margin-right: 6px;">
+              <span class="complexity complexity-MEDIUM">中等复杂</span>
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="complexity" style="margin-right: 6px;">
+              <span class="complexity complexity-HIGH">高度复杂</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 提交 -->
+      <div class="card mb-4">
+        <div class="row-between">
+          <div>
+            <strong style="font-size: 14px;">任务将直接进入 ASSIGNED 状态</strong>
+            <p class="text-subtle mt-1" style="margin: 4px 0 0; font-size: 12px;">
+              韩梅梅 + 王运维 将收到站内 + 邮件通知 · 任务在您的「我发布的」和 ta 的「我接的」可见
+            </p>
+          </div>
+          <i data-lucide="user-check" width="32" height="32" style="color: #f97316;"></i>
+        </div>
+      </div>
+
+      <div class="row-end mt-6" style="gap: 8px;">
+        <a href="05-create-task.html" class="btn btn-secondary">
+          <i data-lucide="arrow-left" width="14" height="14"></i>
+          改为招标
+        </a>
+        <a href="03-task-hall.html" class="btn btn-secondary">取消</a>
+        <button class="btn btn-primary btn-lg" style="background: #f97316; border-color: #f97316;">
+          <i data-lucide="user-check" width="16" height="16"></i>
+          直接指派给韩梅梅
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="05-create-task.html"><i data-lucide="arrow-left" width="12" height="12"></i> 5</a>
+    <a href="07-bid.html">7 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

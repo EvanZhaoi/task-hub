@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P01 · 系统总览 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P01 · 系统总览</span>
+    </div>
+    <nav>
+      <a href="../index.html" class="nav-link">
+        <i data-lucide="home" width="14" height="14"></i>
+        原型目录
+      </a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px;">系统总览</h1>
+    <p class="text-muted mb-8" style="margin-top: 0;">
+      状态机 · 角色矩阵 · 数据模型 · 通知规则。一页看懂 TaskHub MVP。
+    </p>
+
+    <!-- 角色矩阵 -->
+    <div class="card mb-6">
+      <h2 class="section-title">1. 三类角色（边界平等）</h2>
+      <div class="grid-3" style="gap: 16px; margin-top: 16px;">
+
+        <div style="border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+          <div class="row-tight mb-3" style="color: #c2410c;">
+            <div class="avatar avatar-md avatar-publisher">P</div>
+            <span class="role-tag role-publisher">任务发布者</span>
+          </div>
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px;">任何员工</h3>
+          <ul style="font-size: 13px; color: #6e6e80; margin: 0; padding-left: 18px;">
+            <li>浏览任务大厅</li>
+            <li>发布任务（招标）</li>
+            <li>直接指名</li>
+            <li>投标（自己不能投自己发的）</li>
+            <li>选标、确认完成</li>
+            <li>取消自己的任务</li>
+          </ul>
+        </div>
+
+        <div style="border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+          <div class="row-tight mb-3" style="color: var(--color-primary);">
+            <div class="avatar avatar-md">D</div>
+            <span class="role-tag role-developer">接单开发者</span>
+          </div>
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px;">任何员工</h3>
+          <ul style="font-size: 13px; color: #6e6e80; margin: 0; padding-left: 18px;">
+            <li>浏览任务大厅</li>
+            <li>投标（单人 / 多人协作）</li>
+            <li>协商延期</li>
+            <li>申请变更（金额/需求/交期）</li>
+            <li>交付 / 撤回投标</li>
+            <li>同样可以发布任务</li>
+          </ul>
+        </div>
+
+        <div style="border: 1px solid var(--color-border); border-radius: 8px; padding: 20px;">
+          <div class="row-tight mb-3" style="color: #1a1a1a;">
+            <div class="avatar avatar-md avatar-boss">B</div>
+            <span class="role-tag role-boss">老板</span>
+          </div>
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 8px;">拥有全局视图权限</h3>
+          <ul style="font-size: 13px; color: #6e6e80; margin: 0; padding-left: 18px;">
+            <li>看所有任务的甘特图视图</li>
+            <li>按付款账号筛选</li>
+            <li>按状态 / 时间范围筛选</li>
+            <li>不能直接操作任务（去线下）</li>
+            <li>老板加塞属于发布任务</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 状态机 -->
+    <div class="card mb-6">
+      <h2 class="section-title">2. 任务状态机（核心）</h2>
+      <div class="flow-diagram" style="margin-top: 16px;">
+        <svg viewBox="0 0 1100 460" xmlns="http://www.w3.org/2000/svg" style="font-family: -apple-system, sans-serif;">
+          <!-- DRAFT -->
+          <g>
+            <rect x="40" y="40" width="140" height="56" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+            <text x="110" y="64" text-anchor="middle" fill="#374151" font-size="14" font-weight="600">DRAFT</text>
+            <text x="110" y="82" text-anchor="middle" fill="#6b7280" font-size="12">草稿</text>
+          </g>
+          <!-- OPEN -->
+          <g>
+            <rect x="240" y="40" width="140" height="56" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="310" y="64" text-anchor="middle" fill="#1e40af" font-size="14" font-weight="600">OPEN</text>
+            <text x="310" y="82" text-anchor="middle" fill="#1e40af" font-size="12">招标中</text>
+          </g>
+          <!-- ASSIGNED -->
+          <g>
+            <rect x="440" y="40" width="160" height="56" rx="8" fill="#fed7aa" stroke="#f97316" stroke-width="1.5"/>
+            <text x="520" y="64" text-anchor="middle" fill="#9a3412" font-size="14" font-weight="600">ASSIGNED</text>
+            <text x="520" y="82" text-anchor="middle" fill="#9a3412" font-size="12">已选标 / 进行中</text>
+          </g>
+          <!-- COMPLETED -->
+          <g>
+            <rect x="660" y="40" width="160" height="56" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+            <text x="740" y="64" text-anchor="middle" fill="#065f46" font-size="14" font-weight="600">COMPLETED</text>
+            <text x="740" y="82" text-anchor="middle" fill="#065f46" font-size="12">已完成（终态）</text>
+          </g>
+          <!-- FAILED -->
+          <g>
+            <rect x="240" y="180" width="140" height="56" rx="8" fill="#e5e7eb" stroke="#6b7280" stroke-width="1.5"/>
+            <text x="310" y="204" text-anchor="middle" fill="#4b5563" font-size="14" font-weight="600">FAILED</text>
+            <text x="310" y="222" text-anchor="middle" fill="#6b7280" font-size="12">流标</text>
+          </g>
+          <!-- CANCELLED -->
+          <g>
+            <rect x="660" y="180" width="160" height="56" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5"/>
+            <text x="740" y="204" text-anchor="middle" fill="#9ca3af" font-size="14" font-weight="600" text-decoration="line-through">CANCELLED</text>
+            <text x="740" y="222" text-anchor="middle" fill="#9ca3af" font-size="12">已取消（终态）</text>
+          </g>
+
+          <!-- Arrows -->
+          <defs>
+            <marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#6e6e80"/>
+            </marker>
+            <marker id="arr-dashed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/>
+            </marker>
+          </defs>
+
+          <!-- DRAFT -> OPEN (发布) -->
+          <line x1="180" y1="68" x2="240" y2="68" stroke="#6e6e80" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="210" y="58" text-anchor="middle" fill="#374151" font-size="11">发布</text>
+
+          <!-- DRAFT -> CANCELLED -->
+          <path d="M 110 96 Q 110 145, 740 180" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arr-dashed)"/>
+          <text x="425" y="140" text-anchor="middle" fill="#dc2626" font-size="11" font-weight="500">取消（DRAFT / OPEN / ASSIGNED 任一状态 → CANCELLED）</text>
+
+          <!-- OPEN -> ASSIGNED -->
+          <line x1="380" y1="68" x2="440" y2="68" stroke="#6e6e80" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="410" y="58" text-anchor="middle" fill="#374151" font-size="11">选标</text>
+
+          <!-- OPEN -> FAILED -->
+          <line x1="310" y1="96" x2="310" y2="180" stroke="#6e6e80" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="334" y="142" fill="#374151" font-size="11">超时无投标</text>
+
+          <!-- ASSIGNED -> COMPLETED -->
+          <line x1="600" y1="68" x2="660" y2="68" stroke="#6e6e80" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="630" y="58" text-anchor="middle" fill="#374151" font-size="11">确认完成</text>
+
+          <!-- FAILED -> DRAFT (复制新建) -->
+          <path d="M 240 208 Q 160 208, 110 96" fill="none" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="160" y="155" text-anchor="middle" fill="#8b5cf6" font-size="11" font-weight="500">复制新建（模板复用）</text>
+
+          <!-- 直接指名旁路 -->
+          <g>
+            <rect x="430" y="280" width="180" height="44" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="520" y="298" text-anchor="middle" fill="#c2410c" font-size="12" font-weight="600">直接指名（流程 D）</text>
+            <text x="520" y="314" text-anchor="middle" fill="#c2410c" font-size="11">跳过 OPEN，直接进入 ASSIGNED</text>
+          </g>
+          <path d="M 520 280 L 520 96" fill="none" stroke="#f97316" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arr-dashed)"/>
+          <text x="540" y="200" fill="#f97316" font-size="11" font-weight="500">指名 = 自动生效</text>
+
+          <!-- Footer info -->
+          <g transform="translate(40, 380)">
+            <text fill="#6e6e80" font-size="12">说明：</text>
+            <text y="20" fill="#6e6e80" font-size="11">· DRAFT 通常省略（直接发布就是 OPEN）</text>
+            <text y="40" fill="#6e6e80" font-size="11">· COMPLETED 是终态，不可再变更 / 取消 / 重新选标</text>
+            <text y="60" fill="#6e6e80" font-size="11">· CANCELLED 是终态；ASSIGNED 状态需双方同意才能取消</text>
+          </g>
+          <g transform="translate(640, 380)">
+            <text fill="#6e6e80" font-size="12">状态来源：</text>
+            <text y="20" fill="#6e6e80" font-size="11">· DRAFT / OPEN / ASSIGNED → CANCELLED：手动</text>
+            <text y="40" fill="#6e6e80" font-size="11">· OPEN → FAILED：定时任务（每日扫描）</text>
+            <text y="60" fill="#6e6e80" font-size="11">· FAILED → DRAFT：手动（复制新建）</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 权限矩阵 -->
+    <div class="card mb-6">
+      <h2 class="section-title">3. 操作权限矩阵（按当前用户角色 × 任务状态）</h2>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">操作</th>
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">发布者</th>
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">中标者</th>
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">其他用户</th>
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">浏览任务（OPEN/历史）</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px; color: #6e6e80;">全员公开</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">投标</td>
+            <td style="padding: 10px 12px;"><span style="color: #dc2626;">✗</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px; color: #6e6e80;">不能投自己发的</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">选标</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px; color: #6e6e80;">发布者专属</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">直接指名</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px; color: #6e6e80;">发布者专属</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">协商延期</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px; color: #6e6e80;">双方</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">变更字段</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px; color: #6e6e80;">双方确认</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">取消任务</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px; color: #6e6e80;">DRAFT/OPEN 单方；ASSIGNED 双方</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">确认完成</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px; color: #6e6e80;">发布者专属</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 10px 12px; font-weight: 500;">查看他人投标</td>
+            <td style="padding: 10px 12px;"><span style="color: #10b981;">✓</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #dc2626;">✗</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #dc2626;">✗</span></td>
+            <td style="padding: 10px 12px; color: #6e6e80;">互相不可见（防串标）</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 12px; font-weight: 500;">老板视图</td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px;">—</td>
+            <td style="padding: 10px 12px;"><span style="color: #6b7280;">仅老板</span></td>
+            <td style="padding: 10px 12px; color: #6e6e80;">隐藏入口</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 数据模型 -->
+    <div class="card mb-6">
+      <h2 class="section-title">4. 数据模型（4 张核心表）</h2>
+      <div class="grid-2 mt-4" style="gap: 16px;">
+
+        <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div class="row-tight mb-2">
+            <i data-lucide="database" width="14" height="14" style="color: var(--color-primary);"></i>
+            <strong style="font-size: 14px;">task</strong>
+            <span class="text-subtle" style="font-size: 11px;">任务主表</span>
+          </div>
+          <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
+            id · title · description (HTML)<br>
+            budget · final_amount<br>
+            expected_delivery · final_delivery<br>
+            bidding_deadline · status<br>
+            complexity (LOW/MEDIUM/HIGH)<br>
+            created_by · assigned_bid_id<br>
+            payment_account_id · created_at
+          </div>
+        </div>
+
+        <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div class="row-tight mb-2">
+            <i data-lucide="database" width="14" height="14" style="color: var(--color-primary);"></i>
+            <strong style="font-size: 14px;">bid</strong>
+            <span class="text-subtle" style="font-size: 11px;">投标表</span>
+          </div>
+          <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
+            id · task_id · bidder_id<br>
+            amount · delivery_date<br>
+            proposal · status<br>
+            collaborators (JSON)<br>
+            created_at · updated_at<br>
+            UNIQ(task, bidder, ACTIVE)<br>
+            —— 防同人重复投标
+          </div>
+        </div>
+
+        <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div class="row-tight mb-2">
+            <i data-lucide="database" width="14" height="14" style="color: var(--color-primary);"></i>
+            <strong style="font-size: 14px;">task_attachment</strong>
+            <span class="text-subtle" style="font-size: 11px;">附件表</span>
+          </div>
+          <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
+            id · task_id<br>
+            file_name · file_key<br>
+            file_size · mime_type<br>
+            uploaded_by · uploaded_at<br>
+            —— MVP 本地存储<br>
+            —— 20MB / 文件
+          </div>
+        </div>
+
+        <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div class="row-tight mb-2">
+            <i data-lucide="database" width="14" height="14" style="color: var(--color-primary);"></i>
+            <strong style="font-size: 14px;">task_change_log</strong>
+            <span class="text-subtle" style="font-size: 11px;">变更记录表</span>
+          </div>
+          <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
+            id · task_id<br>
+            change_type (AMOUNT/DELIVERY/<br>
+            DESCRIPTION/CANCEL/EXTENSION)<br>
+            old_value (JSON) · new_value (JSON)<br>
+            agreed_by (JSON) · reason<br>
+            created_at<br>
+            —— 不可删，只追加
+          </div>
+        </div>
+
+      </div>
+      <p class="text-subtle text-sm mt-4" style="margin-bottom: 0;">
+        <i data-lucide="info" width="14" height="14"></i>
+        不存：付款账号（外部引用）/ 用户表（外部 + Redis 缓存）/ 系统配置（二期）。
+      </p>
+    </div>
+
+    <!-- 通知规则 -->
+    <div class="card mb-6">
+      <h2 class="section-title">5. 通知规则（MVP 简化版）</h2>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">事件</th>
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">通知对象</th>
+            <th style="text-align: left; padding: 10px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">通道</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">收到投标</td>
+            <td style="padding: 8px 12px;">发布者</td>
+            <td style="padding: 8px 12px;"><span class="badge" style="background: #f5f3ff; color: #5e6ad2;">站内</span> <span class="badge" style="background: #ecfdf5; color: #10b981;">邮件</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">被选中</td>
+            <td style="padding: 8px 12px;">中标者</td>
+            <td style="padding: 8px 12px;"><span class="badge" style="background: #f5f3ff; color: #5e6ad2;">站内</span> <span class="badge" style="background: #ecfdf5; color: #10b981;">邮件</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">未中</td>
+            <td style="padding: 8px 12px;">（中标后自然知，不主动）</td>
+            <td style="padding: 8px 12px; color: #9ca3af;">—</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">状态变更</td>
+            <td style="padding: 8px 12px;">双方</td>
+            <td style="padding: 8px 12px;"><span class="badge" style="background: #f5f3ff; color: #5e6ad2;">站内</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">流标</td>
+            <td style="padding: 8px 12px;">发布者 + 原投标者</td>
+            <td style="padding: 8px 12px;"><span class="badge" style="background: #f5f3ff; color: #5e6ad2;">站内</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">完成</td>
+            <td style="padding: 8px 12px;">双方</td>
+            <td style="padding: 8px 12px;"><span class="badge" style="background: #f5f3ff; color: #5e6ad2;">站内</span> <span class="badge" style="background: #ecfdf5; color: #10b981;">邮件</span></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px;">协商延期发起</td>
+            <td style="padding: 8px 12px;">对方</td>
+            <td style="padding: 8px 12px;"><span class="badge" style="background: #f5f3ff; color: #5e6ad2;">站内</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="text-subtle text-sm mt-4" style="margin-bottom: 0;">
+        <i data-lucide="info" width="14" height="14"></i>
+        企微 / 钉钉集成：二期。
+      </p>
+    </div>
+
+    <!-- 文件位置 -->
+    <div class="card">
+      <h2 class="section-title">📁 原型文件位置</h2>
+      <pre style="background: #fafafa; padding: 12px 14px; border-radius: 6px; font-size: 12px; color: #374151; line-height: 1.8; margin: 16px 0 0; font-family: 'SF Mono', Menlo, monospace;">docs/prototype/
+├── index.html              ← 入口（导航主页）
+├── assets/
+│   └── style.css           ← 共用样式（Design tokens）
+└── pages/                  ← 16 个原型页
+    ├── 01-overview.html        系统总览 + 状态机（本页）
+    ├── 02-login.html           SSO 登录跳转
+    ├── 03-task-hall.html       任务大厅
+    ├── 04-task-detail.html     任务详情（4 状态）
+    ├── 05-create-task.html     发布任务
+    ├── 06-direct-assign.html   直接指名
+    ├── 07-bid.html             投标（单人 + 协作）
+    ├── 08-select-bid.html      选标 + 调整
+    ├── 09-extension.html       协商延期
+    ├── 10-cancel.html          取消任务
+    ├── 11-failed-clone.html    流标 + 复制新建
+    ├── 12-profile.html         个人主页
+    ├── 13-boss-gantt.html      老板视图
+    ├── 14-notifications.html   通知中心
+    ├── 15-flow-diagrams.html   流程图汇总
+    └── 16-empty-states.html    空状态合集</pre>
+    </div>
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home" title="返回导航首页">
+      <i data-lucide="home" width="14" height="14"></i>
+    </a>
+    <a href="../index.html"><i data-lucide="arrow-left" width="12" height="12"></i> 导航</a>
+    <a href="02-login.html">2 / 16 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskHub · 原型导航</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- 头部 -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">原型 v1.0</span>
+    </div>
+    <div class="row-tight text-subtle" style="font-size: 12px;">
+      <i data-lucide="folder-open" width="14" height="14"></i>
+      <span>docs/prototype/</span>
+      <span class="text-muted" style="margin-left: 12px;">覆盖需求文档 §5 全部 11 个流程 (A-K)</span>
+    </div>
+  </header>
+
+  <!-- 主内容 -->
+  <div class="container">
+    <!-- 标题区 -->
+    <div class="mb-8">
+      <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px;">TaskHub 原型图</h1>
+      <p class="text-muted" style="margin: 0; font-size: 15px;">
+        内部任务交易平台 · Linear-inspired 风格 · 共 16 个页面 · 点击进入查看
+      </p>
+    </div>
+
+    <!-- 元信息 -->
+    <div class="alert alert-info">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body">
+        <strong>如何使用</strong>：
+        每个页面是独立的 HTML 自包含文件（无 JS 依赖、可单独打开）。
+        页间用「下一张 / 上一张」浮动按钮串联。所有页面共用 <code>assets/style.css</code>。
+        Mock 数据命名全部带 <code>MOCK_</code> 前缀，零真实业务信息。
+      </div>
+    </div>
+
+    <!-- 系统图 -->
+    <div class="card mb-6">
+      <div class="row-between mb-4">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0;">系统总览</h2>
+        <a href="pages/01-overview.html" class="btn btn-secondary btn-sm">
+          查看完整总览图
+          <i data-lucide="arrow-right" width="12" height="12"></i>
+        </a>
+      </div>
+      <div class="legend" style="margin-bottom: 16px;">
+        <span class="legend-item"><span class="legend-dot" style="background:#5e6ad2;"></span>发布者</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#f97316;"></span>开发者（接单）</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#1a1a1a;"></span>老板</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#10b981;"></span>外部人员接口</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#6e6e80;"></span>SSO 登录</span>
+      </div>
+      <div style="background: #fafafa; border-radius: 6px; padding: 16px;">
+        <pre style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; color: #374151;">
+┌──────────┐    SSO 跳转    ┌──────────────────────────────────────────┐
+│  浏览器   │ ──────────────▶│              TaskHub                       │
+│ (员工电脑) │ ◀────────────── │  ┌────────┐ ┌────────┐ ┌────────┐       │
+└──────────┘   Bearer Token   │  │任务大厅 │ │任务详情 │ │个人主页 │       │
+                                │  └────────┘ └────────┘ └────────┘       │
+                                │  ┌────────┐ ┌────────┐ ┌────────┐       │
+                                │  │ 发布   │ │ 投标   │ │老板视图 │       │
+                                │  └────────┘ └────────┘ └────────┘       │
+                                └──────────────────────────────────────────┘
+                                          │                │
+                          ┌───────────────┼────────────────┘
+                          ▼               ▼               ▼
+                    ┌─────────┐    ┌──────────┐    ┌──────────────┐
+                    │ SSO 插件│    │ 人员接口  │    │ 付款账号（外） │
+                    └─────────┘    └──────────┘    └──────────────┘
+                    公司内部        外部 / 缓存         公司内部
+                </pre>
+      </div>
+    </div>
+
+    <!-- 页面索引 -->
+    <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 16px;">页面索引 · 16 个原型页</h2>
+    <p class="text-muted mb-6" style="margin-top: 0;">按"用户旅程"排序。从进入系统到完成任务，覆盖所有可能的状态切换。</p>
+
+    <div class="grid-4" style="gap: 16px;">
+
+      <!-- 01 总览 -->
+      <a href="pages/01-overview.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P01</span>
+          <i data-lucide="map" width="14" height="14"></i>
+          <span class="text-sm font-medium">系统总览</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">总览 · 状态机 · 权限</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">状态流转图 + 角色矩阵 + 数据模型</p>
+      </a>
+
+      <!-- 02 登录 -->
+      <a href="pages/02-login.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P02</span>
+          <i data-lucide="log-in" width="14" height="14"></i>
+          <span class="text-sm font-medium">登录入口</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">SSO 跳转登录</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">公司 SSO 登录插件（外部）</p>
+      </a>
+
+      <!-- 03 任务大厅 -->
+      <a href="pages/03-task-hall.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P03</span>
+          <i data-lucide="layout-grid" width="14" height="14"></i>
+          <span class="text-sm font-medium">任务大厅</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">任务大厅（流程 J/K）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">搜索 + 状态筛选 + 复杂度 + 分页</p>
+      </a>
+
+      <!-- 04 任务详情 -->
+      <a href="pages/04-task-detail.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P04</span>
+          <i data-lucide="file-text" width="14" height="14"></i>
+          <span class="text-sm font-medium">任务详情</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">任务详情（流程 I）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">4 种状态视图 · 描述为主体</p>
+      </a>
+
+      <!-- 05 发布任务 -->
+      <a href="pages/05-create-task.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P05</span>
+          <i data-lucide="plus-circle" width="14" height="14"></i>
+          <span class="text-sm font-medium">发布任务</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">发布任务（流程 A）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">招标模式 + 富文本 + 附件上传</p>
+      </a>
+
+      <!-- 06 直接指名 -->
+      <a href="pages/06-direct-assign.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: #f97316;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P06</span>
+          <i data-lucide="user-check" width="14" height="14"></i>
+          <span class="text-sm font-medium">直接指名</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">直接指名（流程 D）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">跳过招标 · 自动生效</p>
+      </a>
+
+      <!-- 07 投标 -->
+      <a href="pages/07-bid.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P07</span>
+          <i data-lucide="circle-dollar-sign" width="14" height="14"></i>
+          <span class="text-sm font-medium">投标</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">投标（流程 B）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">单人 + 多人协作两种模式</p>
+      </a>
+
+      <!-- 08 选标 -->
+      <a href="pages/08-select-bid.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P08</span>
+          <i data-lucide="list-checks" width="14" height="14"></i>
+          <span class="text-sm font-medium">选标</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">选标（流程 C）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">投标列表 + 金额/交期调整</p>
+      </a>
+
+      <!-- 09 协商延期 -->
+      <a href="pages/09-extension.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: #f97316;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P09</span>
+          <i data-lucide="clock" width="14" height="14"></i>
+          <span class="text-sm font-medium">协商延期</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">协商延期（流程 E）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">发起 → 对方同意</p>
+      </a>
+
+      <!-- 10 取消任务 -->
+      <a href="pages/10-cancel.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: #dc2626;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P10</span>
+          <i data-lucide="x-circle" width="14" height="14"></i>
+          <span class="text-sm font-medium">取消任务</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">取消任务（流程 F）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">DRAFT/OPEN/ASSIGNED 三种</p>
+      </a>
+
+      <!-- 11 流标 + 复制新建 -->
+      <a href="pages/11-failed-clone.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: #6b7280;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P11</span>
+          <i data-lucide="copy" width="14" height="14"></i>
+          <span class="text-sm font-medium">流标重建</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">流标 + 复制新建（流程 H）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">流标详情 + 一键复用模板</p>
+      </a>
+
+      <!-- 12 个人主页 -->
+      <a href="pages/12-profile.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P12</span>
+          <i data-lucide="user" width="14" height="14"></i>
+          <span class="text-sm font-medium">个人主页</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">个人主页（流程 §10）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">三 Tab + 个人时间线甘特图</p>
+      </a>
+
+      <!-- 13 老板视图 -->
+      <a href="pages/13-boss-gantt.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: #1a1a1a;">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P13</span>
+          <i data-lucide="gantt-chart-square" width="14" height="14"></i>
+          <span class="text-sm font-medium">老板视图</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">老板视图（流程 §9）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">甘特图 + 按付款账号筛选</p>
+      </a>
+
+      <!-- 14 通知中心 -->
+      <a href="pages/14-notifications.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P14</span>
+          <i data-lucide="bell" width="14" height="14"></i>
+          <span class="text-sm font-medium">通知中心</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">通知中心（流程 §8）</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">站内消息 + 已读未读</p>
+      </a>
+
+      <!-- 15 流程图汇总 -->
+      <a href="pages/15-flow-diagrams.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P15</span>
+          <i data-lucide="git-fork" width="14" height="14"></i>
+          <span class="text-sm font-medium">流程图汇总</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">11 个流程的完整图解</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">A-K · SVG · 可直接做参考图</p>
+      </a>
+
+      <!-- 16 空状态 -->
+      <a href="pages/16-empty-states.html" class="card card-hoverable" style="text-decoration: none; color: inherit;">
+        <div class="row-tight mb-3" style="color: var(--color-primary);">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;">P16</span>
+          <i data-lucide="inbox" width="14" height="14"></i>
+          <span class="text-sm font-medium">空状态</span>
+        </div>
+        <h3 style="font-size: 14px; margin: 0 0 6px; font-weight: 600;">空状态合集</h3>
+        <p class="text-subtle" style="font-size: 12px; margin: 0;">12 种常见空状态 + 引导文案</p>
+      </a>
+
+    </div>
+
+    <!-- 数据约定 -->
+    <div class="card mt-8">
+      <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 12px;">数据约定（确保各页面一致）</h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <th style="text-align: left; padding: 8px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">字段</th>
+            <th style="text-align: left; padding: 8px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">格式</th>
+            <th style="text-align: left; padding: 8px 12px; color: #8f8f99; font-weight: 500; font-size: 12px;">示例</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">金额</td>
+            <td style="padding: 8px 12px;"><code>¥1,234</code> （千分位 + 元）</td>
+            <td style="padding: 8px 12px;">¥1,200 / ¥12,800</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">日期</td>
+            <td style="padding: 8px 12px;"><code>YYYY-MM-DD</code></td>
+            <td style="padding: 8px 12px;">2026-06-25</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border);">
+            <td style="padding: 8px 12px;">文件大小</td>
+            <td style="padding: 8px 12px;">B / KB / MB（自动）</td>
+            <td style="padding: 8px 12px;">2.3 MB / 12.5 KB</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px;">状态枚举</td>
+            <td style="padding: 8px 12px;"><code>DRAFT / OPEN / ASSIGNED / COMPLETED / FAILED / CANCELLED</code></td>
+            <td style="padding: 8px 12px;">6 种，不可扩展（MVP）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-8 text-subtle text-sm">
+      <i data-lucide="calendar" width="12" height="12"></i>
+      最后更新 2026-07-02 · 设计语言：Linear + Vercel · 见 <code>../../DESIGN.md</code>
+    </div>
+  </div>
+
+  <!-- 浮动页间导航 -->
+  <div class="proto-nav">
+    <a href="index.html" class="proto-home" title="返回导航首页">
+      <i data-lucide="home" width="14" height="14"></i>
+    </a>
+    <span class="disabled">‹ 上一页</span>
+    <a href="pages/01-overview.html">
+      1 / 16
+      <i data-lucide="arrow-right" width="12" height="12"></i>
+    </a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

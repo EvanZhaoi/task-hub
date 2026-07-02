@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P10 · 取消任务 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P10 · 取消任务</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>陈PM · 发布者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-narrow">
+
+    <!-- 标题 -->
+    <div class="mb-6">
+      <div class="row-tight mb-2" style="color: #dc2626;">
+        <i data-lucide="x-circle" width="20" height="20"></i>
+        <span class="text-sm font-medium" style="font-size: 13px;">流程 F · 取消任务</span>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">取消任务</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">不同状态取消规则不同 · 以下展示 DRAFT / OPEN / ASSIGNED 三种</p>
+    </div>
+
+    <!-- 三种状态对比 -->
+    <div class="grid-3" style="gap: 16px; margin-bottom: 24px;">
+
+      <!-- DRAFT / OPEN：单方取消 -->
+      <div class="card" style="border-color: #fde68a; background: #fffbeb;">
+        <div class="row-tight mb-3" style="gap: 6px;">
+          <span class="badge badge-OPEN">OPEN</span>
+          <span class="text-sm text-muted" style="font-size: 12px;">或 DRAFT</span>
+        </div>
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 12px;">单方取消</h3>
+        <ul style="font-size: 13px; color: #92400e; line-height: 1.8; padding-left: 18px; margin: 0 0 16px;">
+          <li><strong>发布者</strong> 自己取消即可</li>
+          <li>不需要任何确认</li>
+          <li>投标记录自动置 WITHDRAWN</li>
+          <li>状态 → CANCELLED（终态）</li>
+        </ul>
+        <button class="btn btn-danger" style="width: 100%;">
+          <i data-lucide="x" width="14" height="14"></i>
+          直接取消任务
+        </button>
+      </div>
+
+      <!-- ASSIGNED：双方取消 -->
+      <div class="card" style="border-color: #fecaca; background: #fef2f2;">
+        <div class="row-tight mb-3">
+          <span class="badge badge-ASSIGNED">ASSIGNED</span>
+        </div>
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 12px;">需双方同意</h3>
+        <ul style="font-size: 13px; color: #991b1b; line-height: 1.8; padding-left: 18px; margin: 0 0 16px;">
+          <li>任一方<strong>发起</strong>取消</li>
+          <li>对方需<strong>同意</strong></li>
+          <li>可填「已做工时折算」备注</li>
+          <li>状态 → CANCELLED</li>
+        </ul>
+        <button class="btn btn-danger" style="width: 100%;">
+          <i data-lucide="users" width="14" height="14"></i>
+          申请取消（需对方同意）
+        </button>
+      </div>
+
+      <!-- COMPLETED 不能取消 -->
+      <div class="card" style="opacity: 0.55;">
+        <div class="row-tight mb-3">
+          <span class="badge badge-COMPLETED">COMPLETED</span>
+        </div>
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 12px;">不可取消</h3>
+        <ul style="font-size: 13px; color: #6e6e80; line-height: 1.8; padding-left: 18px; margin: 0 0 16px;">
+          <li>COMPLETED 是<strong>终态</strong></li>
+          <li>如有错误，找双方+老板处理</li>
+          <li>记录进 Change Log 即可追溯</li>
+          <li>无「取消」按钮</li>
+        </ul>
+        <button class="btn btn-secondary" disabled style="width: 100%;">
+          <i data-lucide="lock" width="14" height="14"></i>
+          取消（不可用）
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ASSIGNED 状态取消流程详情 -->
+    <div class="card mb-6">
+      <div class="row-between mb-4">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0;">ASSIGNED 状态取消流程</h2>
+        <span class="badge badge-ASSIGNED">进行中</span>
+      </div>
+
+      <!-- 时间线 -->
+      <div style="position: relative; padding-left: 28px;">
+        <!-- 步骤 1：发起 -->
+        <div style="position: relative; padding-bottom: 24px;">
+          <div style="position: absolute; left: -28px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">1</div>
+          <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 6px;">发起取消</h3>
+          <p class="text-muted" style="font-size: 13px; margin: 0 0 12px;">任一方发起 → 填原因 + 备注 → 提交给对方</p>
+          <div class="card" style="background: #fafafa; padding: 12px;">
+            <div class="row-tight mb-2">
+              <div class="avatar avatar-xs">陈</div>
+              <span style="font-size: 13px; font-weight: 500;">陈PM (发布者)</span>
+              <span class="text-subtle text-sm" style="font-size: 12px;">· 2026-06-12 15:30</span>
+            </div>
+            <div class="field" style="margin-bottom: 0;">
+              <div class="text-sm" style="font-size: 13px; color: #374151;">
+                需求变更，新任务被战略项目替换。需要取消这个 UI 重构任务。
+              </div>
+            </div>
+            <div class="row-tight mt-3" style="gap: 6px;">
+              <span class="badge badge-ASSIGNED">已做工时折算</span>
+              <span class="text-subtle text-sm" style="font-size: 12px;">约 30% 已完成（线下协商）</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 步骤 2：对方回应 -->
+        <div style="position: relative; padding-bottom: 24px;">
+          <div style="position: absolute; left: -28px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: #f59e0b; color: white; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="clock" width="10" height="10"></i>
+          </div>
+          <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 6px;">对方回应中</h3>
+          <p class="text-muted" style="font-size: 13px; margin: 0 0 12px;">对方需同意或拒绝 · 不回应 = 维持原状态</p>
+          <div class="alert alert-warning" style="margin-bottom: 0;">
+            <i data-lucide="clock" width="16" height="16" class="alert-icon"></i>
+            <div class="alert-body" style="font-size: 12px;">
+              <strong>等待韩梅梅回应</strong> · 收到站内通知 · 未回应前任务<strong style="color: #9a3412;">不取消</strong>
+            </div>
+          </div>
+          <div class="row-tight mt-3" style="gap: 8px;">
+            <button class="btn btn-danger btn-sm">
+              <i data-lucide="check" width="12" height="12"></i>
+              同意取消
+            </button>
+            <button class="btn btn-secondary btn-sm">
+              <i data-lucide="x" width="12" height="12"></i>
+              拒绝取消
+            </button>
+            <button class="btn btn-ghost btn-sm">
+              <i data-lucide="message-circle" width="12" height="12"></i>
+              评论
+            </button>
+          </div>
+        </div>
+
+        <!-- 步骤 3：状态变更 -->
+        <div style="position: relative;">
+          <div style="position: absolute; left: -28px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: #d1d5db; color: white; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="circle" width="10" height="10"></i>
+          </div>
+          <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 6px; color: #6b7280;">状态变为 CANCELLED（终态）</h3>
+          <p class="text-subtle" style="font-size: 13px; margin: 0;">双方同意后 → 任务状态变 CANCELLED · 写一条 CANCEL 变更记录</p>
+        </div>
+
+        <!-- 竖线 -->
+        <div style="position: absolute; left: -19px; top: 14px; bottom: 14px; width: 2px; background: var(--color-border);"></div>
+      </div>
+    </div>
+
+    <!-- 取消确认模态框（参考） -->
+    <div class="card" style="border-color: #fecaca; background: #fef2f2;">
+      <div class="row-between mb-4">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #991b1b;">
+          <i data-lucide="alert-triangle" width="18" height="18" style="vertical-align: -3px;"></i>
+          取消任务确认（OPEN 状态）
+        </h2>
+      </div>
+
+      <div class="field">
+        <label class="field-label">取消原因（可选）</label>
+        <textarea class="input" rows="3" placeholder="为什么取消？方便记录后续追溯"></textarea>
+      </div>
+
+      <div class="alert alert-danger mb-4">
+        <i data-lucide="alert-triangle" width="16" height="16" class="alert-icon"></i>
+        <div class="alert-body" style="font-size: 12px;">
+          <strong>确认操作</strong>：取消后任务变为 CANCELLED（终态），不可再恢复。<br>
+          当前已有 <strong style="color: #991b1b;">2 个投标</strong>，取消后投标状态自动变 WITHDRAWN · 投标者会收到通知。
+        </div>
+      </div>
+
+      <div class="row-end" style="gap: 8px;">
+        <button class="btn btn-secondary">返回</button>
+        <button class="btn btn-danger btn-lg">
+          <i data-lucide="x-circle" width="16" height="16"></i>
+          确认取消任务
+        </button>
+      </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="alert alert-info mt-6">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>说明</strong>（流程 F）：
+        · DRAFT / OPEN：发布者单方取消<br>
+        · ASSIGNED：<strong style="color: #9a3412;">必须双方同意</strong>才生效<br>
+        · COMPLETED：是终态，不能取消<br>
+        · MVP 不做「已做工时的折算」功能（不记录工时），线下协商即可
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="09-extension.html"><i data-lucide="arrow-left" width="12" height="12"></i> 9</a>
+    <a href="11-failed-clone.html">11 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

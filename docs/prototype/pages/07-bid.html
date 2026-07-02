@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P07 · 投标 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P07 · 投标</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>韩梅梅 · 开发者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-narrow">
+
+    <!-- 标题 + 模式切换 -->
+    <div class="mb-6">
+      <div class="row-tight mb-2" style="color: var(--color-primary);">
+        <i data-lucide="circle-dollar-sign" width="20" height="20"></i>
+        <span class="text-sm font-medium" style="font-size: 13px;">流程 B · 投标</span>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">投标任务</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">「用户登录页 UI 重构」· 陈PM 发布 · 招标截止 2026-06-15</p>
+    </div>
+
+    <!-- 模式切换 -->
+    <div class="card mb-6" style="padding: 16px;">
+      <div class="row" style="gap: 8px;">
+        <button class="btn btn-primary" style="background: var(--color-primary); flex: 1;">
+          <i data-lucide="user" width="14" height="14"></i>
+          单人投标
+        </button>
+        <button class="btn btn-secondary" style="flex: 1;">
+          <i data-lucide="users" width="14" height="14"></i>
+          多人协作投标
+        </button>
+      </div>
+      <p class="text-subtle text-sm mt-3" style="margin-bottom: 0; font-size: 12px;">
+        <i data-lucide="info" width="12" height="12"></i>
+        多人协作 = 主对接人填写整体方案 + 金额，添加协作成员。MVP：协作成员只需被加入，无需二次确认。
+      </p>
+    </div>
+
+    <!-- 投标表单 -->
+    <form class="card mb-4">
+
+      <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px;">单人参投标信息</h2>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field-label">投标金额（¥） <span class="req">*</span></label>
+          <input type="number" class="input" value="800" placeholder="例如 800">
+          <div class="field-hint">
+            预算范围：¥800 · 同任务同人<strong style="color: #9a3412;">只能投标一次</strong>（可撤回后重投）
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">预计交期 <span class="req">*</span></label>
+          <input type="date" class="input" value="2026-06-25">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">方案描述（可选）</label>
+        <textarea class="input" rows="4" placeholder="说说你打算怎么做 · 为什么选你 · 风险点">我俩可以合作，前端我做。需要王运维帮忙做接口对接。预计 3 天出初版，5 天内可上线。</textarea>
+        <div class="field-hint">比如：技术方案 / 工时预估 / 风险点 / 之前的类似经验</div>
+      </div>
+
+      <!-- 多人协作成员（如果选了多人协作才显示）-->
+      <div class="field" style="border-top: 1px dashed var(--color-border); padding-top: 16px;">
+        <div class="row-between mb-2">
+          <label class="field-label" style="margin-bottom: 0;">协作成员（可选）</label>
+          <button class="btn btn-secondary btn-sm" type="button">
+            <i data-lucide="plus" width="12" height="12"></i>
+            添加成员
+          </button>
+        </div>
+        <div class="row-tight" style="flex-wrap: wrap; gap: 6px;">
+          <div class="row-tight" style="background: #f5f3ff; padding: 4px 10px; border-radius: 6px;">
+            <div class="avatar avatar-xs">王</div>
+            <span style="font-size: 12px;">王运维</span>
+            <span class="text-subtle" style="font-size: 11px;">· 后端</span>
+            <i data-lucide="x" width="12" height="12" style="color: #6e6e80; cursor: pointer;"></i>
+          </div>
+        </div>
+        <div class="field-hint">从人员接口拉取 · 仅成员被加入，无需确认</div>
+      </div>
+
+      <!-- 同同人二次投标提示 -->
+      <div class="alert alert-warning" style="margin-bottom: 0;">
+        <i data-lucide="alert-triangle" width="16" height="16" class="alert-icon"></i>
+        <div class="alert-body" style="font-size: 12px;">
+          <strong>提示</strong>：你已经投过这个任务（金额 ¥750），提交这次投标将<strong style="color: #9a3412;">覆盖</strong>原投标。
+        </div>
+      </div>
+    </form>
+
+    <!-- 确认 -->
+    <div class="alert alert-info mb-4">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>提示</strong>：投标提交后只有发布者可以看到 · 投标信息 <strong style="color: #9a3412;">互相不可见</strong>（防串标）· 提交后状态为「等待中」直至发布者选标或流标
+      </div>
+    </div>
+
+    <div class="row-end" style="gap: 8px;">
+      <a href="04-task-detail.html" class="btn btn-secondary">取消</a>
+      <button class="btn btn-primary btn-lg">
+        <i data-lucide="send" width="16" height="16"></i>
+        提交投标
+      </button>
+    </div>
+
+    <!-- 多人协作模式预览 -->
+    <div class="card mt-6" style="background: #fafafa;">
+      <div class="row-tight mb-3">
+        <i data-lucide="users" width="16" height="16" style="color: var(--color-primary);"></i>
+        <h3 style="font-size: 14px; font-weight: 600; margin: 0;">多人协作投标 · 模式细节</h3>
+      </div>
+      <div class="text-sm text-muted" style="line-height: 1.8;">
+        · 主对接人 A 填写整体方案和金额，负责交付<br>
+        · 协作成员只需被加入名单，<strong>不需要二次确认</strong>（MVP 简化）<br>
+        · 数据库存 <code>collaborators</code> JSON 数组<br>
+        · 投标状态：ACTIVE / WITHDRAWN / ACCEPTED / LOST · ACCEPTED 时所有成员都被标记为已参与<br>
+        · 后续交付责任都在主对接人 · 协作成员在自己主页「我接的」 Tab 也可见
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="06-direct-assign.html"><i data-lucide="arrow-left" width="12" height="12"></i> 6</a>
+    <a href="08-select-bid.html">8 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

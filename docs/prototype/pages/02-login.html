@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P02 · SSO 登录跳转 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+    .login-card { max-width: 460px; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="card login-card fade-up" style="padding: 40px 32px;">
+
+      <!-- Logo -->
+      <div class="row mb-6" style="gap: 12px;">
+        <div class="logo" style="width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #5e6ad2 0%, #8b5cf6 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 22px;">T</div>
+        <div>
+          <h1 style="font-size: 22px; font-weight: 700; margin: 0;">TaskHub</h1>
+          <p class="text-muted" style="font-size: 13px; margin: 2px 0 0;">内部任务交易平台</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- 主状态：跳转到 SSO -->
+      <div class="text-center mb-6">
+        <div class="mb-4">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: #f5f3ff; display: inline-flex; align-items: center; justify-content: center; color: var(--color-primary);">
+            <i data-lucide="shield-check" width="28" height="28"></i>
+          </div>
+        </div>
+        <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 8px;">正在跳转公司 SSO 登录...</h2>
+        <p class="text-muted" style="font-size: 13px; margin: 0;">
+          TaskHub 通过公司 SSO 插件完成身份验证，<br>
+          不会存储您的登录密码
+        </p>
+      </div>
+
+      <!-- 跳转按钮 -->
+      <button class="btn btn-primary btn-lg" style="width: 100%; margin-top: 8px;">
+        <i data-lucide="external-link" width="16" height="16"></i>
+        手动跳转 SSO 登录
+      </button>
+
+      <!-- 流程说明 -->
+      <div style="background: #fafafa; border-radius: 8px; padding: 16px; margin-top: 24px;">
+        <div class="section-title" style="margin-bottom: 10px;">登录流程</div>
+        <div style="font-size: 12px; color: #6e6e80;">
+          <div class="row-tight" style="margin-bottom: 8px;">
+            <div class="badge badge-OPEN" style="font-size: 10px;">1</div>
+            <span>TaskHub 接收 redirect → sso.internal.company/auth?...</span>
+          </div>
+          <div class="row-tight" style="margin-bottom: 8px;">
+            <div class="badge badge-OPEN" style="font-size: 10px;">2</div>
+            <span>SSO 验证用户身份，生成 Bearer Token</span>
+          </div>
+          <div class="row-tight" style="margin-bottom: 8px;">
+            <div class="badge badge-OPEN" style="font-size: 10px;">3</div>
+            <span>SSO 重定向回 TaskHub（带 token）</span>
+          </div>
+          <div class="row-tight">
+            <div class="badge badge-COMPLETED" style="font-size: 10px;">4</div>
+            <span>TaskHub 解析 token + 缓存用户信息（Redis 1h）</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 安全提示 -->
+      <div class="alert alert-info mt-6" style="margin-top: 24px; margin-bottom: 0;">
+        <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+        <div class="alert-body" style="font-size: 12px;">
+          <strong>关于身份</strong>：用户信息（姓名、部门、邮箱）从外部人员接口实时获取，TaskHub 不维护本地用户表。
+        </div>
+      </div>
+
+      <!-- 进入开发模式（演示用） -->
+      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px dashed var(--color-border);">
+        <div class="row mb-2">
+          <i data-lucide="wrench" width="14" height="14" style="color: #8f8f99;"></i>
+          <span class="text-subtle" style="font-size: 12px; font-weight: 500;">原型演示模式</span>
+        </div>
+        <p class="text-subtle" style="font-size: 12px; margin: 0 0 12px;">
+          原型阶段没有真实 SSO，使用"切换身份"模拟不同角色：
+        </p>
+        <a href="03-task-hall.html" class="btn btn-secondary" style="width: 100%;">
+          以默认身份（开发者·李雷）进入原型
+          <i data-lucide="arrow-right" width="14" height="14"></i>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="01-overview.html"><i data-lucide="arrow-left" width="12" height="12"></i> 1</a>
+    <a href="03-task-hall.html">3 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

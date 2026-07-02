@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P15 · 流程图汇总 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .flow-node { fill: white; stroke: #d1d5db; stroke-width: 1.5; }
+    .flow-node-primary { fill: #f5f3ff; stroke: #5e6ad2; }
+    .flow-label { fill: #1a1a1a; font-size: 12px; font-weight: 500; font-family: -apple-system, sans-serif; }
+    .flow-sublabel { fill: #6e6e80; font-size: 10px; font-family: -apple-system, sans-serif; }
+    .flow-arrow { stroke: #6b7280; stroke-width: 1.5; fill: none; }
+    .flow-arrow-dashed { stroke: #f97316; stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+    .flow-edge-label { fill: #374151; font-size: 11px; font-family: -apple-system, sans-serif; }
+  </style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P15 · 流程图汇总</span>
+    </div>
+    <nav>
+      <a href="../index.html" class="nav-link">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        原型目录
+      </a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <div class="mb-8">
+      <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px;">流程图汇总 · 11 个流程</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">需求文档 §5 的 A-K 所有流程 SVG 图解。可直接作文档插图。</p>
+    </div>
+
+    <!-- 流程 A：任务发布 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 A · 任务发布（招标模式）</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.1</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 1000 240" xmlns="http://www.w3.org/2000/svg">
+          <!-- 节点 -->
+          <g>
+            <rect x="40" y="80" width="120" height="60" rx="8" class="flow-node"/>
+            <text x="100" y="108" text-anchor="middle" class="flow-label">填写任务信息</text>
+            <text x="100" y="125" text-anchor="middle" class="flow-sublabel">标题/描述/账号/金额</text>
+          </g>
+          <g>
+            <rect x="220" y="80" width="120" height="60" rx="8" class="flow-node"/>
+            <text x="280" y="108" text-anchor="middle" class="flow-label">线下确认金额</text>
+            <text x="280" y="125" text-anchor="middle" class="flow-sublabel">联系付款账号管理员</text>
+          </g>
+          <g>
+            <rect x="400" y="80" width="120" height="60" rx="8" class="flow-node-primary"/>
+            <text x="460" y="108" text-anchor="middle" class="flow-label">点击「发布」</text>
+            <text x="460" y="125" text-anchor="middle" class="flow-sublabel">DRAFT → OPEN</text>
+          </g>
+          <g>
+            <rect x="580" y="80" width="120" height="60" rx="8" class="flow-node"/>
+            <text x="640" y="108" text-anchor="middle" class="flow-label">全员可见</text>
+            <text x="640" y="125" text-anchor="middle" class="flow-sublabel">招标中</text>
+          </g>
+          <g>
+            <rect x="760" y="80" width="160" height="60" rx="8" fill="#fafafa" stroke="#d1d5db" stroke-dasharray="4 4"/>
+            <text x="840" y="108" text-anchor="middle" fill="#6b7280" font-size="12" font-weight="500">流程 B：开发者投标</text>
+            <text x="840" y="125" text-anchor="middle" fill="#9ca3af" font-size="10">见流程 B</text>
+          </g>
+
+          <!-- Arrows -->
+          <line x1="160" y1="110" x2="220" y2="110" class="flow-arrow"/>
+          <line x1="340" y1="110" x2="400" y2="110" class="flow-arrow"/>
+          <line x1="520" y1="110" x2="580" y2="110" class="flow-arrow"/>
+          <line x1="700" y1="110" x2="760" y2="110" class="flow-arrow"/>
+
+          <!-- 标题 -->
+          <text x="500" y="40" text-anchor="middle" fill="#374151" font-size="13" font-weight="600">发布者路径</text>
+          <text x="500" y="200" text-anchor="middle" fill="#6b7280" font-size="11">金额发布后变更需发布者线下再次找管理员确认</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 B：投标 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 B · 投标</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.2</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 1000 320" xmlns="http://www.w3.org/2000/svg">
+          <!-- 单人 -->
+          <g>
+            <text x="100" y="30" fill="#5e6ad2" font-size="13" font-weight="600">单人投标</text>
+            <rect x="40" y="50" width="120" height="50" rx="8" class="flow-node"/>
+            <text x="100" y="78" text-anchor="middle" class="flow-label">填写投标</text>
+            <text x="100" y="92" text-anchor="middle" class="flow-sublabel">金额/交期/方案</text>
+          </g>
+          <g>
+            <rect x="40" y="130" width="120" height="50" rx="8" class="flow-node-primary"/>
+            <text x="100" y="158" text-anchor="middle" class="flow-label">提交</text>
+            <text x="100" y="172" text-anchor="middle" class="flow-sublabel">ACTIVE</text>
+          </g>
+          <line x1="100" y1="100" x2="100" y2="130" class="flow-arrow"/>
+
+          <!-- 多人 -->
+          <g>
+            <text x="300" y="30" fill="#5e6ad2" font-size="13" font-weight="600">多人协作投标</text>
+            <rect x="240" y="50" width="120" height="50" rx="8" class="flow-node"/>
+            <text x="300" y="78" text-anchor="middle" class="flow-label">主对接人填写</text>
+          </g>
+          <g>
+            <rect x="240" y="130" width="120" height="50" rx="8" class="flow-node"/>
+            <text x="300" y="158" text-anchor="middle" class="flow-label">添加协作成员</text>
+            <text x="300" y="172" text-anchor="middle" class="flow-sublabel">从人员接口下拉</text>
+          </g>
+          <g>
+            <rect x="240" y="210" width="120" height="50" rx="8" class="flow-node-primary"/>
+            <text x="300" y="238" text-anchor="middle" class="flow-label">提交</text>
+            <text x="300" y="252" text-anchor="middle" class="flow-sublabel">ACTIVE</text>
+          </g>
+          <line x1="300" y1="100" x2="300" y2="130" class="flow-arrow"/>
+          <line x1="300" y1="180" x2="300" y2="210" class="flow-arrow"/>
+
+          <!-- 右侧：约束 -->
+          <g>
+            <rect x="500" y="50" width="440" height="80" rx="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.5"/>
+            <text x="520" y="78" fill="#c2410c" font-size="13" font-weight="600">规则</text>
+            <text x="520" y="100" fill="#9a3412" font-size="11">· 同任务同一开发者只能投标一次（可撤回后重投）</text>
+            <text x="520" y="118" fill="#9a3412" font-size="11">· 协作成员只需被加入，不需要二次确认（MVP 简化）</text>
+          </g>
+
+          <g>
+            <rect x="500" y="150" width="440" height="80" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5"/>
+            <text x="520" y="178" fill="#dc2626" font-size="13" font-weight="600">隐私</text>
+            <text x="520" y="200" fill="#991b1b" font-size="11">· 投标互相不可见（防串标）</text>
+            <text x="520" y="218" fill="#991b1b" font-size="11">· 只有发布者可见完整投标列表</text>
+          </g>
+
+          <!-- 后续 -->
+          <g>
+            <rect x="240" y="280" width="500" height="30" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+            <text x="490" y="300" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="500">→ 进入流程 C：发布者选标</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 C：选标 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 C · 选标</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.3</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 1000 240" xmlns="http://www.w3.org/2000/svg">
+          <g>
+            <rect x="40" y="80" width="140" height="60" rx="8" class="flow-node"/>
+            <text x="110" y="108" text-anchor="middle" class="flow-label">浏览投标列表</text>
+            <text x="110" y="125" text-anchor="middle" class="flow-sublabel">A 看不到 B 的报价</text>
+          </g>
+          <g>
+            <rect x="220" y="80" width="120" height="60" rx="8" class="flow-node"/>
+            <text x="280" y="108" text-anchor="middle" class="flow-label">选中一个</text>
+          </g>
+          <g>
+            <rect x="380" y="80" width="180" height="60" rx="8" class="flow-node"/>
+            <text x="470" y="108" text-anchor="middle" class="flow-label">调整最终金额 / 交期 / 描述</text>
+          </g>
+          <g>
+            <rect x="600" y="80" width="120" height="60" rx="8" class="flow-node-primary"/>
+            <text x="660" y="108" text-anchor="middle" class="flow-label">确认选标</text>
+          </g>
+          <g>
+            <rect x="760" y="20" width="120" height="60" rx="8" fill="#fed7aa" stroke="#f97316"/>
+            <text x="820" y="48" text-anchor="middle" fill="#9a3412" font-size="12" font-weight="500">中标通知</text>
+            <text x="820" y="65" text-anchor="middle" fill="#9a3412" font-size="10">中标者</text>
+          </g>
+          <g>
+            <rect x="760" y="140" width="120" height="60" rx="8" fill="#f3f4f6" stroke="#9ca3af"/>
+            <text x="820" y="168" text-anchor="middle" fill="#6b7280" font-size="12" font-weight="500">其他变 LOST</text>
+            <text x="820" y="185" text-anchor="middle" fill="#9ca3af" font-size="10">不主动通知</text>
+          </g>
+          <g>
+            <rect x="600" y="160" width="140" height="50" rx="8" fill="#fed7aa" stroke="#f97316"/>
+            <text x="670" y="180" text-anchor="middle" fill="#9a3412" font-size="12" font-weight="600">OPEN → ASSIGNED</text>
+            <text x="670" y="196" text-anchor="middle" fill="#9a3412" font-size="10">进入进行中</text>
+          </g>
+
+          <line x1="180" y1="110" x2="220" y2="110" class="flow-arrow"/>
+          <line x1="340" y1="110" x2="380" y2="110" class="flow-arrow"/>
+          <line x1="560" y1="110" x2="600" y2="110" class="flow-arrow"/>
+          <line x1="660" y1="140" x2="660" y2="160" class="flow-arrow"/>
+          <line x1="720" y1="95" x2="760" y2="50" class="flow-arrow"/>
+          <line x1="720" y1="125" x2="760" y2="170" class="flow-arrow"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 D：直接指名 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 D · 直接指名（旁路）</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.4 · MVP 自动生效 · 跳过招标</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg">
+          <g>
+            <rect x="60" y="60" width="160" height="80" rx="8" class="flow-node"/>
+            <text x="140" y="92" text-anchor="middle" class="flow-label">填写任务信息</text>
+            <text x="140" y="108" text-anchor="middle" class="flow-sublabel">+ 选择被指名人</text>
+            <text x="140" y="124" text-anchor="middle" class="flow-sublabel">+ 指定金额</text>
+          </g>
+          <g>
+            <rect x="280" y="60" width="180" height="80" rx="8" fill="#fff7ed" stroke="#f97316" stroke-width="2"/>
+            <text x="370" y="92" text-anchor="middle" fill="#9a3412" font-size="13" font-weight="600">直接发布</text>
+            <text x="370" y="108" text-anchor="middle" fill="#9a3412" font-size="11">不需要对方确认</text>
+            <text x="370" y="124" text-anchor="middle" fill="#9a3412" font-size="11">不需要招标</text>
+          </g>
+          <g>
+            <rect x="520" y="60" width="160" height="80" rx="8" fill="#fed7aa" stroke="#f97316" stroke-width="2"/>
+            <text x="600" y="92" text-anchor="middle" fill="#9a3412" font-size="13" font-weight="600">→ ASSIGNED</text>
+            <text x="600" y="108" text-anchor="middle" fill="#9a3412" font-size="11">指定的人接单</text>
+            <text x="600" y="124" text-anchor="middle" fill="#9a3412" font-size="11">收到通知</text>
+          </g>
+          <g>
+            <rect x="740" y="60" width="180" height="80" rx="8" fill="#fef3c7" stroke="#fde68a"/>
+            <text x="830" y="92" text-anchor="middle" fill="#92400e" font-size="12" font-weight="600">【二期】</text>
+            <text x="830" y="108" text-anchor="middle" fill="#92400e" font-size="10">被指名人拒绝</text>
+            <text x="830" y="124" text-anchor="middle" fill="#92400e" font-size="10">→ 回到 OPEN</text>
+          </g>
+
+          <line x1="220" y1="100" x2="280" y2="100" class="flow-arrow"/>
+          <line x1="460" y1="100" x2="520" y2="100" class="flow-arrow"/>
+          <line x1="680" y1="100" x2="740" y2="100" class="flow-arrow" stroke-dasharray="4 4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 E：协商延期 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 E · 协商延期</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.5 · ASSIGNED 状态 · 双方确认 · 写 Change Log</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 1000 280" xmlns="http://www.w3.org/2000/svg">
+          <g>
+            <text x="500" y="30" text-anchor="middle" fill="#5e6ad2" font-size="13" font-weight="600">ASSIGNED 状态下的延期流</text>
+          </g>
+
+          <!-- 步骤 1 -->
+          <g>
+            <rect x="60" y="80" width="160" height="60" rx="8" class="flow-node"/>
+            <text x="140" y="105" text-anchor="middle" class="flow-label">线下沟通</text>
+            <text x="140" y="122" text-anchor="middle" class="flow-sublabel">双方达成一致</text>
+          </g>
+          <!-- 步骤 2 -->
+          <g>
+            <rect x="260" y="80" width="160" height="60" rx="8" class="flow-node-primary"/>
+            <text x="340" y="105" text-anchor="middle" class="flow-label">填新交期 + 原因</text>
+            <text x="340" y="122" text-anchor="middle" class="flow-sublabel">发起方提交</text>
+          </g>
+          <!-- 步骤 3 -->
+          <g>
+            <rect x="460" y="80" width="160" height="60" rx="8" class="flow-node"/>
+            <text x="540" y="105" text-anchor="middle" class="flow-label">对方同意</text>
+            <text x="540" y="122" text-anchor="middle" class="flow-sublabel">· 同意 / · 拒绝</text>
+          </g>
+          <!-- 步骤 4 -->
+          <g>
+            <rect x="660" y="80" width="160" height="60" rx="8" class="flow-node-primary"/>
+            <text x="740" y="105" text-anchor="middle" class="flow-label">写 Change Log</text>
+            <text x="740" y="122" text-anchor="middle" class="flow-sublabel">EXTENSION · 双方 + 原因</text>
+          </g>
+          <!-- 步骤 5 -->
+          <g>
+            <rect x="860" y="80" width="100" height="60" rx="8" fill="#fed7aa" stroke="#f97316"/>
+            <text x="910" y="105" text-anchor="middle" fill="#9a3412" font-size="12" font-weight="600">保持</text>
+            <text x="910" y="122" text-anchor="middle" fill="#9a3412" font-size="10">ASSIGNED</text>
+          </g>
+
+          <line x1="220" y1="110" x2="260" y2="110" class="flow-arrow"/>
+          <line x1="420" y1="110" x2="460" y2="110" class="flow-arrow"/>
+          <line x1="620" y1="110" x2="660" y2="110" class="flow-arrow"/>
+          <line x1="820" y1="110" x2="860" y2="110" class="flow-arrow"/>
+
+          <!-- 分支：拒绝 -->
+          <g>
+            <rect x="460" y="180" width="160" height="50" rx="8" fill="#fef2f2" stroke="#fecaca"/>
+            <text x="540" y="200" text-anchor="middle" fill="#991b1b" font-size="11">拒绝 → 维持原交期</text>
+            <text x="540" y="216" text-anchor="middle" fill="#991b1b" font-size="10">双方自行找上司处理</text>
+          </g>
+          <path d="M 540 140 L 540 180" class="flow-arrow" stroke="#dc2626" marker-end="url(#arrow)"/>
+          <text x="468" y="170" fill="#991b1b" font-size="10" font-weight="600">拒绝</text>
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#dc2626"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 F：取消 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 F · 取消任务</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.6 · 三种状态不同规则</p>
+      <div class="flow-diagram">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <th style="text-align: left; padding: 10px; color: #8f8f99; font-weight: 500; font-size: 12px;">当前状态</th>
+              <th style="text-align: left; padding: 10px; color: #8f8f99; font-weight: 500; font-size: 12px;">谁来取消</th>
+              <th style="text-align: left; padding: 10px; color: #8f8f99; font-weight: 500; font-size: 12px;">是否需要对方同意</th>
+              <th style="text-align: left; padding: 10px; color: #8f8f99; font-weight: 500; font-size: 12px;">结果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td style="padding: 10px;"><span class="badge badge-DRAFT">DRAFT</span> 或 <span class="badge badge-OPEN">OPEN</span></td>
+              <td style="padding: 10px;">发布者</td>
+              <td style="padding: 10px;">❌ 不需要</td>
+              <td style="padding: 10px;">直接 → <span style="text-decoration: line-through; color: #9ca3af;">CANCELLED</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td style="padding: 10px;"><span class="badge badge-ASSIGNED">ASSIGNED</span></td>
+              <td style="padding: 10px;">双方任一</td>
+              <td style="padding: 10px;">✅ 必须双方同意</td>
+              <td style="padding: 10px;">对方同意 → <span style="text-decoration: line-through; color: #9ca3af;">CANCELLED</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 10px;"><span class="badge badge-COMPLETED">COMPLETED</span></td>
+              <td style="padding: 10px;">—</td>
+              <td style="padding: 10px;">— 不可取消</td>
+              <td style="padding: 10px; color: #9ca3af;">终态</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="text-subtle text-sm mt-4" style="font-size: 12px; margin-bottom: 0;">
+          <i data-lucide="info" width="14" height="14"></i>
+          每次取消都写一条 CHANGE_LOG（CANCEL 类型）· 不可删除
+        </p>
+      </div>
+    </div>
+
+    <!-- 流程 G：完成确认 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 G · 完成确认</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.7 · 简单：开发者交付 → 发布者点「确认完成」</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 900 160" xmlns="http://www.w3.org/2000/svg">
+          <g>
+            <rect x="40" y="50" width="140" height="60" rx="8" class="flow-node"/>
+            <text x="110" y="78" text-anchor="middle" class="flow-label">开发者交付</text>
+            <text x="110" y="94" text-anchor="middle" class="flow-sublabel">线下沟通</text>
+          </g>
+          <g>
+            <rect x="220" y="50" width="160" height="60" rx="8" class="flow-node-primary"/>
+            <text x="300" y="78" text-anchor="middle" class="flow-label">发布者确认完成</text>
+            <text x="300" y="94" text-anchor="middle" class="flow-sublabel">点击按钮</text>
+          </g>
+          <g>
+            <rect x="420" y="50" width="160" height="60" rx="8" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+            <text x="500" y="78" text-anchor="middle" fill="#065f46" font-size="13" font-weight="600">→ COMPLETED</text>
+            <text x="500" y="94" text-anchor="middle" fill="#065f46" font-size="10">变更记录入档</text>
+          </g>
+          <g>
+            <rect x="620" y="50" width="220" height="60" rx="8" fill="#fafafa" stroke="#d1d5db"/>
+            <text x="730" y="76" text-anchor="middle" fill="#6b7280" font-size="11">MVP 不做超时自动</text>
+            <text x="730" y="94" text-anchor="middle" fill="#6b7280" font-size="11">不点完成 = 永远 ASSIGNED</text>
+          </g>
+          <line x1="180" y1="80" x2="220" y2="80" class="flow-arrow"/>
+          <line x1="380" y1="80" x2="420" y2="80" class="flow-arrow"/>
+          <line x1="580" y1="80" x2="620" y2="80" class="flow-arrow" stroke-dasharray="4 4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 H：流标 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 H · 流标 + 复制新建</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.8 · OPEN 状态超时零投标 → FAILED</p>
+      <div class="flow-diagram">
+        <svg viewBox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg">
+          <g>
+            <rect x="40" y="70" width="100" height="60" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
+            <text x="90" y="98" text-anchor="middle" fill="#1e40af" font-size="12" font-weight="600">OPEN</text>
+            <text x="90" y="115" text-anchor="middle" fill="#1e40af" font-size="10">招标中</text>
+          </g>
+          <g>
+            <rect x="180" y="70" width="120" height="60" rx="8" class="flow-node"/>
+            <text x="240" y="98" text-anchor="middle" class="flow-label">每日扫描</text>
+            <text x="240" y="115" text-anchor="middle" class="flow-sublabel">Spring @Scheduled</text>
+          </g>
+          <g>
+            <rect x="340" y="70" width="160" height="60" rx="8" fill="#e5e7eb" stroke="#6b7280"/>
+            <text x="420" y="98" text-anchor="middle" fill="#4b5563" font-size="12" font-weight="600">→ FAILED</text>
+            <text x="420" y="115" text-anchor="middle" fill="#6b7280" font-size="10">流标（非终态）</text>
+          </g>
+          <g>
+            <rect x="540" y="20" width="180" height="60" rx="8" class="flow-node-primary"/>
+            <text x="630" y="48" text-anchor="middle" class="flow-label">发布者点「复制新建」</text>
+            <text x="630" y="64" text-anchor="middle" class="flow-sublabel">复用模板字段</text>
+          </g>
+          <g>
+            <rect x="540" y="120" width="180" height="60" rx="8" class="flow-node"/>
+            <text x="630" y="146" text-anchor="middle" class="flow-label">不复制历史投标</text>
+            <text x="630" y="162" text-anchor="middle" class="flow-sublabel">仅复用 task 表字段</text>
+          </g>
+          <g>
+            <rect x="760" y="70" width="160" height="60" rx="8" fill="#f3f4f6" stroke="#9ca3af"/>
+            <text x="840" y="98" text-anchor="middle" fill="#6b7280" font-size="12" font-weight="600">新任务 DRAFT</text>
+            <text x="840" y="115" text-anchor="middle" fill="#9ca3af" font-size="10">独立 ID</text>
+          </g>
+
+          <line x1="140" y1="100" x2="180" y2="100" class="flow-arrow"/>
+          <line x1="300" y1="100" x2="340" y2="100" class="flow-arrow"/>
+          <line x1="500" y1="80" x2="540" y2="50" class="flow-arrow"/>
+          <text x="475" y="60" fill="#374151" font-size="10">复制</text>
+          <line x1="500" y1="120" x2="540" y2="150" class="flow-arrow"/>
+          <text x="475" y="155" fill="#9ca3af" font-size="10">不复用</text>
+          <line x1="720" y1="50" x2="760" y2="90" class="flow-arrow"/>
+          <line x1="720" y1="150" x2="760" y2="110" class="flow-arrow"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 流程 I：任务详情页布局 -->
+    <div class="card mb-6">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 I · 任务详情页布局</h2>
+      <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.9 · v0.3 关键改动：描述作为视觉主体</p>
+      <div class="flow-diagram">
+        <pre style="margin: 0; font-size: 12px; line-height: 1.6; color: #374151; background: #fafafa; padding: 16px; border-radius: 6px;"><code>┌────────────────────────────────────────────────────────┐
+│  返回任务大厅 ←
+├────────────────────────────────────────────────────────┤
+│  ① 任务标题 + 状态徽章                                  │   顶部
+│  陈PM  ·  ¥800  ·  2026-06-25  ·  创建于 2026-06-10    │   元信息
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  ② 需求描述 ⭐️ 视觉中心，加大字号（16px / 1.75 行高）  │   主体
+│  ## 背景                                                │
+│  ... 富文本 ...                                         │
+│                                                        │
+├────────────────────────────────────────────────────────┤
+│  ③ 补充信息（4 列网格）：预算/最终金额/交期/截止/付款账号│   补充
+├────────────────────────────────────────────────────────┤
+│  ④ 附件 / 投标列表 / 变更记录 / 操作按钮（按需显示）     │   动作
+└────────────────────────────────────────────────────────┘</code></pre>
+      </div>
+    </div>
+
+    <!-- 流程 J：搜索 + 流程 K：分页 -->
+    <div class="grid-2" style="gap: 16px;">
+
+      <div class="card">
+        <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 J · 任务搜索</h2>
+        <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.10</p>
+        <ul style="font-size: 13px; line-height: 1.8; color: #374151; padding-left: 20px;">
+          <li>实时筛选（onChange，不按回车）</li>
+          <li>匹配：标题 + 描述（<code>LIKE '%q%'</code>）</li>
+          <li>大小写不敏感 · 子串匹配</li>
+          <li>搜索 ∩ 状态筛选（AND）</li>
+          <li>清除按钮 · 变更重置第 1 页</li>
+          <li>MVP：MySQL LIKE（数据量 &lt; 1k）</li>
+          <li>无搜索建议、不存历史</li>
+          <li>老板视图：仅搜标题</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 4px;">流程 K · 列表分页</h2>
+        <p class="text-muted mb-4" style="margin-top: 0; font-size: 13px;">§5.11</p>
+        <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
+          <div style="font-family: monospace; font-size: 12px; color: #1a1a1a; text-align: center; padding: 8px 0;">
+            ‹ 上一页  &nbsp; 第 1 / 2 页  &nbsp; 下一页 ›
+          </div>
+        </div>
+        <ul style="font-size: 13px; line-height: 1.8; color: #374151; padding-left: 20px; margin-top: 12px;">
+          <li>仅任务大厅做分页 · 默认 4 条/页</li>
+          <li>位置：列表底部</li>
+          <li>组件：左 "显示 X-X / 共 X 条" · 右 分页按钮</li>
+          <li>老板/个人：不分（&lt; 10 个任务）</li>
+          <li>后端：<code>?page=1&amp;size=4&amp;q=&amp;status=</code></li>
+          <li>响应：<code>{items, total, page, size, totalPages}</code></li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="14-notifications.html"><i data-lucide="arrow-left" width="12" height="12"></i> 14</a>
+    <a href="16-empty-states.html">16 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

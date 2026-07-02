@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P09 · 协商延期 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P09 · 协商延期</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>韩梅梅 · 开发者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-narrow">
+
+    <!-- 标题 -->
+    <div class="mb-6">
+      <div class="row-tight mb-2" style="color: #f97316;">
+        <i data-lucide="clock" width="20" height="20"></i>
+        <span class="text-sm font-medium" style="font-size: 13px;">流程 E · 协商延期</span>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">申请延期</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">「【老板加塞】CEO 演示数据准备」· 当前交期 2026-06-14</p>
+    </div>
+
+    <!-- 任务信息 -->
+    <div class="card mb-4">
+      <div class="row-tight mb-2">
+        <span class="badge badge-ASSIGNED">进行中</span>
+        <span class="text-sm text-muted" style="font-size: 12px;">· 当前 1 项延期请求待对方回应</span>
+      </div>
+      <h2 style="font-size: 16px; font-weight: 600; margin: 8px 0 12px;">【老板加塞】CEO 演示数据准备</h2>
+      <div class="row" style="gap: 16px; font-size: 12px; color: #6e6e80;">
+        <span>原交期 <strong style="color: #1a1a1a;">2026-06-14</strong></span>
+        <span>金额 <strong style="color: #1a1a1a;">¥1,200</strong></span>
+        <span>发布者 <strong style="color: #1a1a1a;">Evan (老板)</strong></span>
+      </div>
+    </div>
+
+    <!-- 申请延期表单 -->
+    <div class="card mb-4">
+      <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 12px;">提交延期申请</h2>
+
+      <div class="alert alert-info mb-4">
+        <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+        <div class="alert-body" style="font-size: 12px;">
+          <strong>说明</strong>：系统会记录新交期 + 原因 + 双方同意记录 · 请先<strong style="color: #1e40af;">线下与发布者沟通</strong>一致后再提交
+          · 协商失败由双方自行找上司处理，平台<strong style="color: #9a3412;">不介入</strong>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field-label">原交期</label>
+          <input type="date" class="input" value="2026-06-14" disabled style="background: #fafafa; color: #6b7280;">
+        </div>
+        <div class="field">
+          <label class="field-label">新交期 <span class="req">*</span></label>
+          <input type="date" class="input" value="2026-06-16" style="border-color: var(--color-primary);">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">延期原因 <span class="req">*</span></label>
+        <textarea class="input" rows="4">老板加塞，本任务被现有紧急任务插入。已与 Evan 线下沟通，同意将交期延后 2 天。</textarea>
+        <div class="field-hint">
+          常见原因：老板加塞新任务 / 需求变更 / 技术难点 / 个人紧急情况 · 必填，方便后续追溯
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom: 0;">
+        <label class="field-label">可见性</label>
+        <div class="row-tight">
+          <label style="cursor: pointer;">
+            <input type="checkbox" checked>
+            <span class="text-sm" style="font-size: 13px;">仅发布者可见</span>
+          </label>
+          <label style="cursor: pointer;">
+            <input type="checkbox">
+            <span class="text-sm" style="font-size: 13px;">允许协作成员查看原因</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 预览：将记录的变更日志 -->
+    <div class="card mb-4" style="background: #fafafa;">
+      <div class="row-tight mb-3">
+        <i data-lucide="file-text" width="16" height="16" style="color: var(--color-primary);"></i>
+        <h3 style="font-size: 14px; font-weight: 600; margin: 0;">提交后将记录的变更日志</h3>
+      </div>
+      <div class="change-log change-extension">
+        <div class="row-tight">
+          <span class="badge badge-ASSIGNED">交期延期</span>
+          <span class="text-subtle text-sm" style="font-size: 12px;">2026-06-16 (几秒后)</span>
+        </div>
+        <div class="text-muted text-sm mt-1" style="font-size: 13px;">
+          <strong style="color: #1a1a1a;">2026-06-14 → 2026-06-16</strong>
+        </div>
+        <div class="text-sm mt-2" style="font-size: 13px; color: #374151;">
+          原因：老板加塞，本任务被现有紧急任务插入。已与 Evan 线下沟通，同意将交期延后 2 天。
+        </div>
+        <div class="row-tight mt-2 text-subtle text-sm" style="font-size: 12px;">
+          <i data-lucide="users" width="12" height="12"></i>
+          <span>双方确认：韩梅梅 (发起) · Evan (待回应)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-end" style="gap: 8px;">
+      <a href="04-task-detail.html" class="btn btn-secondary">取消</a>
+      <button class="btn btn-primary btn-lg">
+        <i data-lucide="send" width="16" height="16"></i>
+        提交延期申请
+      </button>
+    </div>
+
+    <!-- 下方：变更记录时间轴（已发生的延期）-->
+    <div class="card mt-6">
+      <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px;">历史变更记录</h2>
+
+      <div class="stack" style="gap: 18px;">
+        <div class="change-log change-extension">
+          <div class="row-tight">
+            <span class="badge badge-ASSIGNED">交期延期</span>
+            <span class="text-subtle text-sm" style="font-size: 12px;">2026-06-11 10:30</span>
+          </div>
+          <div class="text-sm mt-1" style="font-size: 13px;">
+            <strong style="color: #1a1a1a;">2026-06-12 → 2026-06-14</strong>
+          </div>
+          <div class="text-sm mt-2" style="font-size: 13px; color: #374151;">
+            原因：原任务延期 2 天，已与发布方协商一致
+          </div>
+          <div class="row-tight mt-2 text-subtle text-sm" style="font-size: 12px;">
+            <i data-lucide="users" width="12" height="12"></i>
+            <span>双方确认：Evan + 韩梅梅</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-subtle text-sm mt-4 text-center" style="font-size: 12px; margin-bottom: 0;">
+        <i data-lucide="info" width="12" height="12"></i>
+        所有变更进 Change Log · 不可删除 · 仅追加
+      </p>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="08-select-bid.html"><i data-lucide="arrow-left" width="12" height="12"></i> 8</a>
+    <a href="10-cancel.html">10 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

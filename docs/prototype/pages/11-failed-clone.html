@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P11 · 流标 + 复制新建 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P11 · 流标重建</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>王运维 · 开发者 · 运维部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- 标题 -->
+    <div class="mb-6">
+      <div class="row-tight mb-2" style="color: #6b7280;">
+        <i data-lucide="copy" width="20" height="20"></i>
+        <span class="text-sm font-medium" style="font-size: 13px;">流程 H · 流标 + 复制新建</span>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">流标任务详情</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">招标截止 + 零投标 → 自动变为 FAILED · 可一键复制模板重新发布</p>
+    </div>
+
+    <!-- 状态横幅 -->
+    <div class="card mb-6" style="background: #f9fafb; border-style: dashed;">
+      <div class="row" style="gap: 16px; align-items: center;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; color: #4b5563;">
+          <i data-lucide="x-octagon" width="28" height="28"></i>
+        </div>
+        <div style="flex: 1;">
+          <div class="row-tight">
+            <span class="badge badge-FAILED">已流标</span>
+            <span class="text-subtle text-sm" style="font-size: 12px;">2026-06-10 18:00 自动判定</span>
+          </div>
+          <h2 style="font-size: 16px; font-weight: 600; margin: 6px 0 4px;">「内部论坛功能」任务流标</h2>
+          <p class="text-muted" style="font-size: 13px; margin: 0;">
+            招标截止时间已过 · 共收到 <strong style="color: #1a1a1a;">0 个</strong> 投标 · 状态由 OPEN → FAILED（可复制新建）
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap: 16px;">
+
+      <!-- 左：原任务信息 -->
+      <div class="card">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px;">
+          <i data-lucide="file-text" width="16" height="16" style="vertical-align: -3px;"></i>
+          原任务信息
+        </h2>
+
+        <div class="stack" style="gap: 12px; font-size: 13px;">
+          <div>
+            <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">任务标题</div>
+            <div class="font-medium mt-1" style="color: #1a1a1a;">内部论坛功能（流标）</div>
+          </div>
+          <div class="grid-2" style="gap: 12px;">
+            <div>
+              <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">发布者</div>
+              <div class="font-medium mt-1">王运维 · 运维部</div>
+            </div>
+            <div>
+              <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">发布者所属部门</div>
+              <div class="font-medium mt-1">运维部</div>
+            </div>
+          </div>
+          <div class="grid-3" style="gap: 12px;">
+            <div>
+              <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">预算</div>
+              <div class="font-medium mt-1">¥200</div>
+            </div>
+            <div>
+              <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">期望交期</div>
+              <div class="font-medium mt-1">2026-06-30</div>
+            </div>
+            <div>
+              <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">招标截止</div>
+              <div class="font-medium mt-1">2026-06-09</div>
+            </div>
+          </div>
+          <div>
+            <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">付款账号</div>
+            <div class="font-medium mt-1">运维部·基础设施</div>
+          </div>
+          <div>
+            <div class="text-subtle" style="font-size: 11px; text-transform: uppercase;">任务描述</div>
+            <div class="text-sm text-muted mt-1">做一个内部讨论区，没人接。预算太低，加价后还没人投标。</div>
+          </div>
+          <div class="row-tight">
+            <span class="complexity complexity-LOW">简单</span>
+            <span class="text-subtle text-sm" style="font-size: 12px;">创建于 2026-06-02</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：流标分析 + 操作 -->
+      <div class="stack">
+
+        <!-- 流标诊断 -->
+        <div class="card">
+          <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 16px;">
+            <i data-lucide="bar-chart-2" width="16" height="16" style="vertical-align: -3px;"></i>
+            流标诊断（MVP 简化版）
+          </h2>
+          <div class="stack" style="gap: 8px;">
+            <div class="row" style="gap: 8px; font-size: 13px;">
+              <i data-lucide="circle-x" width="14" height="14" style="color: #dc2626;"></i>
+              <span>招标期：<strong>7 天</strong>（偏短）</span>
+            </div>
+            <div class="row" style="gap: 8px; font-size: 13px;">
+              <i data-lucide="circle-x" width="14" height="14" style="color: #dc2626;"></i>
+              <span>预算：<strong>¥200</strong>（低于历史同类任务均价）</span>
+            </div>
+            <div class="row" style="gap: 8px; font-size: 13px;">
+              <i data-lucide="circle-x" width="14" height="14" style="color: #dc2626;"></i>
+              <span>浏览量 <strong>12</strong> · 投标 <strong>0</strong> · 转化率 0%</span>
+            </div>
+          </div>
+          <p class="text-subtle text-sm mt-3" style="margin-bottom: 0; font-size: 12px;">
+            <i data-lucide="info" width="12" height="12"></i>
+            二期会增加「历史成交均价参考」· MVP 暂不提供
+          </p>
+        </div>
+
+        <!-- 重新发布 -->
+        <div class="card" style="border-color: var(--color-primary); background: #f5f3ff;">
+          <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 8px; color: var(--color-primary);">
+            <i data-lucide="copy" width="18" height="18" style="vertical-align: -3px;"></i>
+            复制新建
+          </h2>
+          <p class="text-muted mb-3" style="font-size: 13px;">
+            一键复用原任务的模板字段（标题、描述、付款账号） · <strong>不复制历史投标记录</strong>
+          </p>
+          <ul style="font-size: 12px; color: #6e6e80; padding-left: 18px; margin: 0 0 16px;">
+            <li>标题 / 描述 / 附件 · 直接复用</li>
+            <li>金额 / 交期 · 可重新填写（默认填旧值）</li>
+            <li>复杂度 · 保留</li>
+            <li>历史投标 · <strong style="color: #9a3412;">不复制</strong></li>
+          </ul>
+          <button class="btn btn-primary" style="width: 100%;">
+            <i data-lucide="copy" width="16" height="16"></i>
+            复制此任务为草稿
+          </button>
+          <p class="text-subtle text-sm text-center mt-2" style="font-size: 12px; margin-bottom: 0;">
+            新任务将进入 <code>DRAFT</code> 状态 · 待你编辑后发布
+          </p>
+        </div>
+
+        <!-- 其他操作 -->
+        <div class="card">
+          <h2 style="font-size: 14px; font-weight: 600; margin: 0 0 12px;">其他操作</h2>
+          <div class="stack" style="gap: 8px;">
+            <button class="btn btn-secondary" style="justify-content: flex-start;">
+              <i data-lucide="bell" width="14" height="14"></i>
+              通知前投标者「流标已结束」（如有）
+            </button>
+            <button class="btn btn-secondary" style="justify-content: flex-start;">
+              <i data-lucide="message-circle" width="14" height="14"></i>
+              联系管理员讨论是否提价
+            </button>
+            <button class="btn btn-ghost" style="justify-content: flex-start; color: #6e6e80;">
+              <i data-lucide="archive" width="14" height="14"></i>
+              归档此任务（不重新发布）
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 备注 -->
+    <div class="alert alert-info mt-6">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>流标机制说明</strong>：
+        · OPEN 状态任务到达 <code>bidding_deadline</code> 后，<strong>每日定时任务</strong>扫描，零投标 → FAILED<br>
+        · FAILED 是非终态（虽然没人投标），发布者可点击「复制新建」生成新 DRAFT<br>
+        · 复制时<strong style="color: #9a3412;">不复用 bid 表</strong>，只复用模板字段<br>
+        · 复制后的 DRAFT 发布即为新 OPEN 任务（独立 ID）
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="10-cancel.html"><i data-lucide="arrow-left" width="12" height="12"></i> 10</a>
+    <a href="12-profile.html">12 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P13 · 老板视图 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P13 · 老板视图</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="13-boss-gantt.html" class="nav-link active">
+        <i data-lucide="eye" width="14" height="14" style="vertical-align: -2px;"></i>
+        老板视图
+      </a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>Evan · 老板 · CEO办公室</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- 标题 -->
+    <div class="row-between mb-6">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 0;">老板视图</h1>
+        <p class="text-muted mt-1" style="margin: 4px 0 0; font-size: 14px;">所有任务 · 甘特图 · 按状态着色 · 按付款账号筛选</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary">
+          <i data-lucide="download" width="14" height="14"></i>
+          导出 CSV
+        </button>
+        <button class="btn btn-secondary">
+          <i data-lucide="refresh-cw" width="14" height="14"></i>
+          刷新
+        </button>
+      </div>
+    </div>
+
+    <!-- 筛选条 -->
+    <div class="card mb-4">
+      <div class="filter-row" style="padding-top: 0; padding-bottom: 0;">
+        <!-- 时间范围 -->
+        <div class="row-tight">
+          <span class="text-sm text-muted">时间范围</span>
+          <button class="filter-pill">本周</button>
+          <button class="filter-pill">本月</button>
+          <button class="filter-pill">本季度</button>
+          <button class="filter-pill active">最近 90 天</button>
+        </div>
+
+        <!-- 付款账号筛选 -->
+        <select class="select" style="width: 200px;">
+          <option>全部付款账号 · 4</option>
+          <option>产品研发部·2026Q2 预算</option>
+          <option>市场部·数字营销专项</option>
+          <option>运维部·基础设施</option>
+          <option>战略项目·新业务孵化</option>
+        </select>
+
+        <!-- 标题搜索 -->
+        <div class="search-box">
+          <i data-lucide="search" width="14" height="14" class="search-icon"></i>
+          <input type="text" placeholder="搜索任务标题…">
+        </div>
+      </div>
+      <div class="legend mt-3">
+        <span class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span>招标中</span>
+        <span class="legend-item"><span class="legend-dot" style="background: #f97316;"></span>进行中</span>
+        <span class="legend-item"><span class="legend-dot" style="background: #10b981;"></span>已完成</span>
+        <span class="legend-item"><span class="legend-dot" style="background: #6b7280;"></span>流标</span>
+        <span class="legend-item"><span class="legend-dot" style="background: #d1d5db; text-decoration: line-through;"></span>已取消</span>
+        <span class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span>今天</span>
+      </div>
+    </div>
+
+    <!-- 任务数 + 时间 -->
+    <div class="row-between mb-3">
+      <div class="text-sm text-muted" style="font-size: 13px;">
+        共 <strong style="color: #1a1a1a;">8 个</strong> 任务 · 范围 2026-03-15 ~ 2026-07-15
+      </div>
+      <span class="text-subtle text-sm" style="font-size: 12px;">
+        点击任务条 → 进入任务详情
+      </span>
+    </div>
+
+    <!-- 甘特图 -->
+    <div class="card">
+      <div class="gantt-container">
+
+        <!-- 月份标尺 -->
+        <div style="position: relative; height: 32px; border-bottom: 1px solid var(--color-border); margin-bottom: 8px; min-width: 900px;">
+          <div style="position: absolute; top: 0; bottom: 0; left: 0%; border-left: 1px solid var(--color-border); padding-left: 6px; font-size: 11px; color: #9ca3af;">3 月中</div>
+          <div style="position: absolute; top: 0; bottom: 0; left: 17%; border-left: 1px solid var(--color-border); padding-left: 6px; font-size: 11px; color: #9ca3af;">4 月</div>
+          <div style="position: absolute; top: 0; bottom: 0; left: 34%; border-left: 1px solid var(--color-border); padding-left: 6px; font-size: 11px; color: #9ca3af;">5 月</div>
+          <div style="position: absolute; top: 0; bottom: 0; left: 50%; border-left: 1px solid var(--color-border); padding-left: 6px; font-size: 11px; color: #9ca3af;">6 月</div>
+          <div style="position: absolute; top: 0; bottom: 0; left: 67%; border-left: 1px solid var(--color-border); padding-left: 6px; font-size: 11px; color: #9ca3af;">7 月初</div>
+          <!-- 今天线 -->
+          <div class="gantt-today-line" style="left: 56%;"></div>
+          <div style="position: absolute; top: 4px; left: 56%; transform: translateX(2px); font-size: 10px; color: #ef4444; font-weight: 600;">今天</div>
+        </div>
+
+        <!-- 任务 1：COMPLETED -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">移动端首页改版</a>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-COMPLETED" style="left: 35%; width: 10%;" onclick="location.href='04-task-detail.html'">首页改版</div>
+          </div>
+        </div>
+
+        <!-- 任务 2：OPEN -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">用户登录页 UI 重构</a>
+            <span class="complexity complexity-MEDIUM" style="margin-left: 6px;"></span>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-OPEN" style="left: 47%; width: 13%;" onclick="location.href='04-task-detail.html'">登录页重构 · 招标中</div>
+          </div>
+        </div>
+
+        <!-- 任务 3：FAILED -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">内部论坛功能</a>
+            <span class="text-subtle" style="font-size: 11px; margin-left: 6px;">(流标)</span>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-FAILED" style="left: 42%; width: 6%;" onclick="location.href='04-task-detail.html'">论坛 · 流标</div>
+          </div>
+        </div>
+
+        <!-- 任务 4：ASSIGNED -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">订单导出 Excel 功能</a>
+            <span class="complexity complexity-LOW" style="margin-left: 6px;"></span>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-ASSIGNED" style="left: 46%; width: 8%;" onclick="location.href='04-task-detail.html'">订单导出</div>
+          </div>
+        </div>
+
+        <!-- 任务 5：ASSIGNED（高复杂度） -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">老 CRM 系统对接（屎山）</a>
+            <span class="complexity complexity-HIGH" style="margin-left: 6px;"></span>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-ASSIGNED" style="left: 45%; width: 25%;" onclick="location.href='04-task-detail.html'">CRM 对接 · 进行中</div>
+          </div>
+        </div>
+
+        <!-- 任务 6：OPEN -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">营销活动页 A/B 测试方案</a>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-OPEN" style="left: 50%; width: 12%;" onclick="location.href='04-task-detail.html'">A/B 测试 · 招标中</div>
+          </div>
+        </div>
+
+        <!-- 任务 7：老板加塞 -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">【老板加塞】CEO 演示数据准备</a>
+            <span class="badge badge-ASSIGNED" style="margin-left: 6px; font-size: 10px;">紧急</span>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-ASSIGNED" style="left: 55%; width: 5%; background: linear-gradient(90deg, #f97316 0%, #fb923c 100%);" onclick="location.href='04-task-detail.html'">CEO 演示</div>
+          </div>
+        </div>
+
+        <!-- 任务 8：OPEN -->
+        <div class="gantt-row">
+          <div class="gantt-task-name">
+            <a href="04-task-detail.html">数据库慢查询优化</a>
+          </div>
+          <div class="gantt-bar-track">
+            <div class="gantt-bar gantt-bar-OPEN" style="left: 50%; width: 13%;" onclick="location.href='04-task-detail.html'">慢查询优化 · 招标中</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="alert alert-info mt-6">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>老板视图说明</strong>：
+        · 入口只对拥有「老板视图权限」的用户可见 · 普通用户导航无此入口<br>
+        · Y 轴默认按创建时间倒序（最近创建的在最上方）· 时间范围默认最近 90 天<br>
+        · 颜色对应状态：蓝=招标中 / 橙=进行中 / 绿=已完成 / 灰=流标 / 浅灰+删除线=已取消<br>
+        · 按付款账号筛选 = 把任务归属到付款账号（≈按部门划分预算） · 不做分页（MVP 数据量 ≤ 10）
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="12-profile.html"><i data-lucide="arrow-left" width="12" height="12"></i> 12</a>
+    <a href="14-notifications.html">14 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P04 · 任务详情 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P04 · 任务详情</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="13-boss-gantt.html" class="nav-link">老板视图</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>李雷 · 开发者 · 产品研发部</option>
+        <option>韩梅梅 · 开发者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container-narrow">
+
+    <!-- 面包屑 -->
+    <div class="breadcrumb">
+      <a href="03-task-hall.html">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <span class="sep">/</span>
+      <span>用户登录页 UI 重构</span>
+    </div>
+
+    <!-- 状态切换（演示用：4 种状态视图） -->
+    <div class="card mb-4" style="padding: 12px 16px; background: #fffbeb; border-color: #fde68a;">
+      <div class="row" style="justify-content: space-between;">
+        <div class="row-tight">
+          <i data-lucide="info" width="14" height="14" style="color: #c2410c;"></i>
+          <span class="text-sm" style="color: #92400e;">
+            <strong>演示：</strong>本页根据任务状态不同展示不同内容。下方切换查看 4 种状态下的任务详情差异。
+          </span>
+        </div>
+        <div class="row-tight">
+          <button class="filter-pill active" style="padding: 4px 10px; font-size: 12px;">
+            <span class="badge badge-OPEN" style="font-size: 10px;">OPEN</span>
+            招标中
+          </button>
+          <button class="filter-pill" style="padding: 4px 10px; font-size: 12px;">
+            <span class="badge badge-ASSIGNED" style="font-size: 10px;">ASSIGNED</span>
+            进行中
+          </button>
+          <button class="filter-pill" style="padding: 4px 10px; font-size: 12px;">
+            <span class="badge badge-COMPLETED" style="font-size: 10px;">DONE</span>
+            已完成
+          </button>
+          <button class="filter-pill" style="padding: 4px 10px; font-size: 12px;">
+            <span class="badge badge-FAILED" style="font-size: 10px;">FAILED</span>
+            流标
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 标题 + 关键元信息 -->
+    <div class="card mb-4">
+      <div class="row-between" style="align-items: flex-start; gap: 16px;">
+        <h1 style="font-size: 30px; font-weight: 700; margin: 0; line-height: 1.2; flex: 1;">用户登录页 UI 重构</h1>
+        <span class="badge badge-OPEN" style="font-size: 13px; padding: 4px 12px;">招标中</span>
+      </div>
+
+      <div class="row mt-4" style="gap: 24px; flex-wrap: wrap; font-size: 13px; color: #6e6e80;">
+        <div class="row-tight">
+          <div class="avatar avatar-xs avatar-publisher">陈</div>
+          <span><strong style="color: #1a1a1a;">陈PM</strong> · 发布者</span>
+        </div>
+        <div class="row-tight">
+          <i data-lucide="circle-dollar-sign" width="14" height="14"></i>
+          <span>预算 <strong style="color: #1a1a1a;">¥800</strong></span>
+        </div>
+        <div class="row-tight">
+          <i data-lucide="calendar" width="14" height="14"></i>
+          <span>期望交期 <strong style="color: #1a1a1a;">2026-06-25</strong></span>
+        </div>
+        <div class="row-tight">
+          <i data-lucide="clock" width="14" height="14"></i>
+          <span>创建于 <strong style="color: #1a1a1a;">2026-06-10</strong></span>
+        </div>
+        <span class="complexity complexity-MEDIUM">中等复杂</span>
+      </div>
+    </div>
+
+    <!-- 2. 需求描述（加大·主体） -->
+    <div class="card mb-4">
+      <div class="section-title">需求描述</div>
+      <div class="task-description">
+        <h2>背景</h2>
+        <p>现有登录页样式陈旧，且体验较差。我们想参考 <a href="#">Linear 风格</a> 做一次重设计，统一公司内部多个产品（CRM、工单系统、演示站）的登录入口。</p>
+
+        <h2>需要支持</h2>
+        <ul>
+          <li>手机号 + 验证码登录（主）</li>
+          <li>邮箱 + 密码登录（次）</li>
+          <li>SSO 跳转入口（公司内部 SSO）</li>
+          <li>第三方登录暂不做，留接口位</li>
+        </ul>
+
+        <h3>设计要求</h3>
+        <ol>
+          <li>整体风格参考 Linear，简洁、现代</li>
+          <li>主色 <code>#5e6ad2</code>，与公司品牌色一致</li>
+          <li>PC + Mobile 两套适配，Mobile 优先</li>
+          <li>登录成功后跳转回原页面</li>
+        </ol>
+
+        <blockquote>
+          <strong>参考</strong>：Linear / Vercel / Notion 登录页
+        </blockquote>
+
+        <h3>验收点</h3>
+        <ul>
+          <li>手机号格式校验</li>
+          <li>60s 验证码倒计时</li>
+          <li>错误提示文案友好</li>
+          <li>键盘可达性（Tab 顺序合理）</li>
+        </ul>
+
+        <h3>示例代码</h3>
+        <p>验证码接口已就绪：</p>
+        <pre><code>POST /api/auth/sms-code
+Content-Type: application/json
+
+{ "phone": "13800138000" }</code></pre>
+      </div>
+    </div>
+
+    <!-- 3. 补充信息卡 -->
+    <div class="card mb-4">
+      <div class="meta-grid">
+        <div>
+          <div class="label">预算</div>
+          <div class="value">¥800</div>
+        </div>
+        <div>
+          <div class="label">最终金额</div>
+          <div class="value text-subtle" style="font-weight: 400;">—</div>
+        </div>
+        <div>
+          <div class="label">最终交期</div>
+          <div class="value text-subtle" style="font-weight: 400;">—</div>
+        </div>
+        <div>
+          <div class="label">招标截止</div>
+          <div class="value">2026-06-15</div>
+        </div>
+        <div class="col-span-2">
+          <div class="label">付款账号</div>
+          <div class="value" style="font-size: 14px;">产品研发部·2026Q2 预算 · 管理员：陈PM</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. 附件 -->
+    <div class="card mb-4">
+      <div class="row-between mb-3">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0;">附件 (2)</h2>
+        <button class="btn btn-secondary btn-sm">
+          <i data-lucide="upload" width="12" height="12"></i>
+          上传附件
+        </button>
+      </div>
+      <div class="stack" style="gap: 4px;">
+        <div class="attachment-row">
+          <div class="attachment-icon fig">FIG</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 500;">登录页设计稿.fig</div>
+            <div class="text-subtle" style="font-size: 11px;">2.3 MB · 陈PM 上传于 2026-06-10</div>
+          </div>
+          <button class="btn btn-ghost btn-sm">
+            <i data-lucide="download" width="12" height="12"></i>
+            下载
+          </button>
+        </div>
+        <div class="attachment-row">
+          <div class="attachment-icon png">PNG</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 500;">现有登录页截图.png</div>
+            <div class="text-subtle" style="font-size: 11px;">371 KB · 陈PM 上传于 2026-06-10</div>
+          </div>
+          <button class="btn btn-ghost btn-sm">
+            <i data-lucide="download" width="12" height="12"></i>
+            下载
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 投标列表 -->
+    <div class="card mb-4">
+      <div class="row-between mb-3">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0;">投标 (2)</h2>
+        <div class="row-tight text-subtle" style="font-size: 12px;">
+          <i data-lucide="shield" width="12" height="12"></i>
+          <span>投标记录互相不可见（防串标）</span>
+        </div>
+      </div>
+
+      <div class="stack" style="gap: 10px;">
+        <div class="bid-row">
+          <div class="avatar avatar-md">李</div>
+          <div style="flex: 1;">
+            <div class="row-tight">
+              <strong style="font-size: 13px;">李雷</strong>
+              <span class="text-subtle" style="font-size: 12px;">· 产品研发部</span>
+            </div>
+            <p class="text-muted" style="font-size: 13px; margin: 6px 0;">Vue 3 + Tailwind 重写，3 天能搞定。</p>
+            <div class="row mt-2 text-sm text-muted" style="font-size: 12px; gap: 16px;">
+              <span>报价 <strong style="color: #1a1a1a;">¥750</strong></span>
+              <span>交期 <strong style="color: #1a1a1a;">2026-06-24</strong></span>
+              <span class="text-subtle">投标于 2026-06-10</span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm">
+            <i data-lucide="check" width="12" height="12"></i>
+            选 TA
+          </button>
+        </div>
+
+        <div class="bid-row">
+          <div class="avatar avatar-md">韩</div>
+          <div style="flex: 1;">
+            <div class="row-tight">
+              <strong style="font-size: 13px;">韩梅梅</strong>
+              <span class="text-subtle" style="font-size: 12px;">· 产品研发部</span>
+            </div>
+            <p class="text-muted" style="font-size: 13px; margin: 6px 0;">我俩可以合作，前端我做。需要王运维帮忙做接口对接。</p>
+            <div class="row mt-2 text-sm text-muted" style="font-size: 12px; gap: 16px;">
+              <span>报价 <strong style="color: #1a1a1a;">¥800</strong></span>
+              <span>交期 <strong style="color: #1a1a1a;">2026-06-25</strong></span>
+              <span class="row-tight">
+                <span class="badge badge-OPEN" style="font-size: 10px;">协作</span>
+                <span class="text-subtle">韩梅梅 + 王运维</span>
+              </span>
+              <span class="text-subtle">投标于 2026-06-10</span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm">
+            <i data-lucide="check" width="12" height="12"></i>
+            选 TA
+          </button>
+        </div>
+      </div>
+
+      <p class="text-subtle text-sm text-center mt-4" style="font-size: 12px; margin-bottom: 0;">
+        <i data-lucide="lightbulb" width="12" height="12"></i>
+        提示：开发中你对投标不可见，仅在当前身份为发布者时显示完整列表
+      </p>
+    </div>
+
+    <!-- 6. 操作按钮 -->
+    <div class="card">
+      <div class="row" style="gap: 8px;">
+        <button class="btn btn-primary">
+          <i data-lucide="circle-dollar-sign" width="14" height="14"></i>
+          投标
+        </button>
+        <button class="btn btn-secondary" disabled style="opacity: 0.5;">
+          <i data-lucide="check-circle" width="14" height="14"></i>
+          确认完成
+        </button>
+        <button class="btn btn-secondary" disabled style="opacity: 0.5;">
+          <i data-lucide="clock" width="14" height="14"></i>
+          申请延期
+        </button>
+        <button class="btn btn-danger">
+          <i data-lucide="x-circle" width="14" height="14"></i>
+          取消任务
+        </button>
+        <span class="text-subtle text-sm ml-auto" style="font-size: 12px;">
+          当前身份对此任务的部分操作不可用
+        </span>
+      </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="alert alert-info mt-6">
+      <i data-lucide="info" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>说明</strong>：
+        详情页由 4 个区块组成 —— ① 标题 + 关键元信息 · ② <strong>需求描述（视觉中心，加大）</strong> · ③ 补充信息卡 · ④ 附件 / 投标 / 变更 / 操作。
+        v0.2 → v0.3 的关键改动是把需求描述作为页面视觉主体。
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="03-task-hall.html"><i data-lucide="arrow-left" width="12" height="12"></i> 3</a>
+    <a href="05-create-task.html">5 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

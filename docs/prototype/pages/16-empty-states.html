@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P16 · 空状态合集 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P16 · 空状态合集</span>
+    </div>
+    <nav>
+      <a href="../index.html" class="nav-link">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        原型目录
+      </a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <div class="mb-8">
+      <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px;">空状态合集 · 12 种</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">统一设计：图标 + 标题 + 解释 + 主要行动按钮 · 让用户知道「为什么空」+「下一步做什么」</p>
+    </div>
+
+    <!-- 网格：4 列 -->
+    <div class="grid-2" style="gap: 16px;">
+
+      <!-- 1. 任务大厅零命中 -->
+      <div class="card">
+        <div class="section-title">1. 任务大厅 · 搜索零命中</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="search-x" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">没找到匹配 <strong style="color: #1a1a1a;">"CRM 对接"</strong> 的任务</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">试试更短的关键词 · 或清除筛选条件</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-primary btn-sm">清空搜索</button>
+            <button class="btn btn-secondary btn-sm">清空全部筛选</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 任务大厅筛选无任务 -->
+      <div class="card">
+        <div class="section-title">2. 任务大厅 · 筛选无任务</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="filter-x" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">当前筛选下没有任务</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">没有 <strong style="color: #1a1a1a;">高度复杂</strong> 且 <strong style="color: #1a1a1a;">已完成</strong> 的任务</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-primary btn-sm">清除筛选</button>
+            <a href="05-create-task.html" class="btn btn-secondary btn-sm">
+              发布一个
+              <i data-lucide="plus" width="12" height="12"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 任务详情 · 无投标 -->
+      <div class="card">
+        <div class="section-title">3. 任务详情 · 无投标</div>
+        <div class="empty-state" style="padding: 40px 20px;">
+          <div class="empty-icon">
+            <i data-lucide="users-2" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">还没有人投标</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">招标截止：<strong style="color: #1a1a1a;">2026-06-15</strong> · 还有 3 天</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-primary btn-sm">
+              <i data-lucide="send" width="12" height="12"></i>
+              我要投标
+            </button>
+            <button class="btn btn-secondary btn-sm">分享给同事</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 个人主页 · 无发布 -->
+      <div class="card">
+        <div class="section-title">4. 我的 · 我发布的（空）</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="file-plus-2" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">还没有发布过任务</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">把活儿从「私下催」变成「平台招标」</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <a href="05-create-task.html" class="btn btn-primary btn-sm">
+              <i data-lucide="plus" width="12" height="12"></i>
+              发布第一个任务
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. 个人主页 · 无投标 -->
+      <div class="card">
+        <div class="section-title">5. 我的 · 我投标的（空）</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="circle-dollar-sign" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">还没有投标过任务</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">从任务大厅找一个感兴趣的投标吧</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <a href="03-task-hall.html" class="btn btn-primary btn-sm">
+              <i data-lucide="search" width="12" height="12"></i>
+              浏览任务大厅
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. 个人主页 · 无接单 -->
+      <div class="card">
+        <div class="section-title">6. 我的 · 我接的（空）</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="briefcase" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">还没有接单任务</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">投标中标后会自动出现在这里</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <a href="03-task-hall.html" class="btn btn-primary btn-sm">浏览任务大厅</a>
+          </div>
+        </div>
+
+        <!-- 隐藏的时间线占位 -->
+        <div class="alert alert-info" style="font-size: 12px;">
+          <i data-lucide="info" width="14" height="14" class="alert-icon"></i>
+          <div class="alert-body">
+            个人时间线（甘特图）会在接到第 1 个任务后自动出现
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. 通知中心 · 空 -->
+      <div class="card">
+        <div class="section-title">7. 通知中心 · 全空</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="bell-off" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">没有消息</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">投标被选、状态变更都会通知你</p>
+        </div>
+      </div>
+
+      <!-- 8. 老板视图 · 空 -->
+      <div class="card">
+        <div class="section-title">8. 老板视图 · 无任务</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="gantt-chart-square" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">当前筛选下没有任务</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">或扩大时间范围 / 切换付款账号</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-primary btn-sm">清除筛选</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. 任务搜索历史 -->
+      <div class="card">
+        <div class="section-title">9. 搜索 · 全部 0 结果</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="search-slash" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">找不到任务了</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">检查关键词拼写 · 试试"CRM"或"重构"</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-ghost btn-sm">重置所有</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10. 任务状态 · 没找到 -->
+      <div class="card">
+        <div class="section-title">10. 任务状态枚举空状态（代码层）</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="circle-help" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">任务状态未知</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">任务加载出错，请刷新或联系管理员</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-primary btn-sm">重新加载</button>
+            <a href="14-notifications.html" class="btn btn-secondary btn-sm">查看通知</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11. 投标后等待 -->
+      <div class="card">
+        <div class="section-title">11. 投标提交 · 等待中</div>
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i data-lucide="hourglass" width="48" height="48"></i>
+          </div>
+          <p class="empty-title">投标已提交，等待结果</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">发布者选标后会通知你</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <a href="12-profile.html" class="btn btn-secondary btn-sm">查看我的投标</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12. 错误状态 -->
+      <div class="card">
+        <div class="section-title">12. 错误状态（如 500）</div>
+        <div class="empty-state">
+          <div class="empty-icon" style="color: #fca5a5;">
+            <i data-lucide="alert-octagon" width="48" height="48"></i>
+          </div>
+          <p class="empty-title" style="color: #991b1b;">加载任务失败</p>
+          <p class="text-subtle text-sm mt-1" style="font-size: 12px;">可能是网络问题或后端出错 · 请稍后重试</p>
+          <div class="row mt-4" style="justify-content: center; gap: 8px;">
+            <button class="btn btn-primary btn-sm">重新加载</button>
+            <a href="14-notifications.html" class="btn btn-ghost btn-sm">报告问题</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 设计原则 -->
+    <div class="card mt-8">
+      <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px;">空状态设计原则</h2>
+      <ol style="font-size: 13px; line-height: 1.8; color: #374151; padding-left: 20px;">
+        <li><strong>图标</strong>：Linear 风格，48-56px 单色，<code>color: #d1d5db</code> 灰色</li>
+        <li><strong>标题</strong>：<code>font-size: 14px</code>，说"是什么"，不要只说"暂无数据"</li>
+        <li><strong>解释</strong>：一句话说清"为什么空"，引导用户</li>
+        <li><strong>主要行动</strong>：紫色实心按钮 · 用户下一步做什么</li>
+        <li><strong>次要行动</strong>：白色描边按钮 · 备用选项</li>
+        <li><strong>永远别说</strong>：「没有数据」「暂无内容」这种废话</li>
+        <li><strong>永远要</strong>：让用户知道<strong>下一步</strong>做什么</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="15-flow-diagrams.html"><i data-lucide="arrow-left" width="12" height="12"></i> 15</a>
+    <span class="disabled">末页</span>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

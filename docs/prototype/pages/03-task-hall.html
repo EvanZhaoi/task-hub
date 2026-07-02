@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P03 · 任务大厅 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .task-img-cover { width: 100%; height: 88px; background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 6px 6px 0 0; }
+  </style>
+</head>
+<body>
+
+  <!-- 头部 -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P03 · 任务大厅</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link active">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="13-boss-gantt.html" class="nav-link">老板视图</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>李雷 · 开发者 · 产品研发部</option>
+        <option>韩梅梅 · 开发者 · 产品研发部</option>
+        <option>王运维 · 开发者 · 运维部</option>
+        <option>张总 · 发布者 · 市场部</option>
+        <option>陈PM · 发布者 · 产品研发部</option>
+        <option>Evan · 老板 · CEO办公室</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- 顶部标题 -->
+    <div class="row-between mb-6">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 0;">任务大厅</h1>
+        <p class="text-muted mt-1" style="margin: 4px 0 0; font-size: 14px;">所有公开任务 · 可投标 · 实时刷新</p>
+      </div>
+      <div class="btn-row">
+        <a href="05-create-task.html" class="btn btn-primary">
+          <i data-lucide="plus" width="14" height="14"></i>
+          发布任务
+        </a>
+      </div>
+    </div>
+
+    <!-- 筛选条 -->
+    <div class="card mb-4">
+      <div class="filter-row" style="padding-top: 0; padding-bottom: 0;">
+        <!-- 搜索 -->
+        <div class="search-box">
+          <i data-lucide="search" width="14" height="14" class="search-icon"></i>
+          <input type="text" placeholder="搜索标题或描述…" value="">
+        </div>
+
+        <!-- 状态筛选 -->
+        <div class="row-tight">
+          <button class="filter-pill active">全部 · 8</button>
+          <button class="filter-pill">招标中 · 4</button>
+          <button class="filter-pill">进行中 · 3</button>
+          <button class="filter-pill">已完成 · 1</button>
+          <button class="filter-pill">流标/取消</button>
+        </div>
+
+        <!-- 复杂度筛选 -->
+        <div class="row-tight ml-auto" style="gap: 6px;">
+          <span class="text-sm text-muted">复杂度</span>
+          <button class="filter-pill active">全部</button>
+          <button class="filter-pill">
+            <span class="complexity complexity-LOW" style="margin-right: 0;">简</span>
+          </button>
+          <button class="filter-pill">
+            <span class="complexity complexity-MEDIUM" style="margin-right: 0;">中</span>
+          </button>
+          <button class="filter-pill">
+            <span class="complexity complexity-HIGH" style="margin-right: 0;">高</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 任务列表（示例 4 条，第 1 页） -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- 任务 1：OPEN -->
+      <a href="04-task-detail.html" class="task-list-card">
+        <div class="title-row">
+          <h3 class="title">用户登录页 UI 重构</h3>
+          <span class="badge badge-OPEN">招标中</span>
+        </div>
+        <p class="preview">现有登录页样式陈旧，按 Linear 风格重新设计。要求支持手机号+验证码、邮箱+密码两种方式，PC + Mobile 两套适配。</p>
+        <div class="meta">
+          <span>预算 <span class="value">¥800</span></span>
+          <span>期望 <span class="value">2026-06-25</span></span>
+          <span>招标截止 <span class="value">2026-06-15</span></span>
+          <span><span class="complexity complexity-MEDIUM">中等复杂</span></span>
+          <span class="author">陈PM · 产品研发部·2026Q2 预算</span>
+        </div>
+      </a>
+
+      <!-- 任务 2：ASSIGNED（老板加塞） -->
+      <a href="04-task-detail.html" class="task-list-card">
+        <div class="title-row">
+          <h3 class="title">【老板加塞】CEO 演示数据准备</h3>
+          <span class="badge badge-ASSIGNED">进行中</span>
+        </div>
+        <p class="preview">老板下周要见客户，准备 demo 数据。需要覆盖：5 个用户、20 个任务、各种状态的样本。</p>
+        <div class="meta">
+          <span>金额 <span class="value">¥1,200</span></span>
+          <span>交期 <span class="value">2026-06-14</span></span>
+          <span><span class="complexity complexity-LOW">简单</span></span>
+          <span class="author">Evan · 战略项目·新业务孵化</span>
+        </div>
+      </a>
+
+      <!-- 任务 3：OPEN 高复杂度 -->
+      <a href="04-task-detail.html" class="task-list-card">
+        <div class="title-row">
+          <h3 class="title">老 CRM 系统对接（屎山）</h3>
+          <span class="badge badge-OPEN">招标中</span>
+        </div>
+        <p class="preview">需要把我们新的客户数据同步到老 CRM（PHP 写的，没人维护的代码），增量同步，5 分钟内失败要重试。</p>
+        <div class="meta">
+          <span>预算 <span class="value">¥2,000</span></span>
+          <span>期望 <span class="value">2026-07-10</span></span>
+          <span>招标截止 <span class="value">2026-06-11</span></span>
+          <span><span class="complexity complexity-HIGH">高度复杂</span></span>
+          <span class="author">张总 · 市场部·数字营销专项</span>
+        </div>
+      </a>
+
+      <!-- 任务 4：ASSIGNED -->
+      <a href="04-task-detail.html" class="task-list-card">
+        <div class="title-row">
+          <h3 class="title">订单导出 Excel 功能</h3>
+          <span class="badge badge-ASSIGNED">进行中</span>
+        </div>
+        <p class="preview">后台管理系统增加订单导出功能，按时间范围+状态筛选，单次最多 1 万条。前端加按钮，后端用 EasyExcel 生成。</p>
+        <div class="meta">
+          <span>金额 <span class="value">¥450</span></span>
+          <span>交期 <span class="value">2026-06-22</span></span>
+          <span><span class="complexity complexity-LOW">简单</span></span>
+          <span class="author">陈PM · 产品研发部·2026Q2 预算</span>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- 分页 -->
+    <div class="pagination">
+      <span class="page-info">显示 1-4 / 共 8 条</span>
+      <div class="page-controls">
+        <button class="btn btn-secondary btn-sm" disabled>
+          <i data-lucide="chevron-left" width="12" height="12"></i>
+          上一页
+        </button>
+        <span class="page-text">第 1 / 2 页</span>
+        <button class="btn btn-secondary btn-sm">
+          下一页
+          <i data-lucide="chevron-right" width="12" height="12"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="alert alert-info mt-6">
+      <i data-lucide="lightbulb" width="16" height="16" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        <strong>说明</strong>：
+        · 搜索：实时筛选（onChange），匹配标题 + 描述（LIKE 模式）· 点击 ✕ 一键清空<br>
+        · 筛选：状态 + 复杂度叠加（AND 关系），变更重置到第 1 页 · 页大小：4 / 页（演示用）<br>
+        · 任务大厅全员公开，投标记录互相不可见（防串标）· 老板视图入口只对老板角色显示
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="02-login.html"><i data-lucide="arrow-left" width="12" height="12"></i> 2</a>
+    <a href="04-task-detail.html">4 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

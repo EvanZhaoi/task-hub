@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P08 · 选标 · TaskHub 原型</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <span>TaskHub</span>
+      <span class="tag-proto">P08 · 选标</span>
+    </div>
+    <nav>
+      <a href="03-task-hall.html" class="nav-link">
+        <i data-lucide="layout-grid" width="14" height="14" style="vertical-align: -2px;"></i>
+        任务大厅
+      </a>
+      <a href="05-create-task.html" class="nav-link">发布任务</a>
+      <a href="12-profile.html" class="nav-link">我的</a>
+      <a href="../index.html" class="nav-link" style="color: #8f8f99;">
+        <i data-lucide="home" width="14" height="14" style="vertical-align: -2px;"></i>
+        目录
+      </a>
+    </nav>
+    <div class="user-switcher">
+      <span class="text-sm text-muted">当前身份</span>
+      <select class="user-select">
+        <option>陈PM · 发布者 · 产品研发部</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- 标题 -->
+    <div class="mb-6">
+      <div class="row-tight mb-2" style="color: var(--color-primary);">
+        <i data-lucide="list-checks" width="20" height="20"></i>
+        <span class="text-sm font-medium" style="font-size: 13px;">流程 C · 选标</span>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 4px;">选择中标投标</h1>
+      <p class="text-muted" style="margin: 0; font-size: 14px;">「用户登录页 UI 重构」· 招标中 · 收到 2 个投标</p>
+    </div>
+
+    <!-- 选中投标预览 -->
+    <div class="card mb-4" style="background: #f0fdf4; border-color: #86efac;">
+      <div class="row-between mb-3">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #166534;">
+          <i data-lucide="check-circle" width="18" height="18" style="vertical-align: -3px;"></i>
+          选中：韩梅梅（含协作成员王运维）
+        </h2>
+        <span class="badge badge-COMPLETED">已选中</span>
+      </div>
+
+      <div class="grid-3" style="gap: 16px;">
+        <div>
+          <div class="label" style="font-size: 12px; color: #8f8f99; text-transform: uppercase; letter-spacing: 0.05em;">原投标金额</div>
+          <div class="value" style="font-size: 18px; color: #1a1a1a; font-weight: 600; margin-top: 4px;">¥800</div>
+        </div>
+        <div>
+          <div class="label" style="font-size: 12px; color: #8f8f99; text-transform: uppercase; letter-spacing: 0.05em;">原承诺交期</div>
+          <div class="value" style="font-size: 18px; color: #1a1a1a; font-weight: 500; margin-top: 4px;">2026-06-25</div>
+        </div>
+        <div>
+          <div class="label" style="font-size: 12px; color: #8f8f99; text-transform: uppercase; letter-spacing: 0.05em;">协作成员</div>
+          <div class="row-tight mt-2" style="gap: 4px;">
+            <div class="avatar avatar-xs">韩</div>
+            <div class="avatar avatar-xs">王</div>
+            <span class="text-sm text-muted" style="font-size: 12px;">2 人</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 可调整字段 -->
+    <div class="card mb-4">
+      <div class="row-between mb-4">
+        <h2 style="font-size: 16px; font-weight: 600; margin: 0;">
+          <i data-lucide="settings-2" width="18" height="18" style="vertical-align: -3px;"></i>
+          可调整项
+        </h2>
+        <span class="text-subtle text-sm" style="font-size: 12px;">发布者可微调最终金额 / 交期 / 描述</span>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label class="field-label">最终金额（¥） <span class="req">*</span></label>
+          <input type="number" class="input" value="800">
+          <div class="field-hint">
+            原投标 ¥800 · 线下协商后可调整 · 调整后需<a href="#" style="color: var(--color-primary);">联系管理员</a>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">最终交期 <span class="req">*</span></label>
+          <input type="date" class="input" value="2026-06-25">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">需求描述微调（可选）</label>
+        <div class="richtext-content" style="min-height: 100px; padding: 10px 14px;">
+          <p style="margin: 0;">增加需求：需要把登录成功后的跳转 URL 配置化（接 ...</p>
+        </div>
+        <div class="field-hint">如有微调可在原描述基础上追加 · 所有变更将记录到 Change Log</div>
+      </div>
+    </div>
+
+    <!-- 投标对比列表 -->
+    <h2 style="font-size: 16px; font-weight: 600; margin: 32px 0 12px;">收到的投标 · 已选择韩梅梅</h2>
+    <div class="alert alert-info mb-3">
+      <i data-lucide="shield" width="14" height="14" class="alert-icon"></i>
+      <div class="alert-body" style="font-size: 12px;">
+        你作为发布者可以看到完整投标列表 · 但投标之间<strong style="color: #1e40af;">互不可见</strong>（防串标）
+      </div>
+    </div>
+
+    <!-- 未选标的投标（另一个）-->
+    <div class="card card-hoverable mb-3" style="border-style: dashed;">
+      <div class="row" style="gap: 12px;">
+        <div class="avatar avatar-md">李</div>
+        <div style="flex: 1;">
+          <div class="row-tight">
+            <strong style="font-size: 13px;">李雷</strong>
+            <span class="text-subtle" style="font-size: 12px;">· 产品研发部</span>
+          </div>
+          <p class="text-muted mt-2" style="font-size: 13px; margin: 6px 0;">Vue 3 + Tailwind 重写，3 天能搞定。</p>
+          <div class="row mt-2 text-muted" style="font-size: 12px; gap: 16px;">
+            <span>报价 <strong style="color: #1a1a1a;">¥750</strong></span>
+            <span>交期 <strong style="color: #1a1a1a;">2026-06-24</strong></span>
+            <span class="text-subtle">投标于 2026-06-10</span>
+          </div>
+        </div>
+        <div class="row-tight" style="flex-direction: column; gap: 4px; align-items: flex-end;">
+          <span class="text-subtle text-sm" style="font-size: 12px;">未中</span>
+          <button class="btn btn-secondary btn-sm">
+            <i data-lucide="refresh-cw" width="12" height="12"></i>
+            改选李雷
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 选标后的动作 -->
+    <div class="card mt-6">
+      <div class="alert alert-warning mb-4">
+        <i data-lucide="alert-triangle" width="16" height="16" class="alert-icon"></i>
+        <div class="alert-body" style="font-size: 12px;">
+          <strong>选标后效果</strong>：
+          · 任务状态：OPEN → <strong>ASSIGNED</strong><br>
+          · 中标投标状态：ACTIVE → <strong>ACCEPTED</strong>，其他投标：→ <strong>LOST</strong>（不主动通知）<br>
+          · 中标者收到站内 + 邮件通知 · 任务进入「进行中」阶段
+        </div>
+      </div>
+
+      <div class="row-end" style="gap: 8px;">
+        <a href="04-task-detail.html" class="btn btn-secondary">取消</a>
+        <button class="btn btn-primary btn-lg">
+          <i data-lucide="check" width="16" height="16"></i>
+          确认选标
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页间导航 -->
+  <div class="proto-nav">
+    <a href="../index.html" class="proto-home"><i data-lucide="home" width="14" height="14"></i></a>
+    <a href="07-bid.html"><i data-lucide="arrow-left" width="12" height="12"></i> 7</a>
+    <a href="09-extension.html">9 <i data-lucide="arrow-right" width="12" height="12"></i></a>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>
