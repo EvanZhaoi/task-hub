@@ -1,7 +1,7 @@
 -- ============================================================
 -- TaskHub 数据库 Schema (MySQL 8.4)
 -- 文档：docs/模块与数据库设计.md v0.7
--- 4 张核心表：task / bid / task_attachment / task_change_log
+-- 5 张核心表：task / bid / task_attachment / task_change_request / task_change_log
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS `taskhub`
@@ -28,7 +28,9 @@ CREATE TABLE `task` (
   `is_direct`          TINYINT(1)       NOT NULL DEFAULT 0   COMMENT '是否直接指名 0=否 1=是',
   `complexity`         TINYINT          NOT NULL DEFAULT 1   COMMENT '0=LOW 简单 / 1=MEDIUM 中等复杂 / 2=HIGH 高度复杂',
   `created_by`         BIGINT UNSIGNED  NOT NULL             COMMENT '发布者 user_id',
-  `assigned_bid_id`    BIGINT UNSIGNED                       COMMENT '中标投标 ID（冗余）',
+  `assigned_bid_id`    BIGINT UNSIGNED                       COMMENT '中标投标 ID（招标模式冗余）',
+  `assigned_user_id`   BIGINT UNSIGNED                       COMMENT '当前主负责人 user_id（招标中标者或直接指名人）',
+  `assigned_collaborators` JSON                              COMMENT '当前协作成员 user_id 列表（直接指名或中标协作组）',
   `created_at`         DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`         DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `updated_by`         BIGINT UNSIGNED                       COMMENT '最后修改人',
@@ -36,6 +38,7 @@ CREATE TABLE `task` (
   PRIMARY KEY (`id`),
   KEY `IDX_status_created`    (`status`, `created_at`),
   KEY `IDX_created_by_status`  (`created_by`, `status`),
+  KEY `IDX_assigned_user_status` (`assigned_user_id`, `status`),
   KEY `IDX_payment_account`    (`payment_account_id`, `status`),
   KEY `IDX_complexity_status`   (`complexity`, `status`),
   KEY `IDX_deleted`            (`deleted_at`)
@@ -59,10 +62,13 @@ CREATE TABLE `bid` (
   `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at`     DATETIME                             COMMENT '软删时间',
+  `active_bidder_id` BIGINT UNSIGNED GENERATED ALWAYS AS (
+    CASE WHEN `status` = 0 AND `deleted_at` IS NULL THEN `bidder_id` ELSE NULL END
+  ) STORED COMMENT '仅 ACTIVE 且未删除时用于唯一约束',
   PRIMARY KEY (`id`),
   KEY `IDX_task_status`     (`task_id`, `status`),
   KEY `IDX_bidder_status`    (`bidder_id`, `status`),
-  UNIQUE KEY `UNIQ_task_bidder_active` (`task_id`, `bidder_id`, `status`),
+  UNIQUE KEY `UNIQ_task_active_bidder` (`task_id`, `active_bidder_id`),
   KEY `IDX_deleted`         (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='投标表';
@@ -90,7 +96,33 @@ CREATE TABLE `task_attachment` (
 
 
 -- ============================================================
--- 4. task_change_log（任务变更记录）
+-- 4. task_change_request（任务变更请求 / 双方确认）
+-- ============================================================
+DROP TABLE IF EXISTS `task_change_request`;
+CREATE TABLE `task_change_request` (
+  `id`           BIGINT UNSIGNED  NOT NULL             COMMENT '雪花 ID',
+  `task_id`      BIGINT UNSIGNED  NOT NULL             COMMENT '任务 ID',
+  `change_type`  TINYINT          NOT NULL             COMMENT '0=AMOUNT / 1=DELIVERY / 2=DESCRIPTION / 3=EXTENSION / 4=CANCEL',
+  `old_value`    JSON                                  COMMENT '变更前值',
+  `new_value`    JSON                                  COMMENT '变更后值',
+  `reason`       VARCHAR(500)                          COMMENT '原因',
+  `initiator_id` BIGINT UNSIGNED  NOT NULL             COMMENT '发起人 user_id',
+  `approver_id`  BIGINT UNSIGNED  NOT NULL             COMMENT '待确认人 user_id',
+  `status`       TINYINT          NOT NULL DEFAULT 0   COMMENT '0=PENDING / 1=APPROVED / 2=REJECTED / 3=CANCELLED',
+  `responded_at` DATETIME                              COMMENT '确认/拒绝时间',
+  `created_at`   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted_at`   DATETIME                              COMMENT '软删时间',
+  PRIMARY KEY (`id`),
+  KEY `IDX_task_status` (`task_id`, `status`),
+  KEY `IDX_approver_status` (`approver_id`, `status`),
+  KEY `IDX_deleted` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='任务变更请求';
+
+
+-- ============================================================
+-- 5. task_change_log（任务变更记录）
 -- ============================================================
 DROP TABLE IF EXISTS `task_change_log`;
 CREATE TABLE `task_change_log` (
@@ -101,6 +133,7 @@ CREATE TABLE `task_change_log` (
   `new_value`    JSON                                 COMMENT '变更后值',
   `reason`       VARCHAR(500)                        COMMENT '原因',
   `agreed_by`    JSON                                 COMMENT '双方 user_id 列表 [u1, u2]',
+  `request_id`   BIGINT UNSIGNED                      COMMENT '来源变更请求 ID（如有）',
   `created_by`   BIGINT UNSIGNED                     COMMENT '发起人',
   `created_at`   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

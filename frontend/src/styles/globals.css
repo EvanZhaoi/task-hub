@@ -1,137 +1,62 @@
-/* ============================================================
-   Tailwind v4 + shadcn 主题
-   v4 改用 CSS-first：@import + @theme，无 tailwind.config.js
-   ============================================================ */
-
 @import "tailwindcss";
 
-/* ---- shadcn 主题变量：直接放在 :root ---- */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 240 56% 65%;            /* TaskHub 品牌色 #5e6ad2 */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 240 56% 65%;
-  --radius: 0.5rem;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  color: #1a1a1a;
+  background: #fafafa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---- @theme inline：把 :root 变量映射成 Tailwind tokens ---- */
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius: var(--radius);
+* {
+  box-sizing: border-box;
 }
 
-/* ---- 全局基础样式 ---- */
-@layer base {
-  * { @apply border-border; }
-  body {
-    @apply text-foreground;
-    background-color: #fafafa;
-  }
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #fafafa;
 }
 
-/* ---- 状态徽章（项目自定义）---- */
-@layer components {
-  .badge {
-    @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
-  }
-  .badge-draft     { @apply bg-gray-100 text-gray-600; }
-  .badge-open      { @apply bg-blue-100 text-blue-800; }
-  .badge-assigned  { @apply bg-orange-100 text-orange-800; }
-  .badge-completed { @apply bg-green-100 text-green-800; }
-  .badge-failed    { @apply bg-gray-200 text-gray-700; }
-  .badge-cancelled { @apply bg-gray-50 text-gray-500 line-through; }
+.rewrite-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
 
-  /* 复杂度徽章 */
-  .badge-low      { @apply bg-green-100 text-green-800; }
-  .badge-medium   { @apply bg-gray-100 text-gray-700; }
-  .badge-high     { @apply bg-red-100 text-red-800; }
+.rewrite-panel {
+  width: min(100%, 560px);
+  border: 1px solid #ebebeb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 28px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
+}
 
-  /* 投标状态 */
-  .bid-active    { @apply bg-blue-50 text-blue-700 border border-blue-200; }
-  .bid-accepted  { @apply bg-green-50 text-green-700 border border-green-200; }
-  .bid-lost      { @apply bg-gray-50 text-gray-500 border border-gray-200; }
-  .bid-withdrawn { @apply bg-gray-50 text-gray-400 border border-gray-200 line-through; }
+.rewrite-panel h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
+}
 
-  /* 任务富文本渲染（基础样式） */
-  .prose-task {
-    color: #374151;
-    line-height: 1.75;
-    font-size: 16px;
-  }
-  .prose-task p { margin: 0 0 14px; }
-  .prose-task p:last-child { margin-bottom: 0; }
-  .prose-task ul, .prose-task ol { padding-left: 28px; margin: 0 0 14px; }
-  .prose-task ul { list-style: disc; }
-  .prose-task ol { list-style: decimal; }
-  .prose-task h1, .prose-task h2, .prose-task h3 {
-    @apply font-semibold text-foreground;
-    margin: 20px 0 10px;
-    line-height: 1.4;
-  }
-  .prose-task h1 { font-size: 24px; }
-  .prose-task h2 { font-size: 20px; }
-  .prose-task h3 { font-size: 18px; }
-  .prose-task strong { @apply font-semibold text-foreground; }
-  .prose-task em { font-style: italic; }
-  .prose-task code {
-    @apply bg-muted px-1.5 py-0.5 rounded;
-    font-family: "SF Mono", Menlo, Consolas, monospace;
-    font-size: 14px;
-  }
-  .prose-task blockquote {
-    @apply border-l-4 border-primary bg-muted/30 pl-3 py-1;
-    color: #6b7280;
-    margin: 14px 0;
-  }
+.rewrite-panel p {
+  margin: 0;
+  color: #6e6e80;
+  font-size: 14px;
+  line-height: 1.7;
+}
 
-  /* 页面与卡片交互动效（Linear 风格：克制、但顺滑） */
-  .page-enter { animation: fadeUp 200ms ease-out; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* 柔和分割线：用 spacing 代替硬分割线的备选 */
-  .divider-soft { @apply h-px bg-border/60; }
-
-  /* body 背景：极微妙的渐变 + 网格点状（只起到给纯色一点质感的作用） */
-  body {
-    background-color: #fafafa;
-    background-image:
-      radial-gradient(circle at 0% 0%, rgba(94, 106, 210, 0.04) 0%, transparent 40%),
-      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
-  }
+.rewrite-panel .eyebrow {
+  margin-bottom: 8px;
+  color: #5e6ad2;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
 }
