@@ -289,9 +289,9 @@
             budget · final_amount<br>
             expected_delivery · final_delivery<br>
             bidding_deadline · status<br>
-            complexity (LOW/MEDIUM/HIGH)<br>
-            created_by · assigned_bid_id<br>
-            payment_account_id · created_at
+            assignment_type · version<br>
+            primary_assignee_id · assigned_bid_id<br>
+            created_by_snapshot · created_at
           </div>
         </div>
 
@@ -302,46 +302,46 @@
             <span class="text-subtle" style="font-size: 11px;">投标表</span>
           </div>
           <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
-            id · task_id · bidder_id<br>
+            id · task_id · revision_no<br>
             amount · delivery_date<br>
-            proposal · status<br>
-            collaborators (JSON)<br>
+            proposal · status · active_key<br>
+            member → bid_member<br>
             created_at · updated_at<br>
-            UNIQ(task, bidder, ACTIVE)<br>
-            —— 防同人重复投标
+            UNIQ(active_key)<br>
+            —— 保留撤回历史
           </div>
         </div>
 
         <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
           <div class="row-tight mb-2">
             <i data-lucide="database" width="14" height="14" style="color: var(--color-primary);"></i>
-            <strong style="font-size: 14px;">task_attachment</strong>
-            <span class="text-subtle" style="font-size: 11px;">附件表</span>
+            <strong style="font-size: 14px;">attachment_ref</strong>
+            <span class="text-subtle" style="font-size: 11px;">附件引用表</span>
           </div>
           <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
-            id · task_id<br>
-            file_name · file_key<br>
-            file_size · mime_type<br>
-            uploaded_by · uploaded_at<br>
-            —— MVP 本地存储<br>
-            —— 20MB / 文件
+            id · owner_type · owner_id<br>
+            attachment_id<br>
+            uploaded_by · created_at<br>
+            owner: TASK/BID/DELIVERY/<br>
+            CHANGE_REQUEST<br>
+            —— 外部文件服务
           </div>
         </div>
 
         <div style="border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
           <div class="row-tight mb-2">
             <i data-lucide="database" width="14" height="14" style="color: var(--color-primary);"></i>
-            <strong style="font-size: 14px;">task_change_log</strong>
-            <span class="text-subtle" style="font-size: 11px;">变更记录表</span>
+            <strong style="font-size: 14px;">task_event</strong>
+            <span class="text-subtle" style="font-size: 11px;">任务事件表</span>
           </div>
           <div class="text-sm text-muted" style="font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.8;">
             id · task_id<br>
-            change_type (AMOUNT/DELIVERY/<br>
-            DESCRIPTION/CANCEL/EXTENSION)<br>
-            old_value (JSON) · new_value (JSON)<br>
-            agreed_by (JSON) · reason<br>
+            event_type · operator_id<br>
+            from_status · to_status<br>
+            related_type · related_id<br>
+            event_data (JSON) · remark<br>
             created_at<br>
-            —— 不可删，只追加
+            —— 时间线 + 审计
           </div>
         </div>
 
