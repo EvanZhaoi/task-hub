@@ -6,7 +6,7 @@
 -- attachment_ref / task_change_request / task_event
 --
 -- 设计约定：
--- 1. 用户、付款账号、附件文件本体都来自外部系统，本库只保存外部 ID。
+-- 1. 人员、付款账号、附件文件本体都来自外部系统；人员引用统一保存工号。
 -- 2. 金额统一使用 DECIMAL(18,2)，禁止使用 FLOAT / DOUBLE。
 -- 3. DATE 用于只关心自然日的交付日期；TIMESTAMP 用于具体事件发生时间。
 -- 4. 核心业务数据原则上不物理删除，通过状态和事件记录保留历史。
@@ -51,15 +51,15 @@ CREATE TABLE `task` (
   `status`                   VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT '任务状态：DRAFT/OPEN/ASSIGNED/COMPLETED/FAILED/CANCELLED',
   `assignment_type`          VARCHAR(20)     NOT NULL COMMENT '分配方式：BIDDING 招标选标 / DIRECT 直接指名',
   `complexity`               VARCHAR(20)     NOT NULL DEFAULT 'MEDIUM' COMMENT '复杂度：LOW/MEDIUM/HIGH',
-  `created_by`               BIGINT UNSIGNED NOT NULL COMMENT '发布者 user_id（外部引用）',
+  `created_by`               VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `created_by_snapshot`      JSON                     COMMENT '发布者历史快照，仅用于展示和审计',
   `assigned_bid_id`          BIGINT UNSIGNED          COMMENT '中标投标 ID；DIRECT 模式为空',
-  `primary_assignee_id`      BIGINT UNSIGNED          COMMENT '主负责人 user_id；BIDDING 为中标 OWNER，DIRECT 为被指名人',
+  `primary_assignee_id`      VARCHAR(32)              COMMENT '人员工号（外部人员接口标识）',
   `version`                  BIGINT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号，业务更新时递增',
   `completed_at`             TIMESTAMP       NULL     COMMENT '任务完成时间',
   `created_at`               TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at`               TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `updated_by`               BIGINT UNSIGNED          COMMENT '最后修改人 user_id',
+  `updated_by`               VARCHAR(32)              COMMENT '人员工号（外部人员接口标识）',
   PRIMARY KEY (`id`),
   KEY `IDX_task_status_created` (`status`, `created_at` DESC),
   KEY `IDX_task_created_by_status_created` (`created_by`, `status`, `created_at` DESC),
@@ -79,7 +79,7 @@ CREATE TABLE `task` (
 -- 2. bid（投标表）
 --    保留投标历史；撤回后重投会生成新 bid 记录。
 --    主投标人不在 bid 中重复保存，统一由 bid_member.role=OWNER 表示。
---    active_key 由业务层在 ACTIVE 状态下写入 task_id + OWNER user_id 的唯一键。
+--    active_key 由业务层在 ACTIVE 状态下写入 task_id + OWNER 工号的唯一键。
 -- ============================================================
 CREATE TABLE `bid` (
   `id`            BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
@@ -89,7 +89,7 @@ CREATE TABLE `bid` (
   `proposal`      TEXT                     COMMENT '投标方案说明',
   `status`        VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT '投标状态：ACTIVE/WITHDRAWN/ACCEPTED/LOST',
   `revision_no`   INT             NOT NULL DEFAULT 1 COMMENT '同一任务同一 OWNER 的投标修订序号，由业务层递增',
-  `active_key`    VARCHAR(160)             COMMENT 'ACTIVE 时唯一标识 task_id + OWNER user_id；非 ACTIVE 时为 NULL',
+  `active_key`    VARCHAR(160)             COMMENT 'ACTIVE 时唯一标识 task_id + OWNER 工号，如 10001:E12345；非 ACTIVE 时为 NULL',
   `withdrawn_at`  TIMESTAMP       NULL     COMMENT '撤回时间',
   `created_at`    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at`    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -109,7 +109,7 @@ CREATE TABLE `bid` (
 CREATE TABLE `bid_member` (
   `id`         BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
   `bid_id`     BIGINT UNSIGNED NOT NULL COMMENT '投标 ID',
-  `user_id`    BIGINT UNSIGNED NOT NULL COMMENT '成员 user_id（外部引用）',
+  `user_id`    VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `role`       VARCHAR(20)     NOT NULL COMMENT '成员角色：OWNER/COLLABORATOR',
   `created_at` TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
@@ -128,7 +128,7 @@ CREATE TABLE `bid_member` (
 CREATE TABLE `task_assignee` (
   `id`         BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
   `task_id`    BIGINT UNSIGNED NOT NULL COMMENT '任务 ID',
-  `user_id`    BIGINT UNSIGNED NOT NULL COMMENT '成员 user_id（外部引用）',
+  `user_id`    VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `role`       VARCHAR(20)     NOT NULL COMMENT '成员角色：OWNER/COLLABORATOR',
   `created_at` TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
@@ -147,11 +147,11 @@ CREATE TABLE `task_delivery` (
   `id`             BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
   `task_id`        BIGINT UNSIGNED NOT NULL COMMENT '任务 ID',
   `delivery_no`    INT             NOT NULL COMMENT '任务内交付序号，从 1 递增',
-  `submitted_by`   BIGINT UNSIGNED NOT NULL COMMENT '提交人 user_id',
+  `submitted_by`   VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `description`    TEXT                     COMMENT '交付说明',
   `status`         VARCHAR(30)     NOT NULL DEFAULT 'SUBMITTED' COMMENT '交付状态：SUBMITTED/ACCEPTED/REVISION_REQUIRED/WITHDRAWN',
   `submitted_at`   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '提交时间',
-  `reviewed_by`    BIGINT UNSIGNED          COMMENT '评审人 user_id',
+  `reviewed_by`    VARCHAR(32)              COMMENT '人员工号（外部人员接口标识）',
   `reviewed_at`    TIMESTAMP       NULL     COMMENT '评审时间',
   `review_comment` VARCHAR(1000)            COMMENT '评审意见',
   `created_at`     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -175,7 +175,7 @@ CREATE TABLE `attachment_ref` (
   `owner_type`    VARCHAR(30)     NOT NULL COMMENT '所属对象类型：TASK/BID/DELIVERY/CHANGE_REQUEST',
   `owner_id`      BIGINT UNSIGNED NOT NULL COMMENT '所属对象 ID',
   `attachment_id` VARCHAR(128)    NOT NULL COMMENT '外部附件 ID',
-  `uploaded_by`   BIGINT UNSIGNED NOT NULL COMMENT '上传者 user_id',
+  `uploaded_by`   VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `created_at`    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `UNIQ_attachment_owner_file` (`owner_type`, `owner_id`, `attachment_id`),
@@ -193,13 +193,13 @@ CREATE TABLE `task_change_request` (
   `id`                BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
   `task_id`           BIGINT UNSIGNED NOT NULL COMMENT '任务 ID',
   `request_no`        INT             NOT NULL COMMENT '任务内变更请求编号，从 1 递增',
-  `change_type`       VARCHAR(30)     NOT NULL COMMENT '变更类型：AMOUNT/DELIVERY/DESCRIPTION/CANCEL/EXTENSION',
+  `request_type`      VARCHAR(20)     NOT NULL COMMENT '请求类型：CHANGE/CANCEL',
   `old_value`         JSON                     COMMENT '变更前值，camelCase JSON',
   `new_value`         JSON                     COMMENT '变更后值，camelCase JSON',
   `reason`            VARCHAR(500)             COMMENT '变更原因',
   `base_task_version` BIGINT          NOT NULL COMMENT '发起变更时的 task.version',
-  `initiator_id`      BIGINT UNSIGNED NOT NULL COMMENT '发起人 user_id',
-  `approver_id`       BIGINT UNSIGNED NOT NULL COMMENT '待确认人 user_id',
+  `initiator_id`      VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
+  `approver_id`       VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `status`            VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT '请求状态：PENDING/APPROVED/REJECTED/CANCELLED',
   `expires_at`        TIMESTAMP       NULL     COMMENT '过期时间；MVP 暂不自动过期',
   `responded_at`      TIMESTAMP       NULL     COMMENT '确认/拒绝时间',
@@ -212,20 +212,21 @@ CREATE TABLE `task_change_request` (
   KEY `IDX_change_request_task_status_created` (`task_id`, `status`, `created_at` DESC),
   KEY `IDX_change_request_approver_status_created` (`approver_id`, `status`, `created_at` DESC),
   CONSTRAINT `CHK_change_request_no_positive` CHECK (`request_no` > 0),
-  CONSTRAINT `CHK_change_request_type` CHECK (`change_type` IN ('AMOUNT', 'DELIVERY', 'DESCRIPTION', 'CANCEL', 'EXTENSION')),
+  CONSTRAINT `CHK_change_request_type` CHECK (`request_type` IN ('CHANGE', 'CANCEL')),
   CONSTRAINT `CHK_change_request_status` CHECK (`status` IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='任务变更请求表';
 
 -- ============================================================
 -- 8. task_event（任务事件表）
---    记录任务详情时间线和业务审计。不是事件溯源，不用于反向重建 Task 当前状态。
+--    记录任务详情时间线和业务审计。不是事件溯源、消息队列、事件总线或 Outbox，
+--    不用于反向重建 Task 当前状态。
 -- ============================================================
 CREATE TABLE `task_event` (
   `id`           BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
   `task_id`      BIGINT UNSIGNED NOT NULL COMMENT '任务 ID',
   `event_type`   VARCHAR(40)     NOT NULL COMMENT '事件类型',
-  `operator_id`  BIGINT UNSIGNED          COMMENT '操作人 user_id；系统事件可为空',
+  `operator_id`  VARCHAR(32)              COMMENT '人员工号（外部人员接口标识）；系统事件可为空',
   `from_status`  VARCHAR(20)              COMMENT '变更前任务状态',
   `to_status`    VARCHAR(20)              COMMENT '变更后任务状态',
   `related_type` VARCHAR(30)              COMMENT '关联对象类型，如 BID/DELIVERY/CHANGE_REQUEST',
@@ -240,7 +241,8 @@ CREATE TABLE `task_event` (
     'TASK_CREATED', 'TASK_PUBLISHED', 'BID_SUBMITTED', 'BID_WITHDRAWN',
     'BID_ACCEPTED', 'TASK_ASSIGNED', 'CHANGE_REQUESTED', 'CHANGE_APPROVED',
     'CHANGE_REJECTED', 'DELIVERY_SUBMITTED', 'DELIVERY_ACCEPTED',
-    'REVISION_REQUIRED', 'TASK_COMPLETED', 'TASK_CANCELLED', 'TASK_FAILED'
+    'REVISION_REQUIRED', 'TASK_COMPLETED', 'TASK_CANCELLED', 'TASK_FAILED',
+    'BIDDING_DEADLINE_EXTENDED'
   )),
   CONSTRAINT `CHK_task_event_from_status` CHECK (`from_status` IS NULL OR `from_status` IN ('DRAFT', 'OPEN', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED')),
   CONSTRAINT `CHK_task_event_to_status` CHECK (`to_status` IS NULL OR `to_status` IN ('DRAFT', 'OPEN', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED'))
