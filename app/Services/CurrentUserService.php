@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 
 class CurrentUserService
 {
+    public const SESSION_KEY = 'sso_user';
+
     private ?SsoUser $resolvedUser = null;
 
     public function __construct(
@@ -21,6 +23,12 @@ class CurrentUserService
     {
         if ($this->resolvedUser instanceof SsoUser) {
             return $this->resolvedUser;
+        }
+
+        $sessionUser = $this->request->session()->get(self::SESSION_KEY);
+
+        if (is_array($sessionUser)) {
+            return $this->resolvedUser = SsoUser::fromPayload($sessionUser);
         }
 
         $token = $this->request->bearerToken();

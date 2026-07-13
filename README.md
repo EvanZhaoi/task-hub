@@ -1,41 +1,134 @@
 # TaskHub
 
-> 内部任务交易平台 — 用市场化的方式解决公司开发资源分散问题
+TaskHub 是公司内部任务撮合平台，目标是用市场化方式让任务发布者和有空的开发者完成匹配。
 
-![status](https://img.shields.io/badge/status-requirements--v0.2-yellow)
-![phase](https://img.shields.io/badge/phase-design-blue)
+当前仓库处于 **Phase 1：项目初始化与基础架构**。本阶段只完成 Laravel 单体架构、React/Inertia 前端壳、数据库映射、SSO 骨架和开发文档，不包含任务发布、投标、交付等业务功能。
 
-## 项目简介
+## 技术栈
 
-公司内部任务撮合平台。任何人可发布开发任务、开发者可投标、老板可全局看所有任务。
+- PHP 8.5.8
+- Laravel 13
+- React 19
+- TypeScript
+- Inertia.js
+- Vite
+- MySQL 8
+- Pest
 
-**平台只负责"任务流转 + 完成确认"**，资金流转走公司内部系统。
+架构方式：
 
-## 当前状态
+```text
+Laravel Monolith + React(Inertia)
+```
 
-**Phase 0：需求设计**
+不是传统 Blade 页面，也不是完全前后端分离。
 
-- [x] v0.2 需求文档定稿
-- [ ] v0.3 技术选型
-- [ ] v0.4 分模块拆解 + 开发计划
-- [ ] Phase 1: MVP 开发
+## 快速启动
 
-## 文档
+```bash
+git clone <repository-url> task-hub
+cd task-hub
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan config:clear
+composer run dev
+```
 
-- [需求文档 v0.2](./docs/需求文档.md) — 核心需求、状态机、流程、数据模型
-- [交接记录](./docs/交接记录.md) — 决策日志、协作上下文
+Windows PowerShell 复制 `.env`：
 
-## 协作
+```powershell
+Copy-Item .env.example .env
+```
 
-- 产品负责人：Evan
-- 项目导演：Harry
-- 工程执行：TBD
+访问：
 
-## 🔒 安全声明
+```text
+http://127.0.0.1:8000
+```
 
-本仓库为**公开仓库**。平台代码涉及公司内部业务：
+## 数据库初始化
 
-- 所有真实业务数据、用户信息、付款账号 **绝不能进 git**
-- 使用 `.env` + `.gitignore` 隔离敏感配置
-- 任务描述中的真实业务内容（涉及公司具体业务）应做脱敏后再提交文档
-- 代码中的 mock 数据使用明显标记（如 `MOCK_`、`EXAMPLE_`），禁止混入真实数据
+数据库结构以 [database/schema.sql](./database/schema.sql) 为当前唯一标准。
+
+```bash
+mysql -uroot -p < database/schema.sql
+php artisan config:clear
+php artisan db:show
+```
+
+不要运行会创建无关表的默认 Laravel migration。当前项目不创建本地 `users` 表。
+
+详细说明见：
+
+- [04-数据库初始化与配置](./docs/development/04-数据库初始化与配置.md)
+
+## 开发文档
+
+从这里开始阅读：
+
+- [开发文档 README](./docs/development/README.md)
+- [00-开发环境准备](./docs/development/00-开发环境准备.md)
+- [01-从零创建项目](./docs/development/01-从零创建项目.md)
+- [02-拉取并运行现有项目](./docs/development/02-拉取并运行现有项目.md)
+
+## SSO 当前状态
+
+当前只保留真实 SSO 接入骨架：
+
+- `app/Integrations/Sso/SsoClient.php`
+- `app/Integrations/Sso/SsoUser.php`
+- `app/Services/CurrentUserService.php`
+- `app/Http/Middleware/EnsureSsoAuthenticated.php`
+
+总部协议尚未确认，因此 `.env.example` 中的 SSO 地址、登录地址和验证路径保持为空。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表。
+
+详细说明见：
+
+- [06-SSO认证流程](./docs/development/06-SSO认证流程.md)
+
+## 已完成
+
+- Laravel 13 项目初始化
+- React + TypeScript + Inertia 初始化
+- Vite 开发和生产构建
+- MySQL 8 配置
+- 删除默认本地用户体系 migration
+- 8 个 Eloquent Model 映射
+- SSO 接入骨架
+- Pest 基础测试
+- 面向 Java 开发者的开发文档
+
+## 尚未开发
+
+- 发布任务
+- 投标
+- 选标
+- 交付
+- 任务变更
+- 通知
+- 权限矩阵
+- Dashboard / 甘特图
+- 真实 SSO 协议联调
+
+## 验证命令
+
+```bash
+composer validate --strict
+npm run typecheck
+npm run build
+php artisan test
+```
+
+## 安全声明
+
+本仓库为公开仓库。禁止提交：
+
+- `.env`
+- 真实 SSO 地址、密钥、Token
+- 真实用户信息、工号与部门数据
+- 真实付款账号
+- 真实任务内容或附件
+
+所有公司内部数据必须脱敏后再进入文档或测试数据。

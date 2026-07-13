@@ -15,13 +15,19 @@ class SsoClient
             throw new SsoException('SSO base URL is not configured.');
         }
 
+        $validatePath = config('sso.validate_path');
+
+        if (! is_string($validatePath) || $validatePath === '') {
+            throw new SsoException('SSO validate path is not configured.');
+        }
+
         try {
             // TODO: Align request path, authentication headers, and payload shape with the company SSO contract.
             $response = Http::baseUrl($baseUrl)
                 ->timeout((int) config('sso.timeout', 5))
                 ->acceptJson()
                 ->withToken($token)
-                ->post((string) config('sso.validate_path', '/api/sso/validate'));
+                ->post($validatePath);
         } catch (ConnectionException $exception) {
             throw new SsoException('Unable to connect to SSO service.', previous: $exception);
         }
