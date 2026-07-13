@@ -1,59 +1,33 @@
-# ========================================
 # 操作系统
-# ========================================
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
 
-# ========================================
 # IDE / 编辑器
-# ========================================
-.vscode/
-.idea/
+/.codex
+/.cursor/
+/.idea
+/.nova
+/.vscode
+/.zed
 *.iml
 *.iws
 *.ipr
 .project
 .classpath
 .settings/
+.phpactor.json
+_ide_helper.php
 
-# ========================================
-# Node / 前端
-# ========================================
-node_modules/
-*.tsbuildinfo
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# ========================================
-# Java / 后端
-# ========================================
-target/
-build/
-*.class
-*.jar
-*.war
-*.ear
-.gradle/
-.mvn/
-mvnw
-mvnw.cmd
-*.log
-hs_err_pid*
-
-# ========================================
 # 环境变量 / 密钥
-# ========================================
 .env
+.env.backup
+.env.production
 .env.local
 .env.*.local
+/auth.json
 *.pem
 *.key
 *.p12
@@ -61,30 +35,39 @@ credentials.json
 secrets/
 config/local.*
 
-# ========================================
-# 构建产物
-# ========================================
-dist/
-out/
-*.tgz
-*.tar.gz
+# PHP / Laravel
+/vendor
+.phpunit.result.cache
+/.phpunit.cache
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+Homestead.json
+Homestead.yaml
 
-# ========================================
-# 上传文件（本地存储）
-# ========================================
-uploads/
-storage/
-attachments/
+# Node / 前端
+/node_modules
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+yarn.lock
+pnpm-lock.yaml
 
-# ========================================
 # 测试 / 覆盖率
-# ========================================
 coverage/
 .nyc_output/
 *.lcov
 
-# ========================================
 # 日志
-# ========================================
 logs/
 *.log
+hs_err_pid*
+
+# 压缩包 / 临时产物
+*.tgz
+*.tar.gz
