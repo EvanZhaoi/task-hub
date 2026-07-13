@@ -8,10 +8,11 @@ type PageModule = {
     default: ComponentType;
 };
 
+const pages = import.meta.glob<PageModule>('./Pages/**/*.tsx');
+
 createInertiaApp({
     title: (title) => (title ? `${title} - TaskHub` : 'TaskHub'),
     resolve: async (name) => {
-        const pages = import.meta.glob<PageModule>('./Pages/**/*.tsx');
         const page = pages[`./Pages/${name}.tsx`];
 
         if (!page) {
