@@ -217,4 +217,25 @@ $task->getTable();
 
 ## 16. 下一章入口
 
-基础架构文档到此结束。下一阶段建议补齐 SSO Middleware 的真实协议接入，不要直接进入任务业务功能。
+完成本章后，项目中应该已经有 `app/Models/Task.php` 等 Model。
+
+下一章进入 [08-最小业务闭环](./08-最小业务闭环.md)，通过一个只读任务列表学习：
+
+```text
+Route
+↓
+Controller
+↓
+Task Model
+↓
+Inertia Props
+↓
+React Page
+```
+
+如果你从空目录跟着做，进入第 08 章前至少确认：
+
+```bash
+test -f database/schema.sql
+test -f app/Models/Task.php
+```

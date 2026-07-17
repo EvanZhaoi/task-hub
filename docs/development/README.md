@@ -12,10 +12,46 @@
 3. [02-拉取并运行现有项目](./02-拉取并运行现有项目.md)
 4. [03-项目结构](./03-项目结构.md)
 5. [04-数据库初始化与配置](./04-数据库初始化与配置.md)
-6. [05-Inertia与React初始化](./05-Inertia与React初始化.md)
-7. [06-SSO认证流程](./06-SSO认证流程.md)
-8. [07-Eloquent-Model设计](./07-Eloquent-Model设计.md)
-9. [08-最小业务闭环](./08-最小业务闭环.md)
+6. [07-Eloquent-Model设计](./07-Eloquent-Model设计.md)
+7. [08-最小业务闭环](./08-最小业务闭环.md)
+
+## 两种学习路径
+
+如果你是“拉取当前 TaskHub 仓库”学习：
+
+```text
+00 → 02 → 03 → 04 → 07 → 08
+```
+
+当前仓库已经包含 `database/schema.sql` 和 8 个 Eloquent Model，所以你在第 08 章可以直接看到 `app/Models/Task.php`。
+
+如果你是“从空目录跟着 01 章手动创建项目”学习：
+
+```text
+00 → 01 → 03 → 04 → 07 → 08
+```
+
+只完成 01 和 03 后，看不到 `app/Models/Task.php` 是正常的。原因是：
+
+- 01 只创建 Laravel + React + Inertia 项目骨架。
+- 03 只解释项目结构和请求流程。
+- `database/schema.sql` 在 04 章讲解。
+- `app/Models/Task.php` 等 Model 在 07 章讲解。
+- 08 章才第一次使用 `Task` Model 做只读业务闭环。
+
+因此，如果你从零跟做，进入 08 章前请先确认：
+
+```bash
+test -f database/schema.sql && echo "schema exists"
+test -f app/Models/Task.php && echo "Task model exists"
+```
+
+Windows PowerShell：
+
+```powershell
+Test-Path database/schema.sql
+Test-Path app/Models/Task.php
+```
 
 ## 当前阶段边界
 
