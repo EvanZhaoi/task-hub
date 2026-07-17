@@ -15,6 +15,7 @@
 6. [05-Inertia与React初始化](./05-Inertia与React初始化.md)
 7. [06-SSO认证流程](./06-SSO认证流程.md)
 8. [07-Eloquent-Model设计](./07-Eloquent-Model设计.md)
+9. [08-最小业务闭环](./08-最小业务闭环.md)
 
 ## 当前阶段边界
 
@@ -29,6 +30,7 @@ Phase 1 只完成基础环境、认证骨架、数据库映射和开发文档。
 - Pest 测试入口
 - SSO 接入骨架
 - 8 个 Eloquent Model
+- 只读任务列表最小业务闭环
 
 尚未开发：
 
