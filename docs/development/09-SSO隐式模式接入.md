@@ -131,6 +131,28 @@ TASKHUB_PUBLISHER_EMPLOYEE_NOS=
 TASKHUB_DEVELOPER_EMPLOYEE_NOS=
 ```
 
+如果你的本地 `.env` 里没有这些字段，不是前面章节删掉了，而是因为：
+
+- `.env` 是你早期从 `.env.example` 复制出来的本地文件。
+- 后续新增配置只会进入 `.env.example`。
+- Laravel 和 Git 都不会自动把 `.env.example` 的新增字段合并到已经存在的 `.env`。
+- `.env` 不提交到仓库，所以每个开发者都需要手动补齐新增配置。
+
+处理方式：打开本地 `.env`，把上面这一整段追加进去，然后按公司 SSO 文档填写真实值。
+
+追加完成后执行：
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+```
+
+原因：
+
+- Laravel 运行时读取的是 `.env`，不是 `.env.example`。
+- `.env.example` 只是模板。
+- 修改 `.env` 后需要清理配置缓存，确保新值生效。
+
 说明：
 
 - `SSO_LOGIN_URL`：公司 SSO 登录地址。
