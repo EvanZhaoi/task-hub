@@ -768,6 +768,64 @@ Session 中最终保存的是：
 
 ## 13. 第八步：创建 SSO Client
 
+这一节的核心问题是：TaskHub 拿到 `accessToken` 以后，不能直接相信前端说“我是谁”。
+
+前端能做的事情只有一件：
+
+```text
+把公司 SSO 回调带回来的 access_token 交给 Laravel
+```
+
+真正确认当前登录人，必须由后端完成：
+
+```text
+accessToken
+↓
+SsoClient
+↓
+调用公司 SSO 当前登录人接口
+↓
+拿到公司返回的 JSON
+↓
+交给 SsoUser::fromPayload()
+↓
+得到 TaskHub 内部可使用的 SsoUser
+```
+
+所以 `SsoClient` 的意义是：
+
+- 统一封装“调用公司 SSO 接口”的代码。
+- 让 Controller 不直接写 HTTP 请求细节。
+- 让外部协议变化时，优先改 `SsoClient` 和 `SsoUser`，不要扩散到业务代码。
+- 明确 TaskHub 的安全边界：前端提交 token，后端用 token 换当前登录人。
+
+它和上一节 `SsoUser` 的区别：
+
+| 类 | 职责 | 类比 Java |
+|---|---|---|
+| `SsoClient` | 调公司 SSO 接口，拿原始 JSON | `SsoApiClient` / `WebClient` 封装 |
+| `SsoUser` | 把原始 JSON 转成稳定对象 | DTO / Value Object |
+
+它和 Controller 的关系：
+
+```text
+SsoController::store()
+↓
+$ssoClient->fetchCurrentUser($accessToken)
+↓
+SsoClient 调公司接口
+↓
+SsoUser::fromPayload($payload)
+↓
+Controller 拿到 SsoUser 后写 Session
+```
+
+为什么不直接在 Controller 里写 `Http::get()`：
+
+- Controller 应该负责请求流程，不应该关心公司接口 URL、Header、超时、错误解析。
+- 后续其他地方如果也需要校验 token，可以复用 `SsoClient`。
+- 测试时可以替换 `SsoClient`，不用真的访问公司 SSO。
+
 文件：
 
 ```text
@@ -852,13 +910,118 @@ class SsoClient
 - `SSO_USERINFO_PATH` 和 `SSO_VALIDATE_PATH` 只允许填写 path，不允许填写完整 URL。
 - `TODO` 保留在真实公司协议位置，不编造接口。
 
-Laravel 知识点：
+### 13.1 fetchCurrentUser 做了什么
+
+```php
+public function fetchCurrentUser(string $accessToken): SsoUser
+```
+
+这个方法的输入是前端提交的 `accessToken`，输出是 TaskHub 内部使用的 `SsoUser`。
+
+它内部按顺序做这些事：
+
+1. 读取 `SSO_BASE_URL`。
+2. 读取 `SSO_USERINFO_PATH`，没有则兼容读取 `SSO_VALIDATE_PATH`。
+3. 校验 path 不能是完整 URL。
+4. 使用 Laravel HTTP Client 调公司接口。
+5. 检查公司接口 HTTP 状态是否成功。
+6. 检查响应是否是 JSON 对象。
+7. 调用 `SsoUser::fromPayload($payload)` 解析人员信息。
+
+### 13.2 为什么要校验 SSO_USERINFO_PATH 不是完整 URL
+
+推荐配置：
+
+```env
+SSO_BASE_URL=https://sso.company.com
+SSO_USERINFO_PATH=/api/current-user
+```
+
+代码组合后请求：
+
+```text
+https://sso.company.com/api/current-user
+```
+
+如果误写成：
+
+```env
+SSO_USERINFO_PATH=https://sso.company.com/api/current-user
+```
+
+就会让 `SSO_BASE_URL` 失去意义，也会让测试环境、预发环境、生产环境的切换变得混乱。
+
+所以代码主动报错：
+
+```php
+throw new SsoException('SSO user info path must be a path, not a full URL.');
+```
+
+### 13.3 Laravel HTTP Client 是什么
 
 ```php
 Http::baseUrl($baseUrl)
 ```
 
 是 Laravel HTTP Client，类似 Java 里的 `RestTemplate`、`WebClient` 或 OpenFeign。
+
+这段链式调用：
+
+```php
+Http::baseUrl($baseUrl)
+    ->timeout((int) config('sso.timeout', 5))
+    ->acceptJson()
+    ->withToken($accessToken)
+    ->get($userInfoPath);
+```
+
+含义：
+
+- `baseUrl($baseUrl)`：设置接口基础地址。
+- `timeout(...)`：设置超时时间，避免公司接口卡住时请求一直等待。
+- `acceptJson()`：告诉对方希望返回 JSON。
+- `withToken($accessToken)`：把 token 放到 `Authorization: Bearer ...` 请求头。
+- `get($userInfoPath)`：发起 GET 请求。
+
+如果总部协议要求不是 Bearer Token，或者不是 GET，就只改这里。
+
+### 13.4 为什么捕获 ConnectionException
+
+```php
+catch (ConnectionException $exception)
+```
+
+这类异常代表网络层失败，例如：
+
+- SSO 服务不可达。
+- DNS 解析失败。
+- 请求超时。
+- 连接被拒绝。
+
+捕获后统一转成 `SsoException`，Controller 就只需要处理一种 SSO 异常。
+
+### 13.5 validateToken 为什么存在
+
+```php
+public function validateToken(string $token): SsoUser
+{
+    return $this->fetchCurrentUser($token);
+}
+```
+
+当前 Inertia 页面登录使用的是：
+
+```text
+SSO Callback + Laravel Session
+```
+
+但以后如果有内部 API 需要支持：
+
+```text
+Authorization: Bearer xxx
+```
+
+就可以复用 `validateToken()`。本阶段只是预留非常薄的一层，不引入复杂 Guard。
 
 ## 14. 第九步：创建当前用户服务
 
