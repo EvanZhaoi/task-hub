@@ -46,7 +46,7 @@ test('the sso session endpoint accepts access token without state', function ():
         {
             expect($user->employeeNo())->toBe('E10001');
 
-            return ['DEVELOPER'];
+            return ['TOP'];
         }
     });
 
@@ -56,11 +56,11 @@ test('the sso session endpoint accepts access token without state', function ():
         ->assertOk()
         ->assertJson([
             'redirectTo' => route('tasks.index'),
-            'roles' => ['DEVELOPER'],
+            'roles' => ['TOP'],
         ]);
 
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
-        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['DEVELOPER']);
+        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
 });
 
 test('sso user info path must not be a full url', function (): void {

@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'roles' => ['DEVELOPER', 'PUBLISHER', 'BOSS'],
+    'top_role' => 'TOP',
 ];

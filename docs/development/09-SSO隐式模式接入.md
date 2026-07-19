@@ -311,17 +311,17 @@ config/taskhub.php
 <?php
 
 return [
-    'roles' => ['DEVELOPER', 'PUBLISHER', 'BOSS'],
+    'top_role' => 'TOP',
 ];
 ```
 
 注意：角色授权关系不放在 `.env`，而是放在数据库表 `taskhub_user_role`。
 
-这里的 `config/taskhub.php` 只保存系统支持哪些角色值：
+这里的 `config/taskhub.php` 只保存当前已经确认的特殊角色：
 
-- `DEVELOPER`：开发者。
-- `PUBLISHER`：发布者。
-- `BOSS`：老板或管理视角。
+- `TOP`：拥有老板权限的人。
+
+当前不要把角色限制死为开发者、发布者、老板三类。除 `TOP` 外，其他角色后续等产品规则明确后再增加。
 
 为什么角色关系不放 `.env`：
 
@@ -345,16 +345,16 @@ database/schema.sql
 CREATE TABLE `taskhub_user_role` (
   `id` BIGINT UNSIGNED NOT NULL COMMENT '主键ID',
   `employee_no` VARCHAR(32) NOT NULL COMMENT '人员工号（外部人员接口标识）',
-  `role` VARCHAR(20) NOT NULL COMMENT 'TaskHub业务角色',
+  `role` VARCHAR(32) NOT NULL COMMENT 'TaskHub业务角色；当前约定TOP表示拥有老板权限，其他角色后续按业务扩展',
   `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否启用：1启用，0禁用',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `UNIQ_taskhub_user_role_employee_role` (`employee_no`, `role`),
   KEY `IDX_taskhub_user_role_employee_enabled` (`employee_no`, `enabled`),
-  CONSTRAINT `CHK_taskhub_user_role_role` CHECK (`role` IN ('DEVELOPER', 'PUBLISHER', 'BOSS')),
+  CONSTRAINT `CHK_taskhub_user_role_role` CHECK (`role` <> ''),
   CONSTRAINT `CHK_taskhub_user_role_enabled` CHECK (`enabled` IN (0, 1))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='TaskHub用户角色表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TaskHub用户角色表';
 ```
 
 创建 Model：
@@ -412,7 +412,7 @@ class TaskhubUserRole extends Model
 
 ```sql
 INSERT INTO taskhub_user_role (id, employee_no, role)
-VALUES (10001, 'E10001', 'PUBLISHER');
+VALUES (10001, 'E10001', 'TOP');
 ```
 
 禁用角色：
@@ -421,7 +421,7 @@ VALUES (10001, 'E10001', 'PUBLISHER');
 UPDATE taskhub_user_role
 SET enabled = 0
 WHERE employee_no = 'E10001'
-  AND role = 'PUBLISHER';
+  AND role = 'TOP';
 ```
 
 验证：
@@ -1399,7 +1399,7 @@ test('the sso session endpoint accepts access token without state', function ():
         {
             expect($user->employeeNo())->toBe('E10001');
 
-            return ['DEVELOPER'];
+            return ['TOP'];
         }
     });
 
@@ -1409,11 +1409,11 @@ test('the sso session endpoint accepts access token without state', function ():
         ->assertOk()
         ->assertJson([
             'redirectTo' => route('tasks.index'),
-            'roles' => ['DEVELOPER'],
+            'roles' => ['TOP'],
         ]);
 
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
-        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['DEVELOPER']);
+        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
 });
 
 test('task model maps to the existing task table', function (): void {

@@ -260,14 +260,14 @@ CREATE TABLE `task_event` (
 CREATE TABLE `taskhub_user_role` (
   `id`          BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
   `employee_no` VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
-  `role`        VARCHAR(20)     NOT NULL COMMENT 'TaskHub 业务角色：DEVELOPER/PUBLISHER/BOSS',
+  `role`        VARCHAR(32)     NOT NULL COMMENT 'TaskHub 业务角色；当前约定 TOP 表示拥有老板权限，其他角色后续按业务扩展',
   `enabled`     TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用：1 启用 / 0 停用',
   `created_at`  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at`  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `UNIQ_taskhub_user_role_employee_role` (`employee_no`, `role`),
   KEY `IDX_taskhub_user_role_employee_enabled` (`employee_no`, `enabled`),
-  CONSTRAINT `CHK_taskhub_user_role_role` CHECK (`role` IN ('DEVELOPER', 'PUBLISHER', 'BOSS')),
+  CONSTRAINT `CHK_taskhub_user_role_role` CHECK (`role` <> ''),
   CONSTRAINT `CHK_taskhub_user_role_enabled` CHECK (`enabled` IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='TaskHub 用户角色表';
