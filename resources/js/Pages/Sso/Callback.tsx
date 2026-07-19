@@ -3,16 +3,9 @@ import { useEffect, useState } from 'react';
 type CallbackState = 'processing' | 'failed';
 
 function readAuthParams(): URLSearchParams {
-    // 隐式模式通常把 access_token 放在 URL fragment 中，例如：
-    // /sso/callback#access_token=xxx
-    // fragment 不会发送给 Laravel，只能在浏览器中通过 window.location.hash 读取。
-    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-
-    if (hash !== '') {
-        return new URLSearchParams(hash);
-    }
-
-    // 保留 query string 兜底，兼容公司 SSO 可能把参数放到 ?access_token=xxx 的实现。
+    // 公司 SSO 已确认使用 query string 回调，例如：
+    // /sso/callback?access_token=xxx
+    // 因此这里读取 window.location.search，而不是 window.location.hash。
     return new URLSearchParams(window.location.search);
 }
 
@@ -28,10 +21,12 @@ export default function SsoCallback() {
 
     useEffect(() => {
         // 登录收尾属于副作用，需要放在 useEffect 中，避免 React 重新渲染时重复提交。
+        // 这个页面只负责把公司 SSO 回调带回来的 access_token 交给 Laravel。
         const params = readAuthParams();
         const accessToken = params.get('access_token');
 
         if (!accessToken) {
+            // 没有 token 时不能继续创建本地 Session，必须让用户重新走登录流程。
             setCallbackState('failed');
             setMessage('SSO 回调缺少 access_token。');
             return;
@@ -42,8 +37,10 @@ export default function SsoCallback() {
         fetch('/sso/session', {
             method: 'POST',
             headers: {
+                // 告诉 Laravel：前端希望后端返回 JSON，而不是重定向或 HTML 错误页。
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
+                // Laravel web 路由默认开启 CSRF 校验，POST 请求必须带这个头。
                 'X-CSRF-TOKEN': csrfToken(),
             },
             body: JSON.stringify({
@@ -57,6 +54,8 @@ export default function SsoCallback() {
                     throw new Error(payload.message ?? 'SSO 登录失败。');
                 }
 
+                // 后端建立 Session 成功后返回 redirectTo。
+                // replace 会替换当前回调页历史记录，避免浏览器后退回到带 token 的 URL。
                 window.location.replace(payload.redirectTo ?? '/tasks');
             })
             .catch((error: unknown) => {

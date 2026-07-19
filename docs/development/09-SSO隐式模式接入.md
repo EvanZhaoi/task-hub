@@ -13,9 +13,9 @@ EnsureSsoAuthenticated
 ↓
 跳转公司 SSO
 ↓
-公司 SSO 回调 /sso/callback#access_token=...
+公司 SSO 回调 /sso/callback?access_token=...
 ↓
-React 回调页读取 URL fragment
+React 回调页读取 URL query string
 ↓
 POST /sso/session
 ↓
@@ -35,7 +35,7 @@ Laravel 使用 accessToken 调用公司 SSO 当前登录人信息接口
 完成本章后，你应该理解：
 
 - 什么是 SSO 隐式模式。
-- 为什么 Laravel Controller 不能直接读取 URL `#access_token`。
+- 公司 SSO 为什么通过 `?access_token=...` 回调 TaskHub。
 - 为什么需要一个 React 回调页。
 - 为什么 TaskHub 不创建本地 users 表。
 - SSO 身份和 TaskHub 业务角色为什么要分开。
@@ -202,15 +202,15 @@ public function redirect(Request $request): RedirectResponse
 隐式模式常见回调形式：
 
 ```text
-http://127.0.0.1:8000/sso/callback#access_token=xxx
+http://127.0.0.1:8000/sso/callback?access_token=xxx
 ```
 
 关键点：
 
-- `#access_token=xxx` 属于 URL fragment。
-- 浏览器不会把 fragment 发给服务器。
-- 所以 Laravel 的 `/sso/callback` Controller 读不到 `access_token`。
-- 必须由浏览器中的 JavaScript 读取。
+- 公司 SSO 已确认通过 query string 返回 `access_token`。
+- `?access_token=xxx` 会出现在浏览器地址栏中，也会进入 Laravel 请求对象。
+- TaskHub 当前仍使用 React 回调页统一完成登录收尾，让页面负责读取回调参数、提交 `/sso/session`、展示失败状态。
+- 如果后续公司 SSO 协议细节发生变化，先确认协议再改代码，不在文档中猜测。
 
 这就是为什么本章新增：
 
@@ -236,16 +236,15 @@ import { useEffect, useState } from 'react';
 type CallbackState = 'processing' | 'failed';
 
 function readAuthParams(): URLSearchParams {
-    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-
-    if (hash !== '') {
-        return new URLSearchParams(hash);
-    }
-
+    // 公司 SSO 已确认使用 query string 回调，例如：
+    // /sso/callback?access_token=xxx
+    // 因此这里读取 window.location.search，而不是 window.location.hash。
     return new URLSearchParams(window.location.search);
 }
 
 function csrfToken(): string {
+    // /sso/session 是 Laravel web 路由，POST 请求需要 CSRF token。
+    // token 来自 resources/views/app.blade.php 中的 csrf meta。
     return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
 }
 
@@ -254,20 +253,27 @@ export default function SsoCallback() {
     const [message, setMessage] = useState('正在完成单点登录，请稍候。');
 
     useEffect(() => {
+        // 登录收尾属于副作用，需要放在 useEffect 中，避免 React 重新渲染时重复提交。
+        // 这个页面只负责把公司 SSO 回调带回来的 access_token 交给 Laravel。
         const params = readAuthParams();
         const accessToken = params.get('access_token');
 
         if (!accessToken) {
+            // 没有 token 时不能继续创建本地 Session，必须让用户重新走登录流程。
             setCallbackState('failed');
             setMessage('SSO 回调缺少 access_token。');
             return;
         }
 
+        // 前端只把 accessToken 交给 Laravel。
+        // 当前用户身份、工号、角色都由后端调用公司接口和本地角色表确定。
         fetch('/sso/session', {
             method: 'POST',
             headers: {
+                // 告诉 Laravel：前端希望后端返回 JSON，而不是重定向或 HTML 错误页。
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
+                // Laravel web 路由默认开启 CSRF 校验，POST 请求必须带这个头。
                 'X-CSRF-TOKEN': csrfToken(),
             },
             body: JSON.stringify({
@@ -281,9 +287,12 @@ export default function SsoCallback() {
                     throw new Error(payload.message ?? 'SSO 登录失败。');
                 }
 
+                // 后端建立 Session 成功后返回 redirectTo。
+                // replace 会替换当前回调页历史记录，避免浏览器后退回到带 token 的 URL。
                 window.location.replace(payload.redirectTo ?? '/tasks');
             })
             .catch((error: unknown) => {
+                // 失败时停留在回调页，给用户一个明确的重新登录入口。
                 setCallbackState('failed');
                 setMessage(error instanceof Error ? error.message : 'SSO 登录失败。');
             });
@@ -340,37 +349,36 @@ Laravel 建立 Session
 
 这和 Java 后端里“不要在 getter 或构造对象时做外部副作用”类似：登录收尾是副作用，应该放在明确的生命周期里。
 
-#### 6.4.2 为什么先读 hash，再读 query string
+#### 6.4.2 为什么读取 query string
 
-隐式模式标准上通常返回：
-
-```text
-/sso/callback#access_token=xxx
-```
-
-也就是 token 在 `#` 后面。
-
-浏览器不会把 `#` 后面的内容发给服务器，所以 Laravel 后端拿不到它。只有浏览器里的 JavaScript 可以通过：
-
-```ts
-window.location.hash
-```
-
-读取。
-
-代码中仍然保留 query string 兼容：
-
-```ts
-return new URLSearchParams(window.location.search);
-```
-
-这是为了兼容少数公司 SSO 实现把参数放成：
+公司 SSO 已确认回调形式是：
 
 ```text
 /sso/callback?access_token=xxx
 ```
 
-TaskHub 以 hash 为主，query string 只是兼容兜底。
+也就是 token 在 `?` 后面，属于 URL query string。
+
+前端通过：
+
+```ts
+window.location.search
+```
+
+读取。
+
+这里不再使用 `window.location.hash`，原因是：
+
+- 公司协议已经确认是 `?access_token=...`。
+- 文档和代码必须按真实协议写，不能为了“可能兼容”增加错误理解成本。
+- 如果以后总部改协议，应该先确认回调格式，再调整这里。
+
+从技术上说，query string 会随请求发送到 Laravel，因此后端 Controller 也可以读取。但 TaskHub 仍保留 React 回调页，原因是它可以统一处理：
+
+- 登录中提示。
+- 缺少 token 的失败提示。
+- POST `/sso/session`。
+- 建立 Session 成功后的前端跳转。
 
 #### 6.4.3 为什么当前不校验 `state`
 
@@ -704,7 +712,7 @@ GET|HEAD  tasks
 
 | 错误 | 常见原因 | 处理 |
 |---|---|---|
-| 后端拿不到 `access_token` | 隐式模式 token 在 URL fragment 中 | 必须通过 React 回调页读取 hash |
+| 回调页提示缺少 `access_token` | 公司 SSO 回调地址没有带 `?access_token=...`，或参数名和文档不一致 | 先确认总部回调参数名，再检查 `resources/js/Pages/Sso/Callback.tsx` 的读取逻辑 |
 | `SSO login URL is not configured` | `.env` 未配置 `SSO_LOGIN_URL` | 按公司协议填写 |
 | `SSO client ID is not configured` | `.env` 未配置 `SSO_CLIENT_ID` | 填写公司分配的 client id |
 | `419 CSRF token mismatch` | POST `/sso/session` 未带 CSRF | 确认 Blade 有 csrf meta，fetch 有 `X-CSRF-TOKEN` |

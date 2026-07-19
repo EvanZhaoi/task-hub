@@ -46,8 +46,8 @@ class SsoController extends Controller
 
     public function callback(): Response
     {
-        // 隐式模式的 access_token 在 URL fragment 中，后端 Controller 读不到。
-        // 因此这里返回 React 回调页，由浏览器侧 JavaScript 读取 token 后再提交给后端。
+        // 公司 SSO 会把 access_token 作为 query string 回调到这个地址。
+        // 这里仍返回 React 回调页，由前端统一处理登录中、失败提示和提交 /sso/session。
         return Inertia::render('Sso/Callback');
     }
 
