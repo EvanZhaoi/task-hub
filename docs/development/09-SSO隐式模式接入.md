@@ -167,9 +167,9 @@ php artisan cache:clear
 ```php
 public function redirect(Request $request): RedirectResponse
 {
-    // 生成 state，用于防止回调被伪造。
-    $state = Str::random(40);
-    $request->session()->put('sso_state', $state);
+    // 记录用户原本想访问的页面。
+    // SSO 完成后，TaskHub 会跳回这个地址。
+    $request->session()->put('url.intended', $request->session()->get('url.intended', route('tasks.index')));
 
     // 隐式模式要求 response_type=token。
     $query = http_build_query([
@@ -177,7 +177,6 @@ public function redirect(Request $request): RedirectResponse
         'client_id' => config('sso.client_id'),
         'redirect_uri' => route('sso.callback'),
         'scope' => config('sso.scope'),
-        'state' => $state,
     ]);
 
     return redirect()->away(config('sso.login_url').'?'.$query);
@@ -187,15 +186,23 @@ public function redirect(Request $request): RedirectResponse
 作用：
 
 - 把未登录用户送到公司 SSO。
-- 使用 `state` 保护登录流程。
+- 按公司当前 SSO 隐式模式协议拼接登录参数。
+- 暂不提交 `state`，因为公司 SSO 当前不支持回传和校验 `state`。
 - 使用 `redirect()->away()` 跳转到 Laravel 应用外部地址。
+
+补充说明：
+
+- 标准 OAuth/OIDC 流程通常推荐使用 `state` 防止登录回调被伪造。
+- 但接入企业内部 SSO 时，必须以公司实际协议为准。
+- 当前 TaskHub 不再在代码中生成、保存或校验 `state`。
+- 安全边界调整为：前端只提交 `access_token`，后端必须用这个 token 调用公司 SSO 当前登录人接口，并以后端返回的工号作为唯一可信身份。
 
 ### 6.3 理解隐式模式回调
 
 隐式模式常见回调形式：
 
 ```text
-http://127.0.0.1:8000/sso/callback#access_token=xxx&state=yyy
+http://127.0.0.1:8000/sso/callback#access_token=xxx
 ```
 
 关键点：
@@ -243,17 +250,16 @@ function csrfToken(): string {
 }
 
 export default function SsoCallback() {
-    const [state, setState] = useState<CallbackState>('processing');
+    const [callbackState, setCallbackState] = useState<CallbackState>('processing');
     const [message, setMessage] = useState('正在完成单点登录，请稍候。');
 
     useEffect(() => {
         const params = readAuthParams();
         const accessToken = params.get('access_token');
-        const ssoState = params.get('state');
 
-        if (!accessToken || !ssoState) {
-            setState('failed');
-            setMessage('SSO 回调缺少 access_token 或 state。');
+        if (!accessToken) {
+            setCallbackState('failed');
+            setMessage('SSO 回调缺少 access_token。');
             return;
         }
 
@@ -266,7 +272,6 @@ export default function SsoCallback() {
             },
             body: JSON.stringify({
                 accessToken,
-                state: ssoState,
             }),
         })
             .then(async (response) => {
@@ -279,7 +284,7 @@ export default function SsoCallback() {
                 window.location.replace(payload.redirectTo ?? '/tasks');
             })
             .catch((error: unknown) => {
-                setState('failed');
+                setCallbackState('failed');
                 setMessage(error instanceof Error ? error.message : 'SSO 登录失败。');
             });
     }, []);
@@ -294,14 +299,14 @@ export default function SsoCallback() {
                     <div>
                         <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
                         <p className="mt-1 text-sm text-[#6e6e80]">
-                            {state === 'processing' ? '正在建立本地会话' : '登录未完成'}
+                            {callbackState === 'processing' ? '正在建立本地会话' : '登录未完成'}
                         </p>
                     </div>
                 </div>
 
                 <p className="text-sm leading-6 text-[#6e6e80]">{message}</p>
 
-                {state === 'failed' ? (
+                {callbackState === 'failed' ? (
                     <a
                         className="mt-5 inline-flex rounded-md bg-[#5e6ad2] px-4 py-2 text-sm font-medium text-white"
                         href="/login"
@@ -318,7 +323,7 @@ export default function SsoCallback() {
 这个页面的作用不是展示业务内容，而是完成 SSO 隐式模式的浏览器侧收尾工作：
 
 ```text
-读取 access_token 和 state
+读取 access_token
 ↓
 POST 给 Laravel
 ↓
@@ -340,7 +345,7 @@ Laravel 建立 Session
 隐式模式标准上通常返回：
 
 ```text
-/sso/callback#access_token=xxx&state=yyy
+/sso/callback#access_token=xxx
 ```
 
 也就是 token 在 `#` 后面。
@@ -362,14 +367,14 @@ return new URLSearchParams(window.location.search);
 这是为了兼容少数公司 SSO 实现把参数放成：
 
 ```text
-/sso/callback?access_token=xxx&state=yyy
+/sso/callback?access_token=xxx
 ```
 
 TaskHub 以 hash 为主，query string 只是兼容兜底。
 
-#### 6.4.3 为什么必须提交 `state`
+#### 6.4.3 为什么当前不校验 `state`
 
-`state` 是登录流程中的防伪随机值。
+标准 OAuth/OIDC 流程通常会使用 `state`：
 
 流程是：
 
@@ -385,12 +390,23 @@ React 把 state 提交给 Laravel
 Laravel 比较回调 state 和 Session state
 ```
 
-如果两边不一致，说明这次回调不可信，后端会返回：
+它的作用是降低登录回调被伪造、跨站请求混淆等风险。
+
+但 TaskHub 当前接入的是公司 SSO 隐式模式，已确认公司 SSO 没有 `state` 回传和校验能力。因此代码不能强制要求 `state`，否则真实登录会失败。
+
+当前实现的边界是：
 
 ```text
-419
-SSO state verification failed.
+不信任前端提交的用户信息
+↓
+只接收 access_token
+↓
+Laravel 后端使用 access_token 调公司当前登录人接口
+↓
+以后端接口返回的 employeeNo 作为可信身份
 ```
+
+如果后续公司 SSO 支持 `state` 或切换到授权码模式，可以再补回 `state` 校验。
 
 #### 6.4.4 POST 给 Laravel 的请求格式
 
@@ -406,7 +422,6 @@ fetch('/sso/session', {
     },
     body: JSON.stringify({
         accessToken,
-        state: ssoState,
     }),
 });
 ```
@@ -422,7 +437,6 @@ Route::post('/sso/session', [SsoController::class, 'store'])->name('sso.session.
 ```php
 $validated = $request->validate([
     'accessToken' => ['required', 'string'],
-    'state' => ['required', 'string'],
 ]);
 ```
 
@@ -431,9 +445,6 @@ $validated = $request->validate([
 ```text
 React: accessToken
 Laravel: accessToken
-
-React: state
-Laravel: state
 ```
 
 #### 6.4.5 为什么要带 CSRF
@@ -474,8 +485,6 @@ window.location.replace(payload.redirectTo ?? '/tasks');
 失败场景包括：
 
 - SSO 没有带回 `access_token`。
-- SSO 没有带回 `state`。
-- Laravel 校验 state 失败。
 - 后端调用公司当前登录人接口失败。
 - CSRF 配置不正确。
 
@@ -509,7 +518,7 @@ npm run build
 http://127.0.0.1:8000/sso/callback
 ```
 
-页面应该显示“SSO 回调缺少 access_token 或 state”。这不是错误，而是说明回调页已经加载，只是当前 URL 没有 SSO 带回的参数。
+页面应该显示“SSO 回调缺少 access_token”。这不是错误，而是说明回调页已经加载，只是当前 URL 没有 SSO 带回的参数。
 
 ### 6.5 Laravel 用 accessToken 获取当前登录人信息
 
@@ -698,7 +707,6 @@ GET|HEAD  tasks
 | 后端拿不到 `access_token` | 隐式模式 token 在 URL fragment 中 | 必须通过 React 回调页读取 hash |
 | `SSO login URL is not configured` | `.env` 未配置 `SSO_LOGIN_URL` | 按公司协议填写 |
 | `SSO client ID is not configured` | `.env` 未配置 `SSO_CLIENT_ID` | 填写公司分配的 client id |
-| `SSO state verification failed` | 回调 state 和 Session 不一致 | 重新登录，检查是否跨域或 Session 配置异常 |
 | `419 CSRF token mismatch` | POST `/sso/session` 未带 CSRF | 确认 Blade 有 csrf meta，fetch 有 `X-CSRF-TOKEN` |
 | 登录后没有预期角色 | `taskhub_user_role` 中没有启用记录 | 检查该工号是否存在 `enabled = 1` 的角色记录 |
 

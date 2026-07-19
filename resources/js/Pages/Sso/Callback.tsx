@@ -17,17 +17,16 @@ function csrfToken(): string {
 }
 
 export default function SsoCallback() {
-    const [state, setState] = useState<CallbackState>('processing');
+    const [callbackState, setCallbackState] = useState<CallbackState>('processing');
     const [message, setMessage] = useState('正在完成单点登录，请稍候。');
 
     useEffect(() => {
         const params = readAuthParams();
         const accessToken = params.get('access_token');
-        const ssoState = params.get('state');
 
-        if (!accessToken || !ssoState) {
-            setState('failed');
-            setMessage('SSO 回调缺少 access_token 或 state。');
+        if (!accessToken) {
+            setCallbackState('failed');
+            setMessage('SSO 回调缺少 access_token。');
             return;
         }
 
@@ -40,7 +39,6 @@ export default function SsoCallback() {
             },
             body: JSON.stringify({
                 accessToken,
-                state: ssoState,
             }),
         })
             .then(async (response) => {
@@ -53,7 +51,7 @@ export default function SsoCallback() {
                 window.location.replace(payload.redirectTo ?? '/tasks');
             })
             .catch((error: unknown) => {
-                setState('failed');
+                setCallbackState('failed');
                 setMessage(error instanceof Error ? error.message : 'SSO 登录失败。');
             });
     }, []);
@@ -68,14 +66,14 @@ export default function SsoCallback() {
                     <div>
                         <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
                         <p className="mt-1 text-sm text-[#6e6e80]">
-                            {state === 'processing' ? '正在建立本地会话' : '登录未完成'}
+                            {callbackState === 'processing' ? '正在建立本地会话' : '登录未完成'}
                         </p>
                     </div>
                 </div>
 
                 <p className="text-sm leading-6 text-[#6e6e80]">{message}</p>
 
-                {state === 'failed' ? (
+                {callbackState === 'failed' ? (
                     <a
                         className="mt-5 inline-flex rounded-md bg-[#5e6ad2] px-4 py-2 text-sm font-medium text-white"
                         href="/login"

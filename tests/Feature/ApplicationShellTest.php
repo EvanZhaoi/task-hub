@@ -1,7 +1,11 @@
 <?php
 
+use App\Integrations\Sso\SsoClient;
+use App\Integrations\Sso\SsoUser;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
+use App\Services\CurrentUserService;
+use App\Services\TaskhubRoleService;
 
 test('the inertia application shell responds successfully', function (): void {
     $this->withoutVite();
@@ -17,6 +21,45 @@ test('the sso callback page responds successfully', function (): void {
     $this->withoutVite();
 
     $this->get('/sso/callback')->assertOk();
+});
+
+test('the sso session endpoint accepts access token without state', function (): void {
+    $this->app->instance(SsoClient::class, new class extends SsoClient
+    {
+        public function fetchCurrentUser(string $accessToken): SsoUser
+        {
+            expect($accessToken)->toBe('token-123');
+
+            return new SsoUser(
+                employeeNo: 'E10001',
+                displayName: '张三',
+                departmentId: 'DEV01',
+                departmentName: '开发一部',
+            );
+        }
+    });
+
+    $this->app->instance(TaskhubRoleService::class, new class extends TaskhubRoleService
+    {
+        public function rolesFor(SsoUser $user): array
+        {
+            expect($user->employeeNo())->toBe('E10001');
+
+            return ['DEVELOPER'];
+        }
+    });
+
+    $this->postJson('/sso/session', [
+        'accessToken' => 'token-123',
+    ])
+        ->assertOk()
+        ->assertJson([
+            'redirectTo' => route('tasks.index'),
+            'roles' => ['DEVELOPER'],
+        ]);
+
+    expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
+        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['DEVELOPER']);
 });
 
 test('task model maps to the existing task table', function (): void {
