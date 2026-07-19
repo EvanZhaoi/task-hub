@@ -499,10 +499,82 @@ SsoException
 
 ## 12. 第七步：创建 SSO 用户对象
 
+这一节容易混淆，先明确几个概念。
+
+`SsoUser` 不是数据库表，也不是 Eloquent Model。
+
+它只是一个普通 PHP 对象，用来把公司 SSO 返回的 JSON 变成 TaskHub 内部稳定可读的当前登录人对象。
+
+数据流是：
+
+```text
+公司 SSO 原始 JSON
+↓
+SsoUser::fromPayload($payload)
+↓
+得到 SsoUser 对象
+↓
+$user->employeeNo()
+$user->displayName()
+$user->departmentName()
+↓
+$user->toSessionPayload()
+↓
+写入 Laravel Session
+```
+
+为什么中间要多一个 `SsoUser`：
+
+- 公司接口返回字段属于外部协议，未来可能调整。
+- TaskHub 内部业务代码不应该到处解析外部 JSON。
+- 后续 Controller、Service 只需要调用 `$currentUser->employeeNo()`。
+- 一旦公司字段变化，优先改 `SsoUser::fromPayload()`，不要全项目搜索数组字段。
+
+和 Java 的类比：
+
+```text
+SsoUser
+≈ 一个不可变 DTO / Value Object
+≈ 用来承接外部接口响应并提供稳定 getter
+```
+
+它不是：
+
+- 不是 `users` 表。
+- 不是 Laravel 默认认证用户。
+- 不是角色表。
+- 不负责权限判断。
+- 不负责调用公司 SSO 接口。
+
 文件：
 
 ```text
 app/Integrations/Sso/SsoUser.php
+```
+
+公司当前登录人接口返回的是一层简单嵌套：
+
+```json
+{
+  "id": "response-001",
+  "user": {
+    "employeeNo": "E10001",
+    "displayName": "张三",
+    "departmentId": "DEV01",
+    "departmentName": "开发一部"
+  }
+}
+```
+
+这段 JSON 不能直接到处使用，原因是业务代码不应该关心 `user.employeeNo` 这种外部结构。
+
+所以本文件负责把它转换成：
+
+```php
+$user->employeeNo();      // E10001
+$user->displayName();     // 张三
+$user->departmentId();    // DEV01
+$user->departmentName();  // 开发一部
 ```
 
 完整内容：
@@ -586,25 +658,105 @@ final readonly class SsoUser
 }
 ```
 
-为什么不用数组到处传：
+代码分段解释：
+
+### 12.1 构造方法保存标准字段
+
+```php
+public function __construct(
+    private string $employeeNo,
+    private ?string $displayName = null,
+    private ?string $departmentId = null,
+    private ?string $departmentName = null,
+    private array $raw = [],
+) {}
+```
+
+含义：
+
+- `employeeNo` 必须有，因为 TaskHub 用工号识别人。
+- 姓名和部门可以为空，因为公司接口或测试环境不一定返回完整信息。
+- `raw` 保存原始响应，方便后续排查接口字段问题。
+
+`final readonly class` 的意思：
+
+- `final`：这个类不准备被继承，避免认证对象被扩展出奇怪行为。
+- `readonly`：构造完成后属性不能再改，更接近 Java 中不可变对象。
+
+### 12.2 fromPayload 负责解析外部 JSON
+
+```php
+$user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+```
+
+含义：
+
+- 如果原始响应里有 `user` 对象，就从 `user` 里读人员属性。
+- 如果没有 `user`，就把整个 payload 当成扁平结构读。
+
+为什么保留扁平结构兼容：
+
+- 登录后写入 Session 的结构是扁平的。
+- `CurrentUserService` 从 Session 还原用户时也调用 `SsoUser::fromPayload()`。
+- 如果这里只支持嵌套结构，Session 中已有用户信息会解析失败。
+
+### 12.3 employeeNo 是必须字段
+
+```php
+if (! is_string($employeeNo) || $employeeNo === '') {
+    throw new SsoException('SSO response does not contain employee number.');
+}
+```
+
+TaskHub 不维护本地 `users` 表，人员唯一标识来自公司工号，所以工号缺失时不能继续登录。
+
+### 12.4 getter 提供稳定读取方式
+
+业务代码不要写：
+
+```php
+$payload['user']['employeeNo']
+```
+
+而应该写：
+
+```php
+$user->employeeNo()
+```
+
+这样业务代码不关心公司接口 JSON 的具体层级。
+
+### 12.5 toSessionPayload 用于写入 Session
+
+```php
+public function toSessionPayload(): array
+```
+
+Laravel Session 保存数组更直接，不适合直接长期保存复杂对象。
+
+所以登录成功时：
+
+```php
+$request->session()->put(CurrentUserService::SESSION_KEY, $user->toSessionPayload());
+```
+
+Session 中最终保存的是：
+
+```php
+[
+    'employeeNo' => 'E10001',
+    'displayName' => '张三',
+    'departmentId' => 'DEV01',
+    'departmentName' => '开发一部',
+    'raw' => [...],
+]
+```
+
+### 12.6 为什么不用数组到处传
 
 - 数组字段名容易写错。
 - 业务代码需要稳定读取 `employeeNo()`。
 - 后续公司接口字段变化时，只改 `fromPayload()`。
-
-公司当前登录人接口返回的是一层简单嵌套：
-
-```json
-{
-  "id": "response-001",
-  "user": {
-    "employeeNo": "E10001",
-    "displayName": "张三",
-    "departmentId": "DEV01",
-    "departmentName": "开发一部"
-  }
-}
-```
 
 解析规则：
 
