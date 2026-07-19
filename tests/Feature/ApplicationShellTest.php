@@ -73,6 +73,24 @@ test('sso user info path must not be a full url', function (): void {
         ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
 });
 
+test('sso user parses nested user payload', function (): void {
+    $user = SsoUser::fromPayload([
+        'id' => 'response-001',
+        'user' => [
+            'employeeNo' => 'E10001',
+            'displayName' => '张三',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+        ],
+    ]);
+
+    expect($user->employeeNo())->toBe('E10001')
+        ->and($user->displayName())->toBe('张三')
+        ->and($user->departmentId())->toBe('DEV01')
+        ->and($user->departmentName())->toBe('开发一部')
+        ->and($user->raw())->toHaveKey('user');
+});
+
 test('task model maps to the existing task table', function (): void {
     expect((new Task)->getTable())->toBe('task');
 });

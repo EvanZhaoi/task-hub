@@ -524,7 +524,11 @@ final readonly class SsoUser
 
     public static function fromPayload(array $payload): self
     {
-        $employeeNo = $payload['employeeNo'] ?? $payload['employee_no'] ?? null;
+        // 公司当前登录人接口第一层返回 id 和 user，真实人员属性在 user 下。
+        // Session 中保存的是扁平结构，因此这里保留扁平结构兼容读取。
+        $user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+
+        $employeeNo = $user['employeeNo'] ?? $user['employee_no'] ?? $user['id'] ?? $payload['id'] ?? null;
 
         if (! is_string($employeeNo) || $employeeNo === '') {
             throw new SsoException('SSO response does not contain employee number.');
@@ -532,9 +536,9 @@ final readonly class SsoUser
 
         return new self(
             employeeNo: $employeeNo,
-            displayName: self::nullableString($payload['displayName'] ?? $payload['display_name'] ?? null),
-            departmentId: self::nullableString($payload['departmentId'] ?? $payload['department_id'] ?? null),
-            departmentName: self::nullableString($payload['departmentName'] ?? $payload['department_name'] ?? null),
+            displayName: self::nullableString($user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
+            departmentId: self::nullableString($user['departmentId'] ?? $user['department_id'] ?? null),
+            departmentName: self::nullableString($user['departmentName'] ?? $user['department_name'] ?? null),
             raw: $payload,
         );
     }
@@ -588,14 +592,27 @@ final readonly class SsoUser
 - 业务代码需要稳定读取 `employeeNo()`。
 - 后续公司接口字段变化时，只改 `fromPayload()`。
 
-这里兼容两种字段名：
+公司当前登录人接口返回的是一层简单嵌套：
 
-```text
-employeeNo
-employee_no
+```json
+{
+  "id": "response-001",
+  "user": {
+    "employeeNo": "E10001",
+    "displayName": "张三",
+    "departmentId": "DEV01",
+    "departmentName": "开发一部"
+  }
+}
 ```
 
-原因是公司接口真实返回结构还需要最终确认。确认后可以收紧解析规则。
+解析规则：
+
+- 第一层 `id` 是接口响应 ID 或外层标识，不优先作为 TaskHub 工号。
+- 第一层 `user` 下放人员属性。
+- `employeeNo` 是 TaskHub 当前采用的人员工号。
+- 代码兼容 `employee_no`、`display_name` 这类 snake_case 字段名，方便接口字段命名微调。
+- Session 中保存的是扁平结构，因此 `fromPayload()` 也保留了扁平 payload 的兼容解析。
 
 ## 13. 第八步：创建 SSO Client
 
@@ -1361,6 +1378,7 @@ tests/Feature/ApplicationShellTest.php
 <?php
 
 use App\Integrations\Sso\SsoClient;
+use App\Integrations\Sso\SsoException;
 use App\Integrations\Sso\SsoUser;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
@@ -1414,6 +1432,34 @@ test('the sso session endpoint accepts access token without state', function ():
 
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
+});
+
+test('sso user info path must not be a full url', function (): void {
+    config([
+        'sso.base_url' => 'https://sso.example.test',
+        'sso.userinfo_path' => 'https://sso.example.test/api/current-user',
+    ]);
+
+    expect(fn () => app(SsoClient::class)->fetchCurrentUser('token-123'))
+        ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
+});
+
+test('sso user parses nested user payload', function (): void {
+    $user = SsoUser::fromPayload([
+        'id' => 'response-001',
+        'user' => [
+            'employeeNo' => 'E10001',
+            'displayName' => '张三',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+        ],
+    ]);
+
+    expect($user->employeeNo())->toBe('E10001')
+        ->and($user->displayName())->toBe('张三')
+        ->and($user->departmentId())->toBe('DEV01')
+        ->and($user->departmentName())->toBe('开发一部')
+        ->and($user->raw())->toHaveKey('user');
 });
 
 test('task model maps to the existing task table', function (): void {

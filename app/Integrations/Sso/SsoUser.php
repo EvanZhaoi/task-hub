@@ -14,7 +14,11 @@ final readonly class SsoUser
 
     public static function fromPayload(array $payload): self
     {
-        $employeeNo = $payload['employeeNo'] ?? $payload['employee_no'] ?? null;
+        // 公司当前登录人接口第一层返回 id 和 user，真实人员属性在 user 下。
+        // Session 中保存的是扁平结构，因此这里保留扁平结构兼容读取。
+        $user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+
+        $employeeNo = $user['employeeNo'] ?? $user['employee_no'] ?? $user['id'] ?? $payload['id'] ?? null;
 
         if (! is_string($employeeNo) || $employeeNo === '') {
             throw new SsoException('SSO response does not contain employee number.');
@@ -22,9 +26,9 @@ final readonly class SsoUser
 
         return new self(
             employeeNo: $employeeNo,
-            displayName: self::nullableString($payload['displayName'] ?? $payload['display_name'] ?? null),
-            departmentId: self::nullableString($payload['departmentId'] ?? $payload['department_id'] ?? null),
-            departmentName: self::nullableString($payload['departmentName'] ?? $payload['department_name'] ?? null),
+            displayName: self::nullableString($user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
+            departmentId: self::nullableString($user['departmentId'] ?? $user['department_id'] ?? null),
+            departmentName: self::nullableString($user['departmentName'] ?? $user['department_name'] ?? null),
             raw: $payload,
         );
     }
