@@ -14,9 +14,8 @@ class EnsureSsoAuthenticated
             return $next($request);
         }
 
-        // TODO: Redirect to the company SSO login URL after headquarters confirms:
-        // login URL, callback path, state parameter, token/code parameter name,
-        // token validation endpoint, refresh behavior, and logout URL.
-        abort(401, 'SSO protocol is not configured.');
+        $request->session()->put('url.intended', $request->fullUrl());
+
+        return redirect()->route('sso.login');
     }
 }

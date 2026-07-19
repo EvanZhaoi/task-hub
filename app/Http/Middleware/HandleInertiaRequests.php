@@ -16,6 +16,10 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 'name' => config('app.name'),
             ],
+            'auth' => [
+                'user' => $request->session()->get('sso_user'),
+                'roles' => $request->session()->get('taskhub_roles', []),
+            ],
         ];
     }
 }

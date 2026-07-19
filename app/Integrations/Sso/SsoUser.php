@@ -10,8 +10,7 @@ final readonly class SsoUser
         private ?string $departmentId = null,
         private ?string $departmentName = null,
         private array $raw = [],
-    ) {
-    }
+    ) {}
 
     public static function fromPayload(array $payload): self
     {
@@ -53,6 +52,17 @@ final readonly class SsoUser
     public function raw(): array
     {
         return $this->raw;
+    }
+
+    public function toSessionPayload(): array
+    {
+        return [
+            'employeeNo' => $this->employeeNo,
+            'displayName' => $this->displayName,
+            'departmentId' => $this->departmentId,
+            'departmentName' => $this->departmentName,
+            'raw' => $this->raw,
+        ];
     }
 
     private static function nullableString(mixed $value): ?string

@@ -11,13 +11,14 @@ class CurrentUserService
 {
     public const SESSION_KEY = 'sso_user';
 
+    public const ROLE_SESSION_KEY = 'taskhub_roles';
+
     private ?SsoUser $resolvedUser = null;
 
     public function __construct(
         private readonly Request $request,
         private readonly SsoClient $ssoClient,
-    ) {
-    }
+    ) {}
 
     public function user(): SsoUser
     {
@@ -43,5 +44,17 @@ class CurrentUserService
     public function employeeNo(): string
     {
         return $this->user()->employeeNo();
+    }
+
+    public function roles(): array
+    {
+        $roles = $this->request->session()->get(self::ROLE_SESSION_KEY, []);
+
+        return is_array($roles) ? array_values(array_filter($roles, 'is_string')) : [];
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return in_array($role, $this->roles(), true);
     }
 }
