@@ -3,16 +3,22 @@ import { useEffect, useState } from 'react';
 type CallbackState = 'processing' | 'failed';
 
 function readAuthParams(): URLSearchParams {
+    // 隐式模式通常把 access_token 放在 URL fragment 中，例如：
+    // /sso/callback#access_token=xxx
+    // fragment 不会发送给 Laravel，只能在浏览器中通过 window.location.hash 读取。
     const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
 
     if (hash !== '') {
         return new URLSearchParams(hash);
     }
 
+    // 保留 query string 兜底，兼容公司 SSO 可能把参数放到 ?access_token=xxx 的实现。
     return new URLSearchParams(window.location.search);
 }
 
 function csrfToken(): string {
+    // /sso/session 是 Laravel web 路由，POST 请求需要 CSRF token。
+    // token 来自 resources/views/app.blade.php 中的 csrf meta。
     return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
 }
 
@@ -21,6 +27,7 @@ export default function SsoCallback() {
     const [message, setMessage] = useState('正在完成单点登录，请稍候。');
 
     useEffect(() => {
+        // 登录收尾属于副作用，需要放在 useEffect 中，避免 React 重新渲染时重复提交。
         const params = readAuthParams();
         const accessToken = params.get('access_token');
 
@@ -30,6 +37,8 @@ export default function SsoCallback() {
             return;
         }
 
+        // 前端只把 accessToken 交给 Laravel。
+        // 当前用户身份、工号、角色都由后端调用公司接口和本地角色表确定。
         fetch('/sso/session', {
             method: 'POST',
             headers: {
@@ -51,6 +60,7 @@ export default function SsoCallback() {
                 window.location.replace(payload.redirectTo ?? '/tasks');
             })
             .catch((error: unknown) => {
+                // 失败时停留在回调页，给用户一个明确的重新登录入口。
                 setCallbackState('failed');
                 setMessage(error instanceof Error ? error.message : 'SSO 登录失败。');
             });

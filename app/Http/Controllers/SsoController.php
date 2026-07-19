@@ -16,6 +16,7 @@ class SsoController extends Controller
 {
     public function redirect(Request $request): RedirectResponse
     {
+        // 登录地址和客户端标识由公司 SSO 分配，必须来自环境配置，不能写死在代码里。
         $loginUrl = config('sso.login_url');
         $clientId = config('sso.client_id');
 
@@ -27,8 +28,12 @@ class SsoController extends Controller
             abort(503, 'SSO client ID is not configured.');
         }
 
+        // 记录用户原本想访问的页面，SSO 完成后再跳回去。
+        // 如果没有明确的目标页面，则默认进入任务列表。
         $request->session()->put('url.intended', $request->session()->get('url.intended', route('tasks.index')));
 
+        // 公司当前 SSO 使用隐式模式，回调时只返回 access_token。
+        // 标准 OAuth/OIDC 常见的 state 校验当前不可用，因此这里不生成、不传递 state。
         $query = http_build_query(array_filter([
             'response_type' => 'token',
             'client_id' => $clientId,
@@ -41,16 +46,21 @@ class SsoController extends Controller
 
     public function callback(): Response
     {
+        // 隐式模式的 access_token 在 URL fragment 中，后端 Controller 读不到。
+        // 因此这里返回 React 回调页，由浏览器侧 JavaScript 读取 token 后再提交给后端。
         return Inertia::render('Sso/Callback');
     }
 
     public function store(Request $request, SsoClient $ssoClient, TaskhubRoleService $roleService): JsonResponse
     {
+        // 前端只提交 accessToken，不提交姓名、部门或角色。
+        // 当前登录人的可信身份必须由后端拿 token 调公司 SSO 接口得到。
         $validated = $request->validate([
             'accessToken' => ['required', 'string'],
         ]);
 
         try {
+            // 使用 accessToken 获取当前登录人信息，这是 TaskHub 建立本地会话的身份依据。
             $user = $ssoClient->fetchCurrentUser($validated['accessToken']);
         } catch (SsoException $exception) {
             return response()->json([
@@ -60,8 +70,12 @@ class SsoController extends Controller
 
         $roles = $roleService->rolesFor($user);
 
+        // Laravel Session 保存的是已认证用户快照和 TaskHub 本地业务角色。
+        // 角色来自 taskhub_user_role 表，变更角色不需要重新发布应用。
         $request->session()->put(CurrentUserService::SESSION_KEY, $user->toSessionPayload());
         $request->session()->put(CurrentUserService::ROLE_SESSION_KEY, $roles);
+
+        // 登录成功后刷新 Session ID，降低会话固定攻击风险。
         $request->session()->regenerate();
 
         return response()->json([
@@ -72,11 +86,14 @@ class SsoController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        // 退出 TaskHub 时清理本系统保存的登录态和角色。
+        // 公司 SSO 是否需要单点登出，等待总部协议确认后再补充。
         $request->session()->forget([
             CurrentUserService::SESSION_KEY,
             CurrentUserService::ROLE_SESSION_KEY,
         ]);
 
+        // 退出后刷新 CSRF token，避免旧页面继续复用退出前的 token。
         $request->session()->regenerateToken();
 
         return redirect()->route('home');
