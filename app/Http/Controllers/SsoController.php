@@ -62,7 +62,7 @@ class SsoController extends Controller
         }
 
         try {
-            $user = $ssoClient->validateToken($validated['accessToken']);
+            $user = $ssoClient->fetchCurrentUser($validated['accessToken']);
         } catch (SsoException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),

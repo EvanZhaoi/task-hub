@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Http;
 
 class SsoClient
 {
-    public function validateToken(string $token): SsoUser
+    public function fetchCurrentUser(string $accessToken): SsoUser
     {
         $baseUrl = config('sso.base_url');
 
@@ -15,33 +15,38 @@ class SsoClient
             throw new SsoException('SSO base URL is not configured.');
         }
 
-        $validatePath = config('sso.validate_path');
+        $userInfoPath = config('sso.userinfo_path') ?: config('sso.validate_path');
 
-        if (! is_string($validatePath) || $validatePath === '') {
-            throw new SsoException('SSO validate path is not configured.');
+        if (! is_string($userInfoPath) || $userInfoPath === '') {
+            throw new SsoException('SSO user info path is not configured.');
         }
 
         try {
-            // TODO: Align request path, authentication headers, and payload shape with the company SSO contract.
+            // TODO: Align request method, path, headers, and payload shape with the company SSO user info contract.
             $response = Http::baseUrl($baseUrl)
                 ->timeout((int) config('sso.timeout', 5))
                 ->acceptJson()
-                ->withToken($token)
-                ->post($validatePath);
+                ->withToken($accessToken)
+                ->get($userInfoPath);
         } catch (ConnectionException $exception) {
-            throw new SsoException('Unable to connect to SSO service.', previous: $exception);
+            throw new SsoException('Unable to connect to SSO user info service.', previous: $exception);
         }
 
         if (! $response->successful()) {
-            throw new SsoException(sprintf('SSO rejected token with HTTP status %d.', $response->status()));
+            throw new SsoException(sprintf('SSO user info request failed with HTTP status %d.', $response->status()));
         }
 
         $payload = $response->json();
 
         if (! is_array($payload)) {
-            throw new SsoException('SSO response is not a JSON object.');
+            throw new SsoException('SSO user info response is not a JSON object.');
         }
 
         return SsoUser::fromPayload($payload);
+    }
+
+    public function validateToken(string $token): SsoUser
+    {
+        return $this->fetchCurrentUser($token);
     }
 }

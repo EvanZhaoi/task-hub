@@ -19,7 +19,9 @@ React 回调页读取 URL fragment
 ↓
 POST /sso/session
 ↓
-Laravel 调用公司 SSO 校验 token
+Laravel 使用 accessToken 调用公司 SSO 当前登录人信息接口
+↓
+获得 employeeNo / displayName / department 等用户信息
 ↓
 写入 Laravel Session
 ↓
@@ -118,6 +120,7 @@ SSO_LOGIN_URL=
 SSO_CLIENT_ID=
 SSO_SCOPE=
 SSO_CALLBACK_PATH=/sso/callback
+SSO_USERINFO_PATH=
 SSO_VALIDATE_PATH=
 SSO_TIMEOUT=5
 
@@ -134,7 +137,8 @@ TASKHUB_DEVELOPER_EMPLOYEE_NOS=
 - `SSO_CLIENT_ID`：公司分配给 TaskHub 的客户端标识。
 - `SSO_SCOPE`：公司协议要求的授权范围，没有则留空。
 - `SSO_CALLBACK_PATH`：TaskHub 接收回调的路径。
-- `SSO_VALIDATE_PATH`：TaskHub 后端校验 token 的公司接口路径。
+- `SSO_USERINFO_PATH`：TaskHub 后端拿到 access token 后，用它调用公司接口获取当前登录人信息。
+- `SSO_VALIDATE_PATH`：兼容旧命名；如果暂时未配置 `SSO_USERINFO_PATH`，代码会回退读取这个路径。
 - `TASKHUB_*_EMPLOYEE_NOS`：TaskHub 内部角色工号白名单，多个工号用英文逗号分隔。
 
 本章不编造公司协议。真实参数需要按公司 SSO 文档填写。
@@ -228,14 +232,57 @@ POST 时带上 CSRF：
 <meta name="csrf-token" content="{{ csrf_token() }}">
 ```
 
-### 6.5 Laravel 建立 Session
+### 6.5 Laravel 用 accessToken 获取当前登录人信息
+
+隐式模式第一步只让 TaskHub 拿到 access token。TaskHub 不能只相信前端传来的用户信息，也不应该让前端自己决定当前用户是谁。
+
+正确流程是：
+
+```text
+React 回调页提交 accessToken
+↓
+Laravel 后端接收 accessToken
+↓
+Laravel 调用公司 SSO 当前登录人信息接口
+↓
+公司 SSO 返回 employeeNo / displayName / department
+↓
+TaskHub 根据 employeeNo 建立 Session 和解析角色
+```
+
+文件：`app/Integrations/Sso/SsoClient.php`
+
+关键代码：
+
+```php
+public function fetchCurrentUser(string $accessToken): SsoUser
+{
+    // TODO: 按公司 SSO 文档确认真实请求方法、路径、Header 和返回结构。
+    $response = Http::baseUrl(config('sso.base_url'))
+        ->timeout((int) config('sso.timeout', 5))
+        ->acceptJson()
+        ->withToken($accessToken)
+        ->get(config('sso.userinfo_path'));
+
+    return SsoUser::fromPayload($response->json());
+}
+```
+
+这里的核心点：
+
+- access token 只是一把临时凭证。
+- 当前登录人工号必须以后端调用公司接口得到的结果为准。
+- TaskHub 后续业务角色基于 `employeeNo` 解析。
+- 不信任前端传来的姓名、部门或角色。
+
+### 6.6 Laravel 建立 Session
 
 文件：`app/Http/Controllers/SsoController.php`
 
 关键代码：
 
 ```php
-$user = $ssoClient->validateToken($validated['accessToken']);
+$user = $ssoClient->fetchCurrentUser($validated['accessToken']);
 $roles = $roleService->rolesFor($user);
 
 $request->session()->put(CurrentUserService::SESSION_KEY, $user->toSessionPayload());
@@ -245,8 +292,8 @@ $request->session()->regenerate();
 
 作用：
 
-- 后端调用公司 SSO 校验 token。
-- 校验通过后把用户信息写入 Laravel Session。
+- 后端用 access token 获取当前登录人信息。
+- 获取成功后把用户信息写入 Laravel Session。
 - 根据工号解析 TaskHub 本地角色。
 - `regenerate()` 用于登录后刷新 Session ID，降低会话固定风险。
 
@@ -347,8 +394,9 @@ GET|HEAD  tasks
 
 - SSO 登录跳转。
 - 隐式模式回调页。
-- token 提交给 Laravel 建立 Session。
-- 公司 SSO token 校验入口。
+- access token 提交给 Laravel。
+- Laravel 使用 access token 调用公司当前登录人信息接口。
+- 当前登录人信息写入 Laravel Session。
 - TaskHub 本地角色解析。
 - 业务路由 SSO 保护。
 

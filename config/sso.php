@@ -6,6 +6,7 @@ return [
     'client_id' => env('SSO_CLIENT_ID'),
     'scope' => env('SSO_SCOPE'),
     'callback_path' => env('SSO_CALLBACK_PATH', '/sso/callback'),
+    'userinfo_path' => env('SSO_USERINFO_PATH'),
     'validate_path' => env('SSO_VALIDATE_PATH'),
     'timeout' => (int) env('SSO_TIMEOUT', 5),
 ];
