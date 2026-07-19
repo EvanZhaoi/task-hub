@@ -215,9 +215,19 @@ resources/js/Pages/Sso/Callback.tsx
 
 文件：`resources/js/Pages/Sso/Callback.tsx`
 
-关键代码：
+先创建目录：
+
+```bash
+mkdir -p resources/js/Pages/Sso
+```
+
+然后创建完整文件：
 
 ```tsx
+import { useEffect, useState } from 'react';
+
+type CallbackState = 'processing' | 'failed';
+
 function readAuthParams(): URLSearchParams {
     const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
 
@@ -227,15 +237,206 @@ function readAuthParams(): URLSearchParams {
 
     return new URLSearchParams(window.location.search);
 }
+
+function csrfToken(): string {
+    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+}
+
+export default function SsoCallback() {
+    const [state, setState] = useState<CallbackState>('processing');
+    const [message, setMessage] = useState('正在完成单点登录，请稍候。');
+
+    useEffect(() => {
+        const params = readAuthParams();
+        const accessToken = params.get('access_token');
+        const ssoState = params.get('state');
+
+        if (!accessToken || !ssoState) {
+            setState('failed');
+            setMessage('SSO 回调缺少 access_token 或 state。');
+            return;
+        }
+
+        fetch('/sso/session', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            body: JSON.stringify({
+                accessToken,
+                state: ssoState,
+            }),
+        })
+            .then(async (response) => {
+                const payload = (await response.json()) as { redirectTo?: string; message?: string };
+
+                if (!response.ok) {
+                    throw new Error(payload.message ?? 'SSO 登录失败。');
+                }
+
+                window.location.replace(payload.redirectTo ?? '/tasks');
+            })
+            .catch((error: unknown) => {
+                setState('failed');
+                setMessage(error instanceof Error ? error.message : 'SSO 登录失败。');
+            });
+    }, []);
+
+    return (
+        <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6 text-[#1a1a1a]">
+            <section className="w-full max-w-md rounded-lg border border-[#ebebeb] bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                    <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
+                        T
+                    </div>
+                    <div>
+                        <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
+                        <p className="mt-1 text-sm text-[#6e6e80]">
+                            {state === 'processing' ? '正在建立本地会话' : '登录未完成'}
+                        </p>
+                    </div>
+                </div>
+
+                <p className="text-sm leading-6 text-[#6e6e80]">{message}</p>
+
+                {state === 'failed' ? (
+                    <a
+                        className="mt-5 inline-flex rounded-md bg-[#5e6ad2] px-4 py-2 text-sm font-medium text-white"
+                        href="/login"
+                    >
+                        重新登录
+                    </a>
+                ) : null}
+            </section>
+        </main>
+    );
+}
 ```
 
-作用：
+这个页面的作用不是展示业务内容，而是完成 SSO 隐式模式的浏览器侧收尾工作：
 
-- 优先读取 URL hash。
-- 兼容少数 SSO 把参数放在 query string 的情况。
-- 读取到 token 后 POST 给 Laravel。
+```text
+读取 access_token 和 state
+↓
+POST 给 Laravel
+↓
+Laravel 建立 Session
+↓
+跳转回原业务页面
+```
 
-POST 时带上 CSRF：
+#### 6.4.1 为什么要用 `useEffect`
+
+`useEffect(() => { ... }, [])` 表示页面第一次挂载后执行一次。
+
+这里不能在组件函数体里直接 `fetch()`，原因是 React 组件渲染可能执行多次。如果把网络请求直接写在组件函数体里，可能导致重复提交 `/sso/session`。
+
+这和 Java 后端里“不要在 getter 或构造对象时做外部副作用”类似：登录收尾是副作用，应该放在明确的生命周期里。
+
+#### 6.4.2 为什么先读 hash，再读 query string
+
+隐式模式标准上通常返回：
+
+```text
+/sso/callback#access_token=xxx&state=yyy
+```
+
+也就是 token 在 `#` 后面。
+
+浏览器不会把 `#` 后面的内容发给服务器，所以 Laravel 后端拿不到它。只有浏览器里的 JavaScript 可以通过：
+
+```ts
+window.location.hash
+```
+
+读取。
+
+代码中仍然保留 query string 兼容：
+
+```ts
+return new URLSearchParams(window.location.search);
+```
+
+这是为了兼容少数公司 SSO 实现把参数放成：
+
+```text
+/sso/callback?access_token=xxx&state=yyy
+```
+
+TaskHub 以 hash 为主，query string 只是兼容兜底。
+
+#### 6.4.3 为什么必须提交 `state`
+
+`state` 是登录流程中的防伪随机值。
+
+流程是：
+
+```text
+Laravel 生成 state，保存到 Session
+↓
+跳转 SSO 时带上 state
+↓
+SSO 回调时原样带回 state
+↓
+React 把 state 提交给 Laravel
+↓
+Laravel 比较回调 state 和 Session state
+```
+
+如果两边不一致，说明这次回调不可信，后端会返回：
+
+```text
+419
+SSO state verification failed.
+```
+
+#### 6.4.4 POST 给 Laravel 的请求格式
+
+前端请求：
+
+```tsx
+fetch('/sso/session', {
+    method: 'POST',
+    headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken(),
+    },
+    body: JSON.stringify({
+        accessToken,
+        state: ssoState,
+    }),
+});
+```
+
+后端对应路由：
+
+```php
+Route::post('/sso/session', [SsoController::class, 'store'])->name('sso.session.store');
+```
+
+后端接收字段：
+
+```php
+$validated = $request->validate([
+    'accessToken' => ['required', 'string'],
+    'state' => ['required', 'string'],
+]);
+```
+
+字段名必须一致：
+
+```text
+React: accessToken
+Laravel: accessToken
+
+React: state
+Laravel: state
+```
+
+#### 6.4.5 为什么要带 CSRF
 
 ```tsx
 'X-CSRF-TOKEN': csrfToken(),
@@ -246,6 +447,69 @@ POST 时带上 CSRF：
 ```blade
 <meta name="csrf-token" content="{{ csrf_token() }}">
 ```
+
+Laravel 的 Web 路由默认启用 CSRF 保护。`/sso/session` 是 POST 请求，如果不带 CSRF token，会返回：
+
+```text
+419 CSRF token mismatch
+```
+
+这里没有关闭 CSRF，也没有把 `/sso/session` 放到 API 路由里，原因是 TaskHub 是 Laravel + Inertia 单体应用，SSO 完成后要建立浏览器 Session，走 Web 路由更合适。
+
+#### 6.4.6 成功后为什么用 `window.location.replace`
+
+```tsx
+window.location.replace(payload.redirectTo ?? '/tasks');
+```
+
+作用：
+
+- 跳回原本想访问的业务页面。
+- 使用 `replace` 而不是 `href = ...`，可以避免用户点击浏览器后退时又回到带 token 的回调地址。
+
+这点很重要：access token 不应该长期留在浏览器历史记录中。
+
+#### 6.4.7 失败时为什么显示重试入口
+
+失败场景包括：
+
+- SSO 没有带回 `access_token`。
+- SSO 没有带回 `state`。
+- Laravel 校验 state 失败。
+- 后端调用公司当前登录人接口失败。
+- CSRF 配置不正确。
+
+页面失败时展示“重新登录”，让用户回到 `/login` 重新开始 SSO 流程。
+
+#### 6.4.8 如何验证这一页
+
+先确认路由存在：
+
+```bash
+php artisan route:list
+```
+
+应该看到：
+
+```text
+GET|HEAD  sso/callback
+POST      sso/session
+```
+
+再确认前端能编译：
+
+```bash
+npm run typecheck
+npm run build
+```
+
+没有公司 SSO 参数时，可以直接访问：
+
+```text
+http://127.0.0.1:8000/sso/callback
+```
+
+页面应该显示“SSO 回调缺少 access_token 或 state”。这不是错误，而是说明回调页已经加载，只是当前 URL 没有 SSO 带回的参数。
 
 ### 6.5 Laravel 用 accessToken 获取当前登录人信息
 
