@@ -82,7 +82,7 @@ php artisan db:show
 - `app/Services/CurrentUserService.php`
 - `app/Http/Middleware/EnsureSsoAuthenticated.php`
 
-SSO 真实地址需要按公司协议填写。`SSO_LOGIN_URL` 使用浏览器可跳转的完整 URL；`SSO_USERINFO_PATH` / `SSO_VALIDATE_PATH` 只填写接口 path，由代码与 `SSO_BASE_URL` 组合。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表。
+SSO 真实地址需要按公司协议填写。`SSO_LOGIN_URL` 使用浏览器可跳转的完整 URL；`SSO_USERINFO_PATH` / `SSO_VALIDATE_PATH` 只填写接口 path，由代码与 `SSO_BASE_URL` 组合。获取当前登录人信息按公司推荐方式使用 POST JSON，提交 `clientId`、`secret`、`accessToken`。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表。
 
 详细说明见：
 

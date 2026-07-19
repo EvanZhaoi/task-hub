@@ -147,11 +147,13 @@ mysql -u root -p taskhub < database/schema.sql
 SSO_BASE_URL=
 SSO_LOGIN_URL=
 SSO_CLIENT_ID=
+SSO_CLIENT_SECRET=
 SSO_SCOPE=
 SSO_CALLBACK_PATH=/sso/callback
 SSO_USERINFO_PATH=
 SSO_VALIDATE_PATH=
-SSO_TIMEOUT=5
+SSO_TIMEOUT=3
+SSO_VERIFY_SSL=false
 ```
 
 这些字段的作用：
@@ -161,18 +163,24 @@ SSO_TIMEOUT=5
 | `SSO_BASE_URL` | 公司 SSO 接口基础地址，例如用户信息接口所在域名 |
 | `SSO_LOGIN_URL` | 公司 SSO 登录入口，填写浏览器可直接跳转的完整 URL |
 | `SSO_CLIENT_ID` | 公司分配给 TaskHub 的客户端标识 |
+| `SSO_CLIENT_SECRET` | 公司分配给 TaskHub 的客户端密钥，用于后端获取当前登录人信息 |
 | `SSO_SCOPE` | 公司协议要求的授权范围，没有则留空 |
 | `SSO_CALLBACK_PATH` | 公司 SSO 登录成功后回调 TaskHub 的路径 |
 | `SSO_USERINFO_PATH` | TaskHub 后端用 accessToken 获取当前登录人的接口路径，只填 path，不填完整 URL |
 | `SSO_VALIDATE_PATH` | 早期兼容命名；没有 `SSO_USERINFO_PATH` 时才回退使用，只填 path，不填完整 URL |
 | `SSO_TIMEOUT` | 后端调用公司 SSO 接口的超时时间，单位秒 |
+| `SSO_VERIFY_SSL` | 是否校验 SSO HTTPS 证书；公司推荐示例关闭校验，所以默认 `false` |
 
 推荐填写方式：
 
 ```env
 SSO_BASE_URL=https://sso.company.com
 SSO_LOGIN_URL=https://sso.company.com/oauth/authorize
+SSO_CLIENT_ID=ClientID
+SSO_CLIENT_SECRET=secret
 SSO_USERINFO_PATH=/api/current-user
+SSO_TIMEOUT=3
+SSO_VERIFY_SSL=false
 ```
 
 不要这样写：
@@ -253,11 +261,13 @@ return [
     'base_url' => env('SSO_BASE_URL'),
     'login_url' => env('SSO_LOGIN_URL'),
     'client_id' => env('SSO_CLIENT_ID'),
+    'client_secret' => env('SSO_CLIENT_SECRET'),
     'scope' => env('SSO_SCOPE'),
     'callback_path' => env('SSO_CALLBACK_PATH', '/sso/callback'),
     'userinfo_path' => env('SSO_USERINFO_PATH'),
     'validate_path' => env('SSO_VALIDATE_PATH'),
-    'timeout' => (int) env('SSO_TIMEOUT', 5),
+    'timeout' => (int) env('SSO_TIMEOUT', 3),
+    'verify_ssl' => filter_var(env('SSO_VERIFY_SSL', false), FILTER_VALIDATE_BOOLEAN),
 ];
 ```
 
@@ -853,6 +863,17 @@ class SsoClient
             throw new SsoException('SSO base URL is not configured.');
         }
 
+        $clientId = config('sso.client_id');
+        $clientSecret = config('sso.client_secret');
+
+        if (! is_string($clientId) || $clientId === '') {
+            throw new SsoException('SSO client ID is not configured.');
+        }
+
+        if (! is_string($clientSecret) || $clientSecret === '') {
+            throw new SsoException('SSO client secret is not configured.');
+        }
+
         // userinfo_path 是当前推荐命名；validate_path 保留为早期配置兼容入口。
         $userInfoPath = config('sso.userinfo_path') ?: config('sso.validate_path');
 
@@ -865,13 +886,21 @@ class SsoClient
         }
 
         try {
-            // TODO: 按公司 SSO 文档确认真实请求方法、路径、Header 和返回结构。
-            // 当前骨架表达的是关键安全边界：后端用 accessToken 换取当前登录人信息。
-            $response = Http::baseUrl($baseUrl)
-                ->timeout((int) config('sso.timeout', 5))
+            // 按公司推荐方式：POST JSON，body 中提交 clientId、secret 和 accessToken。
+            $request = Http::baseUrl($baseUrl)
+                ->timeout((int) config('sso.timeout', 3))
                 ->acceptJson()
-                ->withToken($accessToken)
-                ->get($userInfoPath);
+                ->asJson();
+
+            if (! config('sso.verify_ssl')) {
+                $request = $request->withoutVerifying();
+            }
+
+            $response = $request->post($userInfoPath, [
+                'clientId' => $clientId,
+                'secret' => $clientSecret,
+                'accessToken' => $accessToken,
+            ]);
         } catch (ConnectionException $exception) {
             throw new SsoException('Unable to connect to SSO user info service.', previous: $exception);
         }
@@ -907,8 +936,9 @@ class SsoClient
 
 - 前端不能把姓名、部门、角色直接传给后端。
 - 后端必须用 `accessToken` 调公司接口确认当前登录人。
+- 获取当前登录人信息按公司推荐方式使用 `POST` JSON。
+- 请求 body 包含 `clientId`、`secret`、`accessToken`。
 - `SSO_USERINFO_PATH` 和 `SSO_VALIDATE_PATH` 只允许填写 path，不允许填写完整 URL。
-- `TODO` 保留在真实公司协议位置，不编造接口。
 
 ### 13.1 fetchCurrentUser 做了什么
 
@@ -921,12 +951,14 @@ public function fetchCurrentUser(string $accessToken): SsoUser
 它内部按顺序做这些事：
 
 1. 读取 `SSO_BASE_URL`。
-2. 读取 `SSO_USERINFO_PATH`，没有则兼容读取 `SSO_VALIDATE_PATH`。
-3. 校验 path 不能是完整 URL。
-4. 使用 Laravel HTTP Client 调公司接口。
-5. 检查公司接口 HTTP 状态是否成功。
-6. 检查响应是否是 JSON 对象。
-7. 调用 `SsoUser::fromPayload($payload)` 解析人员信息。
+2. 读取 `SSO_CLIENT_ID` 和 `SSO_CLIENT_SECRET`。
+3. 读取 `SSO_USERINFO_PATH`，没有则兼容读取 `SSO_VALIDATE_PATH`。
+4. 校验 path 不能是完整 URL。
+5. 使用 Laravel HTTP Client 发起 `POST` JSON 请求。
+6. 请求 body 放入 `clientId`、`secret`、`accessToken`。
+7. 检查公司接口 HTTP 状态是否成功。
+8. 检查响应是否是 JSON 对象。
+9. 调用 `SsoUser::fromPayload($payload)` 解析人员信息。
 
 ### 13.2 为什么要校验 SSO_USERINFO_PATH 不是完整 URL
 
@@ -968,11 +1000,20 @@ Http::baseUrl($baseUrl)
 这段链式调用：
 
 ```php
-Http::baseUrl($baseUrl)
-    ->timeout((int) config('sso.timeout', 5))
+$request = Http::baseUrl($baseUrl)
+    ->timeout((int) config('sso.timeout', 3))
     ->acceptJson()
-    ->withToken($accessToken)
-    ->get($userInfoPath);
+    ->asJson();
+
+if (! config('sso.verify_ssl')) {
+    $request = $request->withoutVerifying();
+}
+
+$response = $request->post($userInfoPath, [
+    'clientId' => $clientId,
+    'secret' => $clientSecret,
+    'accessToken' => $accessToken,
+]);
 ```
 
 含义：
@@ -980,10 +1021,31 @@ Http::baseUrl($baseUrl)
 - `baseUrl($baseUrl)`：设置接口基础地址。
 - `timeout(...)`：设置超时时间，避免公司接口卡住时请求一直等待。
 - `acceptJson()`：告诉对方希望返回 JSON。
-- `withToken($accessToken)`：把 token 放到 `Authorization: Bearer ...` 请求头。
-- `get($userInfoPath)`：发起 GET 请求。
+- `asJson()`：请求体按 JSON 发送，并设置 JSON Content-Type。
+- `withoutVerifying()`：关闭 HTTPS 证书校验，对应公司推荐示例里的 `verify_peer=false` 和 `verify_peer_name=false`。
+- `post($userInfoPath, [...])`：发起 POST 请求，并把 `clientId`、`secret`、`accessToken` 放进 JSON body。
 
-如果总部协议要求不是 Bearer Token，或者不是 GET，就只改这里。
+当前按截图推荐方式实现，不再使用 Bearer Token 请求头，也不再使用 GET 请求。
+
+对应公司推荐 PHP 示例可以理解为：
+
+```php
+$post_content = [
+    'clientId' => 'ClientID',
+    'secret' => 'secret',
+    'accessToken' => $_GET['accessToken'],
+];
+```
+
+Laravel 中对应：
+
+```php
+$response = $request->post($userInfoPath, [
+    'clientId' => $clientId,
+    'secret' => $clientSecret,
+    'accessToken' => $accessToken,
+]);
+```
 
 ### 13.4 为什么捕获 ConnectionException
 
@@ -1699,6 +1761,7 @@ use App\Models\Task;
 use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
 use App\Services\TaskhubRoleService;
+use Illuminate\Support\Facades\Http;
 
 test('protected task pages redirect to sso login when session is missing', function (): void {
     $this->get('/tasks')->assertRedirect('/login');
@@ -1757,6 +1820,37 @@ test('sso user info path must not be a full url', function (): void {
 
     expect(fn () => app(SsoClient::class)->fetchCurrentUser('token-123'))
         ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
+});
+
+test('sso client posts json payload to user info endpoint', function (): void {
+    config([
+        'sso.base_url' => 'https://sso.example.test',
+        'sso.client_id' => 'ClientID',
+        'sso.client_secret' => 'secret',
+        'sso.userinfo_path' => '/api/current-user',
+        'sso.timeout' => 3,
+        'sso.verify_ssl' => false,
+    ]);
+
+    Http::fake([
+        'https://sso.example.test/api/current-user' => Http::response([
+            'id' => 'response-001',
+            'user' => [
+                'employeeNo' => 'E10001',
+                'displayName' => '张三',
+            ],
+        ]),
+    ]);
+
+    $user = app(SsoClient::class)->fetchCurrentUser('token-123');
+
+    expect($user->employeeNo())->toBe('E10001');
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+        && $request->url() === 'https://sso.example.test/api/current-user'
+        && $request->data()['clientId'] === 'ClientID'
+        && $request->data()['secret'] === 'secret'
+        && $request->data()['accessToken'] === 'token-123');
 });
 
 test('sso user parses nested user payload', function (): void {
@@ -1887,6 +1981,7 @@ http://127.0.0.1:8000/tasks
 | 回调页提示缺少 `access_token` | 公司 SSO 回调地址没有带 `?access_token=...`，或参数名不是 `access_token` | 先确认总部回调参数名，再改 `Callback.tsx` |
 | `SSO login URL is not configured` | `.env` 未配置 `SSO_LOGIN_URL` | 按公司协议填写登录地址后执行 `php artisan config:clear` |
 | `SSO client ID is not configured` | `.env` 未配置 `SSO_CLIENT_ID` | 填写公司分配的 client id |
+| `SSO client secret is not configured` | `.env` 未配置 `SSO_CLIENT_SECRET` | 填写公司分配的 secret |
 | `SSO base URL is not configured` | `.env` 未配置 `SSO_BASE_URL` | 填写公司当前登录人接口基础地址 |
 | `SSO user info path is not configured` | `.env` 未配置 `SSO_USERINFO_PATH` | 填写 accessToken 换当前登录人的接口路径 |
 | `SSO user info path must be a path, not a full URL` | `SSO_USERINFO_PATH` 或 `SSO_VALIDATE_PATH` 填了完整 URL | 保留 `SSO_BASE_URL` 为域名，path 改成 `/api/current-user` 这类相对路径 |

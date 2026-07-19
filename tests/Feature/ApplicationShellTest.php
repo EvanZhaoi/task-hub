@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
 use App\Services\TaskhubRoleService;
+use Illuminate\Support\Facades\Http;
 
 test('the inertia application shell responds successfully', function (): void {
     $this->withoutVite();
@@ -66,11 +67,44 @@ test('the sso session endpoint accepts access token without state', function ():
 test('sso user info path must not be a full url', function (): void {
     config([
         'sso.base_url' => 'https://sso.example.test',
+        'sso.client_id' => 'ClientID',
+        'sso.client_secret' => 'secret',
         'sso.userinfo_path' => 'https://sso.example.test/api/current-user',
     ]);
 
     expect(fn () => app(SsoClient::class)->fetchCurrentUser('token-123'))
         ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
+});
+
+test('sso client posts json payload to user info endpoint', function (): void {
+    config([
+        'sso.base_url' => 'https://sso.example.test',
+        'sso.client_id' => 'ClientID',
+        'sso.client_secret' => 'secret',
+        'sso.userinfo_path' => '/api/current-user',
+        'sso.timeout' => 3,
+        'sso.verify_ssl' => false,
+    ]);
+
+    Http::fake([
+        'https://sso.example.test/api/current-user' => Http::response([
+            'id' => 'response-001',
+            'user' => [
+                'employeeNo' => 'E10001',
+                'displayName' => '张三',
+            ],
+        ]),
+    ]);
+
+    $user = app(SsoClient::class)->fetchCurrentUser('token-123');
+
+    expect($user->employeeNo())->toBe('E10001');
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+        && $request->url() === 'https://sso.example.test/api/current-user'
+        && $request->data()['clientId'] === 'ClientID'
+        && $request->data()['secret'] === 'secret'
+        && $request->data()['accessToken'] === 'token-123');
 });
 
 test('sso user parses nested user payload', function (): void {

@@ -16,6 +16,17 @@ class SsoClient
             throw new SsoException('SSO base URL is not configured.');
         }
 
+        $clientId = config('sso.client_id');
+        $clientSecret = config('sso.client_secret');
+
+        if (! is_string($clientId) || $clientId === '') {
+            throw new SsoException('SSO client ID is not configured.');
+        }
+
+        if (! is_string($clientSecret) || $clientSecret === '') {
+            throw new SsoException('SSO client secret is not configured.');
+        }
+
         // userinfo_path 是当前推荐命名；validate_path 保留为早期配置兼容入口。
         $userInfoPath = config('sso.userinfo_path') ?: config('sso.validate_path');
 
@@ -28,13 +39,21 @@ class SsoClient
         }
 
         try {
-            // TODO: 按公司 SSO 文档确认真实请求方法、路径、Header 和返回结构。
-            // 当前骨架表达的是关键安全边界：后端用 accessToken 换取当前登录人信息。
-            $response = Http::baseUrl($baseUrl)
-                ->timeout((int) config('sso.timeout', 5))
+            // 按公司推荐方式：POST JSON，body 中提交 clientId、secret 和 accessToken。
+            $request = Http::baseUrl($baseUrl)
+                ->timeout((int) config('sso.timeout', 3))
                 ->acceptJson()
-                ->withToken($accessToken)
-                ->get($userInfoPath);
+                ->asJson();
+
+            if (! config('sso.verify_ssl')) {
+                $request = $request->withoutVerifying();
+            }
+
+            $response = $request->post($userInfoPath, [
+                'clientId' => $clientId,
+                'secret' => $clientSecret,
+                'accessToken' => $accessToken,
+            ]);
         } catch (ConnectionException $exception) {
             throw new SsoException('Unable to connect to SSO user info service.', previous: $exception);
         }
