@@ -159,13 +159,34 @@ SSO_TIMEOUT=5
 | 字段 | 作用 |
 |---|---|
 | `SSO_BASE_URL` | 公司 SSO 接口基础地址，例如用户信息接口所在域名 |
-| `SSO_LOGIN_URL` | 公司 SSO 登录入口 |
+| `SSO_LOGIN_URL` | 公司 SSO 登录入口，填写浏览器可直接跳转的完整 URL |
 | `SSO_CLIENT_ID` | 公司分配给 TaskHub 的客户端标识 |
 | `SSO_SCOPE` | 公司协议要求的授权范围，没有则留空 |
 | `SSO_CALLBACK_PATH` | 公司 SSO 登录成功后回调 TaskHub 的路径 |
-| `SSO_USERINFO_PATH` | TaskHub 后端用 accessToken 获取当前登录人的接口路径 |
-| `SSO_VALIDATE_PATH` | 早期兼容命名；没有 `SSO_USERINFO_PATH` 时才回退使用 |
+| `SSO_USERINFO_PATH` | TaskHub 后端用 accessToken 获取当前登录人的接口路径，只填 path，不填完整 URL |
+| `SSO_VALIDATE_PATH` | 早期兼容命名；没有 `SSO_USERINFO_PATH` 时才回退使用，只填 path，不填完整 URL |
 | `SSO_TIMEOUT` | 后端调用公司 SSO 接口的超时时间，单位秒 |
+
+推荐填写方式：
+
+```env
+SSO_BASE_URL=https://sso.company.com
+SSO_LOGIN_URL=https://sso.company.com/oauth/authorize
+SSO_USERINFO_PATH=/api/current-user
+```
+
+不要这样写：
+
+```env
+SSO_BASE_URL=https://sso.company.com
+SSO_USERINFO_PATH=https://sso.company.com/api/current-user
+```
+
+原因：
+
+- `SSO_LOGIN_URL` 是浏览器跳转地址，所以使用完整 URL。
+- `SSO_USERINFO_PATH` 是后端接口路径，会和 `SSO_BASE_URL` 组合，所以只写 path。
+- 如果 path 也写完整 URL，`SSO_BASE_URL` 会失去意义，不同环境切换时也更容易出错。
 
 然后打开你本地的：
 
@@ -612,6 +633,10 @@ class SsoClient
             throw new SsoException('SSO user info path is not configured.');
         }
 
+        if ($this->isAbsoluteUrl($userInfoPath)) {
+            throw new SsoException('SSO user info path must be a path, not a full URL.');
+        }
+
         try {
             // TODO: 按公司 SSO 文档确认真实请求方法、路径、Header 和返回结构。
             // 当前骨架表达的是关键安全边界：后端用 accessToken 换取当前登录人信息。
@@ -643,6 +668,11 @@ class SsoClient
         // 预留给 Bearer Token API 场景；当前 Inertia 页面登录主要使用 fetchCurrentUser。
         return $this->fetchCurrentUser($token);
     }
+
+    private function isAbsoluteUrl(string $value): bool
+    {
+        return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');
+    }
 }
 ```
 
@@ -650,6 +680,7 @@ class SsoClient
 
 - 前端不能把姓名、部门、角色直接传给后端。
 - 后端必须用 `accessToken` 调公司接口确认当前登录人。
+- `SSO_USERINFO_PATH` 和 `SSO_VALIDATE_PATH` 只允许填写 path，不允许填写完整 URL。
 - `TODO` 保留在真实公司协议位置，不编造接口。
 
 Laravel 知识点：
@@ -1497,6 +1528,7 @@ http://127.0.0.1:8000/tasks
 | `SSO client ID is not configured` | `.env` 未配置 `SSO_CLIENT_ID` | 填写公司分配的 client id |
 | `SSO base URL is not configured` | `.env` 未配置 `SSO_BASE_URL` | 填写公司当前登录人接口基础地址 |
 | `SSO user info path is not configured` | `.env` 未配置 `SSO_USERINFO_PATH` | 填写 accessToken 换当前登录人的接口路径 |
+| `SSO user info path must be a path, not a full URL` | `SSO_USERINFO_PATH` 或 `SSO_VALIDATE_PATH` 填了完整 URL | 保留 `SSO_BASE_URL` 为域名，path 改成 `/api/current-user` 这类相对路径 |
 | `419 CSRF token mismatch` | Blade 缺少 CSRF meta，或 fetch 未带 `X-CSRF-TOKEN` | 检查 `app.blade.php` 和 `Callback.tsx` |
 | 登录后没有角色 | `taskhub_user_role` 没有该工号的启用角色 | 插入或启用对应角色记录 |
 | 访问 `/tasks` 无限跳 `/login` | Session 没写入或浏览器 Cookie 被禁用 | 检查 `/sso/session` 响应、`SESSION_DRIVER=file`、浏览器 Cookie |

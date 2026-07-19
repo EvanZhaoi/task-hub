@@ -1,6 +1,7 @@
 <?php
 
 use App\Integrations\Sso\SsoClient;
+use App\Integrations\Sso\SsoException;
 use App\Integrations\Sso\SsoUser;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
@@ -60,6 +61,16 @@ test('the sso session endpoint accepts access token without state', function ():
 
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['DEVELOPER']);
+});
+
+test('sso user info path must not be a full url', function (): void {
+    config([
+        'sso.base_url' => 'https://sso.example.test',
+        'sso.userinfo_path' => 'https://sso.example.test/api/current-user',
+    ]);
+
+    expect(fn () => app(SsoClient::class)->fetchCurrentUser('token-123'))
+        ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
 });
 
 test('task model maps to the existing task table', function (): void {

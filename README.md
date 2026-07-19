@@ -82,11 +82,11 @@ php artisan db:show
 - `app/Services/CurrentUserService.php`
 - `app/Http/Middleware/EnsureSsoAuthenticated.php`
 
-总部协议尚未确认，因此 `.env.example` 中的 SSO 地址、登录地址和验证路径保持为空。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表。
+SSO 真实地址需要按公司协议填写。`SSO_LOGIN_URL` 使用浏览器可跳转的完整 URL；`SSO_USERINFO_PATH` / `SSO_VALIDATE_PATH` 只填写接口 path，由代码与 `SSO_BASE_URL` 组合。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表。
 
 详细说明见：
 
-- [06-SSO认证流程](./docs/development/06-SSO认证流程.md)
+- [09-SSO隐式模式接入](./docs/development/09-SSO隐式模式接入.md)
 
 ## 已完成
 

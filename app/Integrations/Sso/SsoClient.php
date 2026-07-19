@@ -23,6 +23,10 @@ class SsoClient
             throw new SsoException('SSO user info path is not configured.');
         }
 
+        if ($this->isAbsoluteUrl($userInfoPath)) {
+            throw new SsoException('SSO user info path must be a path, not a full URL.');
+        }
+
         try {
             // TODO: 按公司 SSO 文档确认真实请求方法、路径、Header 和返回结构。
             // 当前骨架表达的是关键安全边界：后端用 accessToken 换取当前登录人信息。
@@ -53,5 +57,10 @@ class SsoClient
     {
         // 预留给 Bearer Token API 场景；当前 Inertia 页面登录主要使用 fetchCurrentUser。
         return $this->fetchCurrentUser($token);
+    }
+
+    private function isAbsoluteUrl(string $value): bool
+    {
+        return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');
     }
 }
