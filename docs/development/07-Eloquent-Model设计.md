@@ -554,6 +554,7 @@ $task->getTable();
 | `AttachmentRef` | `attachment_ref` | 附件引用 |
 | `TaskChangeRequest` | `task_change_request` | 变更请求 |
 | `TaskEvent` | `task_event` | 任务事件 |
+| `TaskhubUserRole` | `taskhub_user_role` | TaskHub 用户角色 |
 
 ## 16. 下一章入口
 

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Integrations\Sso\SsoUser;
+use App\Models\TaskhubUserRole;
 
 class TaskhubRoleService
 {
@@ -11,19 +12,13 @@ class TaskhubRoleService
      */
     public function rolesFor(SsoUser $user): array
     {
-        $employeeNo = $user->employeeNo();
-        $roles = [];
-
-        foreach (config('taskhub.roles', []) as $role => $employeeNos) {
-            if (in_array($employeeNo, $employeeNos, true)) {
-                $roles[] = $role;
-            }
-        }
-
-        if ($roles === []) {
-            $roles[] = (string) config('taskhub.default_role', 'DEVELOPER');
-        }
-
-        return array_values(array_unique($roles));
+        return TaskhubUserRole::query()
+            ->where('employee_no', $user->employeeNo())
+            ->where('enabled', true)
+            ->orderBy('role')
+            ->pluck('role')
+            ->filter(fn (mixed $role): bool => is_string($role) && $role !== '')
+            ->values()
+            ->all();
     }
 }

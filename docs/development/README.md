@@ -67,7 +67,7 @@ Phase 1 只完成基础环境、认证骨架、数据库映射和开发文档。
 - Pest 测试入口
 - SSO 接入骨架
 - SSO 隐式模式登录回调与本地角色控制
-- 8 个 Eloquent Model
+- 9 个 Eloquent Model
 - 只读任务列表最小业务闭环
 
 尚未开发：

@@ -123,12 +123,6 @@ SSO_CALLBACK_PATH=/sso/callback
 SSO_USERINFO_PATH=
 SSO_VALIDATE_PATH=
 SSO_TIMEOUT=5
-
-TASKHUB_DEFAULT_ROLE=DEVELOPER
-TASKHUB_ADMIN_EMPLOYEE_NOS=
-TASKHUB_BOSS_EMPLOYEE_NOS=
-TASKHUB_PUBLISHER_EMPLOYEE_NOS=
-TASKHUB_DEVELOPER_EMPLOYEE_NOS=
 ```
 
 如果你的本地 `.env` 里没有这些字段，不是前面章节删掉了，而是因为：
@@ -161,7 +155,6 @@ php artisan cache:clear
 - `SSO_CALLBACK_PATH`：TaskHub 接收回调的路径。
 - `SSO_USERINFO_PATH`：TaskHub 后端拿到 access token 后，用它调用公司接口获取当前登录人信息。
 - `SSO_VALIDATE_PATH`：兼容旧命名；如果暂时未配置 `SSO_USERINFO_PATH`，代码会回退读取这个路径。
-- `TASKHUB_*_EMPLOYEE_NOS`：TaskHub 内部角色工号白名单，多个工号用英文逗号分隔。
 
 本章不编造公司协议。真实参数需要按公司 SSO 文档填写。
 
@@ -355,26 +348,61 @@ ADMIN
 
 ### 7.3 当前角色控制方式
 
-文件：`config/taskhub.php`
+TaskHub 角色不放在 `.env`，而是放在数据库表：
 
-当前使用环境变量中的工号白名单：
-
-```php
-'roles' => [
-    'ADMIN' => [...],
-    'BOSS' => [...],
-    'PUBLISHER' => [...],
-    'DEVELOPER' => [...],
-],
+```text
+taskhub_user_role
 ```
 
-优点：
+原因：
 
-- 不需要本地用户表。
-- 实现简单。
-- 适合 Phase 1 验证真实 SSO 后快速进入业务开发。
+- 角色是业务配置，不是部署配置。
+- 改角色不应该要求重新发布或重启应用。
+- SSO 只负责认证身份，TaskHub 自己控制业务角色。
+- 仍然不创建本地 users 表，只保存工号和角色关系。
 
-后续如果角色管理复杂，可以再引入独立角色配置后台或外部权限接口。本章不提前设计复杂权限系统。
+表结构核心字段：
+
+```text
+employee_no  人员工号
+role         DEVELOPER / PUBLISHER / BOSS
+enabled      是否启用
+```
+
+读取角色的代码在：
+
+```text
+app/Services/TaskhubRoleService.php
+```
+
+核心逻辑：
+
+```php
+return TaskhubUserRole::query()
+    ->where('employee_no', $user->employeeNo())
+    ->where('enabled', true)
+    ->orderBy('role')
+    ->pluck('role')
+    ->all();
+```
+
+角色变更方式：
+
+```sql
+INSERT INTO taskhub_user_role (id, employee_no, role)
+VALUES (10001, 'E10001', 'PUBLISHER');
+```
+
+禁用角色：
+
+```sql
+UPDATE taskhub_user_role
+SET enabled = 0
+WHERE employee_no = 'E10001'
+  AND role = 'PUBLISHER';
+```
+
+后续如果需要角色管理页面，可以基于这张表做后台维护。本章先只完成数据库控制能力。
 
 ## 8. 如何验证
 
@@ -408,7 +436,7 @@ GET|HEAD  tasks
 | `SSO client ID is not configured` | `.env` 未配置 `SSO_CLIENT_ID` | 填写公司分配的 client id |
 | `SSO state verification failed` | 回调 state 和 Session 不一致 | 重新登录，检查是否跨域或 Session 配置异常 |
 | `419 CSRF token mismatch` | POST `/sso/session` 未带 CSRF | 确认 Blade 有 csrf meta，fetch 有 `X-CSRF-TOKEN` |
-| 登录后没有预期角色 | 工号不在角色白名单 | 检查 `TASKHUB_*_EMPLOYEE_NOS` |
+| 登录后没有预期角色 | `taskhub_user_role` 中没有启用记录 | 检查该工号是否存在 `enabled = 1` 的角色记录 |
 
 ## 10. 本章总结
 

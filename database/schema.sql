@@ -4,6 +4,8 @@
 -- MVP 核心表：
 -- task / bid / bid_member / task_assignee / task_delivery /
 -- attachment_ref / task_change_request / task_event
+-- 角色控制表：
+-- taskhub_user_role
 --
 -- 设计约定：
 -- 1. 人员、付款账号、附件文件本体都来自外部系统；人员引用统一保存工号。
@@ -29,6 +31,7 @@ DROP TABLE IF EXISTS `task_delivery`;
 DROP TABLE IF EXISTS `task_assignee`;
 DROP TABLE IF EXISTS `bid_member`;
 DROP TABLE IF EXISTS `bid`;
+DROP TABLE IF EXISTS `taskhub_user_role`;
 DROP TABLE IF EXISTS `task`;
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -248,6 +251,26 @@ CREATE TABLE `task_event` (
   CONSTRAINT `CHK_task_event_to_status` CHECK (`to_status` IS NULL OR `to_status` IN ('DRAFT', 'OPEN', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='任务事件表';
+
+-- ============================================================
+-- 9. taskhub_user_role（TaskHub 用户角色表）
+--    只保存工号与 TaskHub 内部角色，不保存姓名、部门等用户资料。
+--    身份认证仍以公司 SSO 为准；角色调整通过数据库记录生效，不需要重新发布。
+-- ============================================================
+CREATE TABLE `taskhub_user_role` (
+  `id`          BIGINT UNSIGNED NOT NULL COMMENT '雪花 ID',
+  `employee_no` VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
+  `role`        VARCHAR(20)     NOT NULL COMMENT 'TaskHub 业务角色：DEVELOPER/PUBLISHER/BOSS',
+  `enabled`     TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用：1 启用 / 0 停用',
+  `created_at`  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at`  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UNIQ_taskhub_user_role_employee_role` (`employee_no`, `role`),
+  KEY `IDX_taskhub_user_role_employee_enabled` (`employee_no`, `enabled`),
+  CONSTRAINT `CHK_taskhub_user_role_role` CHECK (`role` IN ('DEVELOPER', 'PUBLISHER', 'BOSS')),
+  CONSTRAINT `CHK_taskhub_user_role_enabled` CHECK (`enabled` IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='TaskHub 用户角色表';
 
 -- ============================================================
 -- 内部外键
