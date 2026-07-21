@@ -65,6 +65,8 @@ test('the sso session endpoint accepts access token without state', function ():
 });
 
 test('logout clears sso session and redirects home', function (): void {
+    config(['sso.logout_url' => null]);
+
     $this->withSession([
         CurrentUserService::SESSION_KEY => [
             'employeeNo' => 'E10001',
@@ -74,6 +76,22 @@ test('logout clears sso session and redirects home', function (): void {
     ])
         ->post('/logout')
         ->assertRedirect(route('home'))
+        ->assertSessionMissing(CurrentUserService::SESSION_KEY)
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+});
+
+test('logout redirects to sso logout url when configured', function (): void {
+    config(['sso.logout_url' => 'https://sso.example.test/logout']);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '张三',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+    ])
+        ->post('/logout')
+        ->assertRedirect('https://sso.example.test/logout')
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
         ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
 });

@@ -3,6 +3,7 @@
 return [
     'base_url' => env('SSO_BASE_URL'),
     'login_url' => env('SSO_LOGIN_URL'),
+    'logout_url' => env('SSO_LOGOUT_URL'),
     'client_id' => env('SSO_CLIENT_ID'),
     'client_secret' => env('SSO_CLIENT_SECRET'),
     'scope' => env('SSO_SCOPE'),

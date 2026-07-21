@@ -87,7 +87,7 @@ class SsoController extends Controller
     public function logout(Request $request): RedirectResponse
     {
         // 退出 TaskHub 时清理本系统保存的登录态和角色。
-        // 公司 SSO 是否需要单点登出，等待总部协议确认后再补充。
+        // 这一步必须先做，避免用户从总部 SSO 返回时 TaskHub 仍保留旧 Session。
         $request->session()->forget([
             CurrentUserService::SESSION_KEY,
             CurrentUserService::ROLE_SESSION_KEY,
@@ -95,6 +95,14 @@ class SsoController extends Controller
 
         // 退出后刷新 CSRF token，避免旧页面继续复用退出前的 token。
         $request->session()->regenerateToken();
+
+        // 如果公司 SSO 提供统一退出地址，则本地退出完成后继续跳转到总部退出页。
+        // SSO_LOGOUT_URL 是浏览器跳转地址，所以这里使用完整 URL，并用 away() 避免 Laravel 当作站内路径处理。
+        $logoutUrl = config('sso.logout_url');
+
+        if (is_string($logoutUrl) && $logoutUrl !== '') {
+            return redirect()->away($logoutUrl);
+        }
 
         return redirect()->route('home');
     }

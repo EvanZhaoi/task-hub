@@ -146,6 +146,7 @@ mysql -u root -p taskhub < database/schema.sql
 ```env
 SSO_BASE_URL=
 SSO_LOGIN_URL=
+SSO_LOGOUT_URL=
 SSO_CLIENT_ID=
 SSO_CLIENT_SECRET=
 SSO_SCOPE=
@@ -162,6 +163,7 @@ SSO_VERIFY_SSL=false
 |---|---|
 | `SSO_BASE_URL` | 公司 SSO 接口基础地址，例如用户信息接口所在域名 |
 | `SSO_LOGIN_URL` | 公司 SSO 登录入口，填写浏览器可直接跳转的完整 URL |
+| `SSO_LOGOUT_URL` | 公司 SSO 退出入口，填写浏览器可直接跳转的完整 URL；TaskHub 本地退出完成后会跳转到这里 |
 | `SSO_CLIENT_ID` | 公司分配给 TaskHub 的客户端标识 |
 | `SSO_CLIENT_SECRET` | 公司分配给 TaskHub 的客户端密钥，用于后端获取当前登录人信息 |
 | `SSO_SCOPE` | 公司协议要求的授权范围，没有则留空 |
@@ -176,6 +178,7 @@ SSO_VERIFY_SSL=false
 ```env
 SSO_BASE_URL=https://sso.company.com
 SSO_LOGIN_URL=https://sso.company.com/oauth/authorize
+SSO_LOGOUT_URL=https://sso.company.com/logout
 SSO_CLIENT_ID=ClientID
 SSO_CLIENT_SECRET=secret
 SSO_USERINFO_PATH=/api/current-user
@@ -260,6 +263,7 @@ config/sso.php
 return [
     'base_url' => env('SSO_BASE_URL'),
     'login_url' => env('SSO_LOGIN_URL'),
+    'logout_url' => env('SSO_LOGOUT_URL'),
     'client_id' => env('SSO_CLIENT_ID'),
     'client_secret' => env('SSO_CLIENT_SECRET'),
     'scope' => env('SSO_SCOPE'),
@@ -1390,7 +1394,7 @@ class SsoController extends Controller
     public function logout(Request $request): RedirectResponse
     {
         // 退出 TaskHub 时清理本系统保存的登录态和角色。
-        // 公司 SSO 是否需要单点登出，等待总部协议确认后再补充。
+        // 这一步必须先做，避免用户从总部 SSO 返回时 TaskHub 仍保留旧 Session。
         $request->session()->forget([
             CurrentUserService::SESSION_KEY,
             CurrentUserService::ROLE_SESSION_KEY,
@@ -1398,6 +1402,14 @@ class SsoController extends Controller
 
         // 退出后刷新 CSRF token，避免旧页面继续复用退出前的 token。
         $request->session()->regenerateToken();
+
+        // 如果公司 SSO 提供统一退出地址，则本地退出完成后继续跳转到总部退出页。
+        // SSO_LOGOUT_URL 是浏览器跳转地址，所以这里使用完整 URL，并用 away() 避免 Laravel 当作站内路径处理。
+        $logoutUrl = config('sso.logout_url');
+
+        if (is_string($logoutUrl) && $logoutUrl !== '') {
+            return redirect()->away($logoutUrl);
+        }
 
         return redirect()->route('home');
     }
@@ -1411,7 +1423,7 @@ class SsoController extends Controller
 | `redirect` | `GET /login` | 拼接公司 SSO 登录地址并跳转 |
 | `callback` | `GET /sso/callback` | 返回 React 回调页 |
 | `store` | `POST /sso/session` | 用 accessToken 获取当前登录人并建立 Session |
-| `logout` | `POST /logout` | 清理 TaskHub 本地登录态 |
+| `logout` | `POST /logout` | 清理 TaskHub 本地登录态；配置 `SSO_LOGOUT_URL` 时继续跳转公司 SSO 退出地址 |
 
 ## 18. 第十三步：注册路由
 
@@ -1509,7 +1521,7 @@ import { router } from '@inertiajs/react';
 
 - `/logout` 是 POST 路由，不应该用普通 `<a href="/logout">`。
 - Inertia 会按 Laravel Web 请求方式提交，并携带 CSRF token。
-- 后端清理 Session 后重定向到首页。
+- 后端清理 Session 后，如果配置了 `SSO_LOGOUT_URL`，继续跳转公司 SSO 退出地址；否则回到首页。
 
 退出链路：
 
@@ -1524,12 +1536,22 @@ SsoController::logout()
 ↓
 刷新 CSRF token
 ↓
-跳转首页
+如果配置 SSO_LOGOUT_URL：跳转公司 SSO 退出地址
+↓
+如果未配置 SSO_LOGOUT_URL：回到 TaskHub 首页
 ```
 
-当前只退出 TaskHub 本地 Session。
+为什么先清理 TaskHub，再跳公司 SSO：
 
-公司 SSO 是否需要统一登出地址，目前还没有确认，所以本章不跳转总部 SSO 登出接口。
+- TaskHub 的登录态保存在 Laravel Session 中，公司 SSO 不会自动清理这部分数据。
+- 如果先跳走再清理，本系统的退出逻辑可能没有机会执行。
+- 所以顺序固定为：先清理 TaskHub 本地 Session，再跳转总部 SSO 退出链接。
+
+`SSO_LOGOUT_URL` 是浏览器跳转地址，应填写完整 URL，例如：
+
+```env
+SSO_LOGOUT_URL=https://sso.company.com/logout
+```
 
 ## 19. 第十四步：确保 Blade 提供 CSRF token
 
@@ -1873,6 +1895,8 @@ test('the sso session endpoint accepts access token without state', function ():
 });
 
 test('logout clears sso session and redirects home', function (): void {
+    config(['sso.logout_url' => null]);
+
     $this->withSession([
         CurrentUserService::SESSION_KEY => [
             'employeeNo' => 'E10001',
@@ -1882,6 +1906,22 @@ test('logout clears sso session and redirects home', function (): void {
     ])
         ->post('/logout')
         ->assertRedirect(route('home'))
+        ->assertSessionMissing(CurrentUserService::SESSION_KEY)
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+});
+
+test('logout redirects to sso logout url when configured', function (): void {
+    config(['sso.logout_url' => 'https://sso.example.test/logout']);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '张三',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+    ])
+        ->post('/logout')
+        ->assertRedirect('https://sso.example.test/logout')
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
         ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
 });
@@ -2054,6 +2094,7 @@ http://127.0.0.1:8000/tasks
 
 ```bash
 php artisan test --filter='logout clears sso session and redirects home'
+php artisan test --filter='logout redirects to sso logout url when configured'
 ```
 
 如果已经完成真实 SSO 登录，可以在任务列表页面点击右上角：
@@ -2064,8 +2105,9 @@ php artisan test --filter='logout clears sso session and redirects home'
 
 预期结果：
 
-- 浏览器跳回首页 `/`。
-- 再访问 `/tasks` 会重新进入 SSO 登录流程。
+- 如果配置了 `SSO_LOGOUT_URL`，浏览器跳转到公司 SSO 退出地址。
+- 如果没有配置 `SSO_LOGOUT_URL`，浏览器跳回 TaskHub 首页 `/`。
+- 再访问 `/tasks` 会重新进入 SSO 登录流程，或被公司 SSO 重新认证。
 - 这说明 TaskHub 本地 Session 已清理。
 
 ## 25. 常见错误与处理
@@ -2160,6 +2202,7 @@ SSO 负责身份认证，TaskHub 自己负责业务角色。
 - `Callback.tsx` 不读取 `window.location.hash`。
 - `Tasks/Index.tsx` 有退出按钮。
 - 退出按钮使用 `router.post('/logout')`。
+- 配置 `SSO_LOGOUT_URL` 后，退出会先清理 TaskHub Session，再跳转公司 SSO 退出地址。
 - 代码没有强制要求 `state`。
 - `taskhub_user_role` 表存在。
 - `php artisan test` 通过。
