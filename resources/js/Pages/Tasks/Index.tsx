@@ -1,3 +1,5 @@
+import { router } from '@inertiajs/react';
+
 type TaskListItem = {
     id: string;
     title: string;
@@ -70,6 +72,13 @@ export default function TaskIndex({ tasks }: TaskIndexProps) {
                         <span className="rounded-md bg-[#f5f3ff] px-3 py-1.5 font-medium text-[#5e6ad2]">
                             任务列表
                         </span>
+                        <button
+                            className="rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#fafafa]"
+                            onClick={() => router.post('/logout')}
+                            type="button"
+                        >
+                            退出
+                        </button>
                     </nav>
                 </div>
             </header>

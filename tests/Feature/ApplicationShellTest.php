@@ -64,6 +64,20 @@ test('the sso session endpoint accepts access token without state', function ():
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
 });
 
+test('logout clears sso session and redirects home', function (): void {
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '张三',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+    ])
+        ->post('/logout')
+        ->assertRedirect(route('home'))
+        ->assertSessionMissing(CurrentUserService::SESSION_KEY)
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+});
+
 test('sso user info path must not be a full url', function (): void {
     config([
         'sso.base_url' => 'https://sso.example.test',

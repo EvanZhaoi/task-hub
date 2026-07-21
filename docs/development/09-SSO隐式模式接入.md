@@ -1471,6 +1471,66 @@ POST      logout
 GET|HEAD  tasks
 ```
 
+### 18.1 增加前端退出入口
+
+后端已经有：
+
+```php
+Route::post('/logout', [SsoController::class, 'logout'])->name('sso.logout');
+```
+
+但用户不能直接在浏览器地址栏访问 `POST /logout`，所以前端页面需要提供一个按钮。
+
+文件：
+
+```text
+resources/js/Pages/Tasks/Index.tsx
+```
+
+先引入 Inertia 的 `router`：
+
+```tsx
+import { router } from '@inertiajs/react';
+```
+
+然后在顶部导航中增加退出按钮：
+
+```tsx
+<button
+    className="rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#fafafa]"
+    onClick={() => router.post('/logout')}
+    type="button"
+>
+    退出
+</button>
+```
+
+为什么用 `router.post('/logout')`：
+
+- `/logout` 是 POST 路由，不应该用普通 `<a href="/logout">`。
+- Inertia 会按 Laravel Web 请求方式提交，并携带 CSRF token。
+- 后端清理 Session 后重定向到首页。
+
+退出链路：
+
+```text
+点击“退出”
+↓
+Inertia POST /logout
+↓
+SsoController::logout()
+↓
+清理 sso_user 和 taskhub_roles
+↓
+刷新 CSRF token
+↓
+跳转首页
+```
+
+当前只退出 TaskHub 本地 Session。
+
+公司 SSO 是否需要统一登出地址，目前还没有确认，所以本章不跳转总部 SSO 登出接口。
+
 ## 19. 第十四步：确保 Blade 提供 CSRF token
 
 文件：
@@ -1812,9 +1872,25 @@ test('the sso session endpoint accepts access token without state', function ():
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
 });
 
+test('logout clears sso session and redirects home', function (): void {
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '张三',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+    ])
+        ->post('/logout')
+        ->assertRedirect(route('home'))
+        ->assertSessionMissing(CurrentUserService::SESSION_KEY)
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+});
+
 test('sso user info path must not be a full url', function (): void {
     config([
         'sso.base_url' => 'https://sso.example.test',
+        'sso.client_id' => 'ClientID',
+        'sso.client_secret' => 'secret',
         'sso.userinfo_path' => 'https://sso.example.test/api/current-user',
     ]);
 
@@ -1974,6 +2050,24 @@ http://127.0.0.1:8000/tasks
 
 如果 `SSO_LOGIN_URL` 或 `SSO_CLIENT_ID` 未配置，会看到配置错误。这是正常的，说明业务路由已经被 SSO Middleware 保护。
 
+退出功能验证：
+
+```bash
+php artisan test --filter='logout clears sso session and redirects home'
+```
+
+如果已经完成真实 SSO 登录，可以在任务列表页面点击右上角：
+
+```text
+退出
+```
+
+预期结果：
+
+- 浏览器跳回首页 `/`。
+- 再访问 `/tasks` 会重新进入 SSO 登录流程。
+- 这说明 TaskHub 本地 Session 已清理。
+
 ## 25. 常见错误与处理
 
 | 错误 | 常见原因 | 处理 |
@@ -2064,6 +2158,8 @@ SSO 负责身份认证，TaskHub 自己负责业务角色。
 - `app.blade.php` 有 CSRF meta。
 - `Callback.tsx` 读取 `window.location.search`。
 - `Callback.tsx` 不读取 `window.location.hash`。
+- `Tasks/Index.tsx` 有退出按钮。
+- 退出按钮使用 `router.post('/logout')`。
 - 代码没有强制要求 `state`。
 - `taskhub_user_role` 表存在。
 - `php artisan test` 通过。
