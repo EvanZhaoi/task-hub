@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { usePage } from '@inertiajs/react';
 
 import type { SharedPageProps } from '../types/page';
+import { csrfToken } from '../utils/csrf';
 
 type AppLayoutProps = {
     activeNav: 'tasks';
@@ -13,11 +14,6 @@ type AppLayoutProps = {
 const navItems = [
     { key: 'tasks', label: '任务大厅', href: '/tasks' },
 ] as const;
-
-function csrfToken(): string {
-    // 原生 POST 退出表单需要手动提交 Laravel 写入 Blade meta 的 CSRF token。
-    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
-}
 
 export default function AppLayout({ activeNav, children, subtitle, title }: AppLayoutProps) {
     const { auth } = usePage<SharedPageProps>().props;

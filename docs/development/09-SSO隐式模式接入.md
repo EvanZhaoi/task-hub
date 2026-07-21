@@ -1516,14 +1516,10 @@ router.post('/logout')
 resources/js/Pages/Tasks/Index.tsx
 ```
 
-先增加读取 CSRF token 的函数：
+先从通用工具导入 CSRF token 读取函数。具体工具文件在本章后面的 SSO 回调页步骤会创建；如果你先做退出按钮，也可以提前创建 `resources/js/utils/csrf.ts`。
 
 ```tsx
-function csrfToken(): string {
-    // Laravel 的 CSRF token 由 resources/views/app.blade.php 写入 meta。
-    // 原生 POST Form 不能像 Inertia 一样自动附带 token，所以这里手动读取。
-    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
-}
+import { csrfToken } from '../../utils/csrf';
 ```
 
 然后在顶部导航中增加退出表单：
@@ -1638,6 +1634,54 @@ resources/views/app.blade.php
 
 ```bash
 mkdir -p resources/js/Pages/Sso
+mkdir -p resources/js/utils
+```
+
+创建文件：
+
+```text
+resources/js/utils/csrf.ts
+```
+
+完整内容：
+
+```ts
+export function csrfToken(): string {
+    // Laravel web 路由的 POST 请求需要读取 Blade meta 中的 CSRF token。
+    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+}
+```
+
+创建文件：
+
+```text
+resources/js/utils/url.ts
+```
+
+完整内容：
+
+```ts
+type QueryValue = number | string | null | undefined;
+
+export function currentSearchParams(): URLSearchParams {
+    return new URLSearchParams(window.location.search);
+}
+
+export function urlWithQuery(path: string, params: Record<string, QueryValue>): string {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') {
+            return;
+        }
+
+        query.set(key, String(value));
+    });
+
+    const queryString = query.toString();
+
+    return queryString === '' ? path : `${path}?${queryString}`;
+}
 ```
 
 创建文件：
@@ -1651,19 +1695,16 @@ resources/js/Pages/Sso/Callback.tsx
 ```tsx
 import { useEffect, useState } from 'react';
 
+import { csrfToken } from '../../utils/csrf';
+import { currentSearchParams } from '../../utils/url';
+
 type CallbackState = 'processing' | 'failed';
 
 function readAuthParams(): URLSearchParams {
     // 公司 SSO 已确认使用 query string 回调，例如：
     // /sso/callback?access_token=xxx
     // 因此这里读取 window.location.search，而不是 window.location.hash。
-    return new URLSearchParams(window.location.search);
-}
-
-function csrfToken(): string {
-    // /sso/session 是 Laravel web 路由，POST 请求需要 CSRF token。
-    // token 来自 resources/views/app.blade.php 中的 csrf meta。
-    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+    return currentSearchParams();
 }
 
 export default function SsoCallback() {

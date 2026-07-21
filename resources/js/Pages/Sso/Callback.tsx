@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react';
 
+import { csrfToken } from '../../utils/csrf';
+import { currentSearchParams } from '../../utils/url';
+
 type CallbackState = 'processing' | 'failed';
 
 function readAuthParams(): URLSearchParams {
     // 公司 SSO 已确认使用 query string 回调，例如：
     // /sso/callback?access_token=xxx
     // 因此这里读取 window.location.search，而不是 window.location.hash。
-    return new URLSearchParams(window.location.search);
-}
-
-function csrfToken(): string {
-    // /sso/session 是 Laravel web 路由，POST 请求需要 CSRF token。
-    // token 来自 resources/views/app.blade.php 中的 csrf meta。
-    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+    return currentSearchParams();
 }
 
 export default function SsoCallback() {

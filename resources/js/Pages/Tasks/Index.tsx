@@ -1,5 +1,6 @@
 import AppLayout from '../../Layouts/AppLayout';
 import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus } from '../../types/task';
+import { urlWithQuery } from '../../utils/url';
 
 const statusLabels: Record<TaskStatus, string> = {
     DRAFT: '草稿',
@@ -34,24 +35,13 @@ const complexityClassNames: Record<TaskComplexity, string> = {
 };
 
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
-    const params = new URLSearchParams();
     const merged = { ...filters, ...nextFilters };
 
-    if (merged.keyword !== '') {
-        params.set('keyword', merged.keyword);
-    }
-
-    if (merged.status !== 'ALL') {
-        params.set('status', merged.status);
-    }
-
-    if (merged.complexity !== 'ALL') {
-        params.set('complexity', merged.complexity);
-    }
-
-    const query = params.toString();
-
-    return query === '' ? '/tasks' : `/tasks?${query}`;
+    return urlWithQuery('/tasks', {
+        keyword: merged.keyword,
+        status: merged.status === 'ALL' ? null : merged.status,
+        complexity: merged.complexity === 'ALL' ? null : merged.complexity,
+    });
 }
 
 export default function TaskIndex({ complexityOptions, filters, statusOptions, tasks }: TaskIndexProps) {
