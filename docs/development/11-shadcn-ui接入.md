@@ -24,6 +24,7 @@
 - 项目可以使用 `@/components/ui/button` 等路径导入基础组件。
 - 任务大厅页面继续保持原型风格，但重复样式明显减少。
 - SSO 回调页复用 Card 和 Button。
+- shadcn CLI 生成的默认组件样式会被调整为 TaskHub 当前原型风格，不直接照搬默认主题。
 - `npm run typecheck`、`npm run build` 和 `php artisan test` 都应通过。
 
 ## 涉及文件
@@ -259,7 +260,7 @@ className={isActive ? 'bg-[#f5f3ff] text-[#5e6ad2]' : 'text-[#6e6e80]'}
 npx shadcn@latest add button
 ```
 
-生成后再根据 TaskHub 原型图做小范围样式调整，例如主色、边框色、字号和圆角。
+生成后必须根据 TaskHub 原型图做小范围样式调整，例如主色、边框色、字号和圆角。不要直接保持 shadcn 默认视觉，否则任务大厅会和现有原型风格不一致。
 
 当前仓库最终使用的 Button 结构如下。它和 shadcn 生成代码的思路一致：用 `cva` 管理 variant，用 `Slot` 支持 `asChild`。
 
@@ -322,7 +323,47 @@ export { buttonVariants };
 
 这里的重点是：业务页面不再关心按钮的边框、圆角、hover、字号，只关心“这是主按钮还是次按钮”。
 
-### 6. 使用命令生成 Badge、Card、Input
+### 6. 生成后同步 TaskHub 视觉风格
+
+CLI 生成组件只是第一步。shadcn 的默认样式是通用后台风格，不等于 TaskHub 最终设计稿。TaskHub 当前已经有原型图和任务大厅视觉，因此生成组件后要把“基础组件默认样式”调整为项目风格。
+
+需要同步的样式：
+
+- 主色：继续使用当前任务大厅主色 `#5e6ad2`，hover 使用 `#4f5bd5`。
+- 页面背景：继续使用浅灰工作台背景 `#f7f7f8`。
+- 卡片：保持白底、浅边框 `#e5e7eb`、8px 左右圆角，不做夸张阴影。
+- 表单控件：高度统一 `h-10`，边框使用 `#d1d5db`，focus 使用低透明品牌色 ring。
+- 状态色：招标中、待选标、进行中、完成、流标、取消继续使用当前 Badge 映射，不直接使用 shadcn 默认 destructive/secondary 文案。
+- 字体层级：任务大厅是业务工作台，不使用过大的营销式标题。
+
+不建议改的内容：
+
+- 不为了“看起来像 shadcn 官网”改掉原型图风格。
+- 不在每个页面重复写按钮和卡片 className。
+- 不把业务状态颜色散落在多个页面里；先集中在 Badge variant 或模块展示配置中。
+
+当前仓库已经做过的样式同步示例：
+
+```tsx
+const buttonVariants = cva(
+    // 基础按钮结构仍沿用 shadcn/cva 思路。
+    'inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50',
+    {
+        variants: {
+            variant: {
+                // 主按钮颜色改成 TaskHub 原型主色，而不是照搬 shadcn 默认 primary。
+                primary: 'bg-[#5e6ad2] text-white hover:bg-[#4f5bd5]',
+                // outline 用于退出、重置、分页等弱动作，保持业务系统克制风格。
+                outline: 'border border-[#d1d5db] bg-white text-[#4b5563] hover:border-[#9ca3af] hover:bg-[#f9fafb]',
+            },
+        },
+    },
+);
+```
+
+后续新增组件也按同样方式处理：先用 CLI 生成，再调整到 TaskHub 原型风格。
+
+### 7. 使用命令生成 Badge、Card、Input
 
 继续使用 CLI：
 
@@ -347,7 +388,7 @@ npx shadcn@latest add badge card input
 
 TaskHub 当前只是普通筛选表单，原生 `select` 可访问性好、表单提交简单、代码少。后续如果需要搜索、多选或异步加载，再引入 Radix Select。
 
-### 7. 重构业务页面
+### 8. 重构业务页面
 
 重构前，任务大厅页面会直接写大量样式：
 
@@ -444,6 +485,7 @@ http://127.0.0.1:8000/tasks
 - 新增路径别名。
 - 使用 `npx shadcn@latest init` 生成基础配置和 `cn()` 工具。
 - 使用 `npx shadcn@latest add ...` 生成基础 UI 组件。
+- 将 CLI 生成的默认组件样式调整为 TaskHub 原型风格。
 - 用组件重构已有任务大厅和 SSO 回调页面。
 
 以后写业务页面时，优先使用 `resources/js/components/ui` 中已有组件。只有确实没有合适组件时，再写页面级 Tailwind。
