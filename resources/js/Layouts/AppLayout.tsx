@@ -1,21 +1,10 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { usePage } from '@inertiajs/react';
 
-type CurrentUser = {
-    employeeNo?: string;
-    displayName?: string;
-    departmentName?: string;
-};
-
-type SharedProps = {
-    auth?: {
-        user?: CurrentUser | null;
-        roles?: string[];
-    };
-};
+import type { SharedPageProps } from '../types/page';
 
 type AppLayoutProps = {
-    activeNav: 'tasks' | 'create' | 'mine' | 'boss';
+    activeNav: 'tasks';
     children: ReactNode;
     subtitle?: string;
     title: string;
@@ -23,9 +12,6 @@ type AppLayoutProps = {
 
 const navItems = [
     { key: 'tasks', label: '任务大厅', href: '/tasks' },
-    { key: 'create', label: '发布任务', href: '/tasks/create' },
-    { key: 'mine', label: '我的', href: '/me' },
-    { key: 'boss', label: '老板视图', href: '/boss' },
 ] as const;
 
 function csrfToken(): string {
@@ -34,7 +20,7 @@ function csrfToken(): string {
 }
 
 export default function AppLayout({ activeNav, children, subtitle, title }: AppLayoutProps) {
-    const { auth } = usePage<SharedProps>().props;
+    const { auth } = usePage<SharedPageProps>().props;
     const user = auth?.user;
     const roles = auth?.roles ?? [];
     const userLabel = user?.displayName ?? user?.employeeNo ?? '未识别用户';
