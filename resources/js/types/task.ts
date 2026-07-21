@@ -1,5 +1,8 @@
+// 任务页面展示状态。
+// PENDING_SELECTION 是前端派生状态，不是数据库 task.status 枚举值。
 export type TaskStatus = 'DRAFT' | 'OPEN' | 'PENDING_SELECTION' | 'ASSIGNED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
+// 数据库真实保存的 task.status，排除前端派生状态。
 export type TaskDatabaseStatus = Exclude<TaskStatus, 'PENDING_SELECTION'>;
 
 export type TaskComplexity = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -29,6 +32,7 @@ export type TaskListItem = {
     activeBidCount: number;
 };
 
+// Laravel paginate() 转换后传给前端的分页元数据。
 export type PaginationMeta = {
     currentPage: number;
     from: number | null;

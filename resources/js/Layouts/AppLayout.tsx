@@ -12,10 +12,12 @@ type AppLayoutProps = {
 };
 
 const navItems = [
+    // 这里只放已经落地的一级入口；发布/修改任务后续在任务大厅中用模态框承载。
     { key: 'tasks', label: '任务大厅', href: '/tasks' },
 ] as const;
 
 export default function AppLayout({ activeNav, children, subtitle, title }: AppLayoutProps) {
+    // auth 来自 Inertia 全局共享 props，后端来源是 Laravel Session。
     const { auth } = usePage<SharedPageProps>().props;
     const user = auth?.user;
     const roles = auth?.roles ?? [];
@@ -66,6 +68,7 @@ export default function AppLayout({ activeNav, children, subtitle, title }: AppL
                         </div>
 
                         <form action="/logout" method="POST">
+                            {/* 原生表单退出会触发浏览器顶层导航，避免 Inertia Ajax 跟随外部 SSO 302 引发 CORS。 */}
                             <input name="_token" type="hidden" value={csrfToken()} />
 
                             <button

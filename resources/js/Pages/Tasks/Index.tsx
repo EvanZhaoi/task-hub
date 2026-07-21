@@ -18,6 +18,8 @@ const complexityLabels: Record<TaskComplexity, string> = {
     HIGH: '复杂',
 };
 
+// 状态和复杂度的颜色只服务当前列表页展示，暂不抽到共享配置。
+// 等详情页、弹窗也复用同一套视觉映射时，再提升为 task display config。
 const statusClassNames: Record<TaskStatus, string> = {
     DRAFT: 'bg-gray-100 text-gray-600',
     OPEN: 'bg-blue-100 text-blue-800',
@@ -35,6 +37,7 @@ const complexityClassNames: Record<TaskComplexity, string> = {
 };
 
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
+    // 快捷筛选要保留其它筛选条件，只替换用户当前点击的那一项。
     const merged = { ...filters, ...nextFilters };
 
     return urlWithQuery('/tasks', {
