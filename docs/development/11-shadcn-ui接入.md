@@ -51,14 +51,15 @@
 命令执行目录：项目根目录。
 
 ```bash
-# class-variance-authority：定义组件 variant，例如 primary / outline。
-# clsx：按条件组合 className。
-# tailwind-merge：合并冲突的 Tailwind class。
-# @radix-ui/react-slot：支持 Button asChild，让 a 标签也能套用按钮样式。
-# lucide-react：后续按钮图标优先使用的图标库。
-npm install class-variance-authority clsx tailwind-merge @radix-ui/react-slot lucide-react
+# 新版 shadcn 推荐先用 init 初始化已有项目。
+# 这个命令会根据提示生成 components.json、安装基础依赖、创建 cn() 工具。
+npx shadcn@latest init
 
-# Vite 配置中使用 node:path，需要 Node 类型定义。
+# 再用 add 命令生成需要的基础组件。
+# 能用命令生成的组件，不手写；生成后只做 TaskHub 风格所需的小范围调整。
+npx shadcn@latest add button badge card input
+
+# Vite 配置中使用 node:path，需要 Node 类型定义；如果项目已安装，可以跳过。
 npm install -D @types/node
 ```
 
@@ -155,9 +156,27 @@ export default defineConfig({
 
 只配其中一个是不够的。
 
-### 3. 新增 shadcn 配置文件
+### 3. 生成 shadcn 配置文件
 
-新增 `components.json`。
+新版 shadcn 不需要优先手写 `components.json`。执行：
+
+```bash
+# 在已有项目中初始化 shadcn/ui。
+# 这一步会生成 components.json，并安装 class-variance-authority、clsx、tailwind-merge、lucide-react 等依赖。
+npx shadcn@latest init
+```
+
+命令执行时按 TaskHub 当前结构选择：
+
+- TypeScript：是。
+- style：建议选择 `new-york`。
+- base color：建议选择 `neutral`。
+- CSS 文件：`resources/css/app.css`。
+- components alias：`@/components`。
+- utils alias：`@/lib/utils`。
+- React Server Components：否。TaskHub 是 Laravel + Inertia，不使用 RSC。
+
+执行后会生成或更新 `components.json`。当前仓库最终配置如下：
 
 ```json
 {
@@ -183,7 +202,14 @@ export default defineConfig({
 }
 ```
 
-这个文件的作用类似“前端组件规范说明”。以后如果使用 shadcn CLI 添加组件，它会根据这里的目录和别名生成代码。
+这个文件的作用类似“前端组件规范说明”。以后使用 `npx shadcn@latest add xxx` 添加组件时，CLI 会根据这里的目录和别名生成代码。
+
+如果你使用的是新版 shadcn，并且 `npx shadcn@latest init` 已经生成了正确的 `components.json`，就不需要手动创建它。只有在以下情况才手动调整：
+
+- CLI 没识别 Laravel 项目的 `resources/css/app.css`。
+- CLI 生成的 alias 不是 `@/components`、`@/lib/utils`。
+- `tailwind.css` 指向了不存在的 CSS 文件。
+- Tailwind v4 项目中 `tailwind.config` 不应指向旧的 `tailwind.config.js`。
 
 字段解释：
 
@@ -195,9 +221,11 @@ export default defineConfig({
 - `aliases`：告诉 shadcn 组件、工具函数、hook 应该生成到哪里。
 - `iconLibrary`：后续需要图标时优先使用 `lucide`。
 
-### 4. 新增 `cn()` 工具
+### 4. 生成 `cn()` 工具
 
-新增 `resources/js/lib/utils.ts`。
+新版 shadcn 的 `init` 命令会自动创建 `resources/js/lib/utils.ts`，通常不需要手写。
+
+当前仓库中的最终内容如下，主要用于理解它的作用：
 
 ```ts
 import { clsx, type ClassValue } from 'clsx';
@@ -221,9 +249,19 @@ className={isActive ? 'bg-[#f5f3ff] text-[#5e6ad2]' : 'text-[#6e6e80]'}
 
 这种代码本身没错，但组件越来越多后会难以维护。`cn()` 可以把“基础样式 + 条件样式 + 外部覆盖样式”统一合并。
 
-### 5. 新增 Button
+### 5. 使用命令生成 Button
 
-新增 `resources/js/components/ui/button.tsx`。
+不要优先手写 `resources/js/components/ui/button.tsx`。使用命令生成：
+
+```bash
+# 生成 Button 组件源码到 resources/js/components/ui/button.tsx。
+# CLI 会根据 components.json 中的 alias 自动处理 import 路径。
+npx shadcn@latest add button
+```
+
+生成后再根据 TaskHub 原型图做小范围样式调整，例如主色、边框色、字号和圆角。
+
+当前仓库最终使用的 Button 结构如下。它和 shadcn 生成代码的思路一致：用 `cva` 管理 variant，用 `Slot` 支持 `asChild`。
 
 ```tsx
 import { Slot } from '@radix-ui/react-slot';
@@ -284,9 +322,17 @@ export { buttonVariants };
 
 这里的重点是：业务页面不再关心按钮的边框、圆角、hover、字号，只关心“这是主按钮还是次按钮”。
 
-### 6. 新增 Badge、Card、Input、NativeSelect
+### 6. 使用命令生成 Badge、Card、Input
 
-这些组件都放在 `resources/js/components/ui/` 下。
+继续使用 CLI：
+
+```bash
+# 一次生成多个组件。
+# 能用 shadcn 命令生成的组件，后续都按这个方式处理。
+npx shadcn@latest add badge card input
+```
+
+生成的组件都放在 `resources/js/components/ui/` 下。
 
 它们的作用：
 
@@ -294,6 +340,8 @@ export { buttonVariants };
 - `Card`：统一卡片边框、背景和圆角。
 - `Input`：统一输入框高度、边框和焦点样式。
 - `NativeSelect`：先封装浏览器原生 `select`，避免当前阶段引入过重交互。
+
+`NativeSelect` 不是 shadcn 官方组件，而是 TaskHub 当前阶段的轻量封装。原因是任务大厅筛选只需要普通 HTML 表单提交，原生 `select` 更简单，也更适合 GET 表单。
 
 为什么暂时不用复杂 Select？
 
@@ -382,6 +430,8 @@ http://127.0.0.1:8000/tasks
 | `Cannot find module '@/components/ui/button'` | `tsconfig.json` 或 `vite.config.ts` 没配置别名 | 同时检查两个文件 |
 | `Option 'baseUrl' has been removed` | TypeScript 7 不再使用 `baseUrl` | 删除 `baseUrl`，在 `paths` 中写 `./resources/js/*` |
 | `Cannot find module 'node:path'` | 缺少 Node 类型定义 | 执行 `npm install -D @types/node` |
+| `components.json` 已存在，CLI 提示覆盖 | 项目已经初始化过 shadcn | 不要盲目覆盖，先对比当前 alias 和 css 配置 |
+| CLI 生成的组件样式和原型图不一致 | shadcn 默认样式不是 TaskHub 最终视觉 | 保留组件结构，只按原型调整颜色、间距、圆角 |
 | 按钮样式没有变化 | 页面仍在用原始 `button` | 检查是否导入并使用 `Button` |
 | Tailwind 样式不生效 | CSS 入口断开 | 确认 `resources/js/app.tsx` 中仍有 `import '../css/app.css'` |
 | 链接按钮不能点击 | `Button asChild` 用法错误 | 使用 `<Button asChild><a href="...">...</a></Button>` |
@@ -392,11 +442,18 @@ http://127.0.0.1:8000/tasks
 
 - 引入 shadcn/ui 组件组织方式。
 - 新增路径别名。
-- 抽出 `cn()` 工具。
-- 抽出基础 UI 组件。
+- 使用 `npx shadcn@latest init` 生成基础配置和 `cn()` 工具。
+- 使用 `npx shadcn@latest add ...` 生成基础 UI 组件。
 - 用组件重构已有任务大厅和 SSO 回调页面。
 
 以后写业务页面时，优先使用 `resources/js/components/ui` 中已有组件。只有确实没有合适组件时，再写页面级 Tailwind。
+
+后续开发约定：
+
+- Laravel、React、Inertia、shadcn 能用官方命令生成的文件，优先使用命令生成。
+- 命令生成后再按 TaskHub 数据库、原型图和业务规则调整。
+- 不为“学习展示”手写大量无意义样板代码。
+- 文档要写清楚命令、生成了哪些文件、哪些地方是生成后手动改的。
 
 ## 下一章预告
 
