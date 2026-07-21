@@ -12,6 +12,7 @@ TaskHub 是公司内部任务撮合平台，目标是用市场化方式让任务
 - TypeScript
 - Inertia.js
 - Vite
+- Tailwind CSS 4 + shadcn/ui 风格基础组件
 - MySQL 8
 - Pest
 
@@ -72,6 +73,7 @@ php artisan db:show
 - [00-开发环境准备](./docs/development/00-开发环境准备.md)
 - [01-从零创建项目](./docs/development/01-从零创建项目.md)
 - [02-拉取并运行现有项目](./docs/development/02-拉取并运行现有项目.md)
+- [11-shadcn-ui接入](./docs/development/11-shadcn-ui接入.md)
 
 ## SSO 当前状态
 
@@ -98,6 +100,7 @@ SSO 真实地址需要按公司协议填写。`SSO_LOGIN_URL` 使用浏览器可
 - 8 个 Eloquent Model 映射
 - SSO 接入骨架
 - Pest 基础测试
+- shadcn/ui 风格基础组件
 - 面向 Java 开发者的开发文档
 
 ## 尚未开发

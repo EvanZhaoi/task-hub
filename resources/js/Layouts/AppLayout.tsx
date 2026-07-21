@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { usePage } from '@inertiajs/react';
 
-import type { SharedPageProps } from '../types/page';
-import { csrfToken } from '../utils/csrf';
+import { Button } from '@/components/ui/button';
+import { csrfToken } from '@/utils/csrf';
+import type { SharedPageProps } from '@/types/page';
 
 type AppLayoutProps = {
     activeNav: 'tasks';
@@ -71,12 +72,9 @@ export default function AppLayout({ activeNav, children, subtitle, title }: AppL
                             {/* 原生表单退出会触发浏览器顶层导航，避免 Inertia Ajax 跟随外部 SSO 302 引发 CORS。 */}
                             <input name="_token" type="hidden" value={csrfToken()} />
 
-                            <button
-                                className="rounded-md border border-[#d1d5db] bg-white px-3 py-1.5 text-sm text-[#4b5563] hover:border-[#9ca3af] hover:bg-[#f9fafb]"
-                                type="submit"
-                            >
+                            <Button size="sm" type="submit" variant="outline">
                                 退出
-                            </button>
+                            </Button>
                         </form>
                     </div>
                 </div>

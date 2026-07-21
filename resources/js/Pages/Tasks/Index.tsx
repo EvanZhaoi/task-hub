@@ -1,6 +1,13 @@
-import AppLayout from '../../Layouts/AppLayout';
-import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus } from '../../types/task';
-import { urlWithQuery } from '../../utils/url';
+import AppLayout from '@/Layouts/AppLayout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { NativeSelect } from '@/components/ui/native-select';
+import { cn } from '@/lib/utils';
+import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus } from '@/types/task';
+import { urlWithQuery } from '@/utils/url';
+import type { ComponentProps } from 'react';
 
 const statusLabels: Record<TaskStatus, string> = {
     DRAFT: '草稿',
@@ -18,22 +25,20 @@ const complexityLabels: Record<TaskComplexity, string> = {
     HIGH: '复杂',
 };
 
-// 状态和复杂度的颜色只服务当前列表页展示，暂不抽到共享配置。
-// 等详情页、弹窗也复用同一套视觉映射时，再提升为 task display config。
-const statusClassNames: Record<TaskStatus, string> = {
-    DRAFT: 'bg-gray-100 text-gray-600',
-    OPEN: 'bg-blue-100 text-blue-800',
-    PENDING_SELECTION: 'bg-amber-100 text-amber-800',
-    ASSIGNED: 'bg-orange-100 text-orange-800',
-    COMPLETED: 'bg-emerald-100 text-emerald-800',
-    FAILED: 'bg-gray-200 text-gray-700',
-    CANCELLED: 'bg-gray-50 text-gray-400 line-through',
+const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['variant']> = {
+    DRAFT: 'default',
+    OPEN: 'open',
+    PENDING_SELECTION: 'pending',
+    ASSIGNED: 'assigned',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+    CANCELLED: 'cancelled',
 };
 
-const complexityClassNames: Record<TaskComplexity, string> = {
-    LOW: 'bg-emerald-100 text-emerald-800',
-    MEDIUM: 'bg-gray-100 text-gray-700',
-    HIGH: 'bg-red-100 text-red-800',
+const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badge>['variant']> = {
+    LOW: 'completed',
+    MEDIUM: 'default',
+    HIGH: 'danger',
 };
 
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
@@ -54,79 +59,66 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
             subtitle="所有公开任务 · 可投标 · 支持状态、复杂度和关键词筛选"
             title="任务大厅"
         >
-            <div className="mb-4 rounded-lg border border-[#e5e7eb] bg-white p-4">
-                <form action="/tasks" className="flex flex-col gap-3 lg:flex-row lg:items-center" method="GET">
-                    <div className="relative min-w-0 flex-1">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af]">
-                            搜索
-                        </span>
-                        <input
-                            className="h-10 w-full rounded-md border border-[#d1d5db] bg-white pl-12 pr-3 text-sm outline-none focus:border-[#5e6ad2] focus:ring-2 focus:ring-[#5e6ad2]/15"
-                            defaultValue={filters.keyword}
-                            name="keyword"
-                            placeholder="输入标题或描述关键词"
-                            type="search"
-                        />
+            <Card className="mb-4">
+                <CardContent>
+                    <form action="/tasks" className="flex flex-col gap-3 lg:flex-row lg:items-center" method="GET">
+                        <div className="relative min-w-0 flex-1">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af]">
+                                搜索
+                            </span>
+                            <Input
+                                className="pl-12"
+                                defaultValue={filters.keyword}
+                                name="keyword"
+                                placeholder="输入标题或描述关键词"
+                                type="search"
+                            />
+                        </div>
+
+                        <NativeSelect defaultValue={filters.status} name="status">
+                            {statusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    状态：{option.label}
+                                </option>
+                            ))}
+                        </NativeSelect>
+
+                        <NativeSelect defaultValue={filters.complexity} name="complexity">
+                            {complexityOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    复杂度：{option.label}
+                                </option>
+                            ))}
+                        </NativeSelect>
+
+                        <Button type="submit">查询</Button>
+                        <Button asChild variant="outline">
+                            <a href="/tasks">重置</a>
+                        </Button>
+                    </form>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {statusOptions.map((option) => {
+                            const isActive = filters.status === option.value;
+
+                            return (
+                                <a
+                                    className={cn(
+                                        'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                                        isActive
+                                            ? 'bg-[#f5f3ff] text-[#5e6ad2]'
+                                            : 'border border-[#e5e7eb] text-[#6e6e80] hover:border-[#c7d2fe] hover:text-[#4f46e5]',
+                                    )}
+                                    href={filterUrl({ status: option.value }, filters)}
+                                    key={option.value}
+                                >
+                                    {option.label}
+                                </a>
+                            );
+                        })}
                     </div>
-
-                    <select
-                        className="h-10 rounded-md border border-[#d1d5db] bg-white px-3 text-sm text-[#374151] outline-none focus:border-[#5e6ad2] focus:ring-2 focus:ring-[#5e6ad2]/15"
-                        defaultValue={filters.status}
-                        name="status"
-                    >
-                        {statusOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                状态：{option.label}
-                            </option>
-                        ))}
-                    </select>
-
-                    <select
-                        className="h-10 rounded-md border border-[#d1d5db] bg-white px-3 text-sm text-[#374151] outline-none focus:border-[#5e6ad2] focus:ring-2 focus:ring-[#5e6ad2]/15"
-                        defaultValue={filters.complexity}
-                        name="complexity"
-                    >
-                        {complexityOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                复杂度：{option.label}
-                            </option>
-                        ))}
-                    </select>
-
-                    <button
-                        className="h-10 rounded-md bg-[#5e6ad2] px-4 text-sm font-medium text-white hover:bg-[#4f5bd5]"
-                        type="submit"
-                    >
-                        查询
-                    </button>
-                    <a
-                        className="flex h-10 items-center justify-center rounded-md border border-[#d1d5db] px-4 text-sm text-[#4b5563] hover:bg-[#f9fafb]"
-                        href="/tasks"
-                    >
-                        重置
-                    </a>
-                </form>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                    {statusOptions.map((option) => {
-                        const isActive = filters.status === option.value;
-
-                        return (
-                            <a
-                                className={
-                                    isActive
-                                        ? 'rounded-full bg-[#f5f3ff] px-3 py-1 text-xs font-medium text-[#5e6ad2]'
-                                        : 'rounded-full border border-[#e5e7eb] px-3 py-1 text-xs text-[#6e6e80] hover:border-[#c7d2fe] hover:text-[#4f46e5]'
-                                }
-                                href={filterUrl({ status: option.value }, filters)}
-                                key={option.value}
-                            >
-                                {option.label}
-                            </a>
-                        );
-                    })}
-                </div>
-            </div>
+                </CardContent>
+            </Card>
 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm text-[#6e6e80]">
                 <span>
@@ -139,30 +131,31 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
 
             <div className="space-y-3">
                 {tasks.data.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-[#d1d5db] bg-white p-8 text-center">
-                        <h2 className="text-base font-semibold">暂无符合条件的任务</h2>
-                        <p className="mt-2 text-sm text-[#6e6e80]">可以调整关键词、状态或复杂度筛选条件后再试。</p>
-                    </div>
+                    <Card className="border-dashed border-[#d1d5db]">
+                        <CardContent className="p-8 text-center">
+                            <h2 className="text-base font-semibold">暂无符合条件的任务</h2>
+                            <p className="mt-2 text-sm text-[#6e6e80]">
+                                可以调整关键词、状态或复杂度筛选条件后再试。
+                            </p>
+                        </CardContent>
+                    </Card>
                 ) : (
                     tasks.data.map((task) => (
-                        <article
-                            className="rounded-lg border border-[#e5e7eb] bg-white p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
+                        <Card
+                            as="article"
+                            className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
                             key={task.id}
                         >
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <h2 className="m-0 text-base font-semibold">{task.title}</h2>
-                                        <span
-                                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClassNames[task.displayStatus]}`}
-                                        >
+                                        <Badge variant={statusBadgeVariants[task.displayStatus]}>
                                             {statusLabels[task.displayStatus]}
-                                        </span>
-                                        <span
-                                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${complexityClassNames[task.complexity]}`}
-                                        >
+                                        </Badge>
+                                        <Badge variant={complexityBadgeVariants[task.complexity]}>
                                             {complexityLabels[task.complexity]}
-                                        </span>
+                                        </Badge>
                                     </div>
                                     <p className="mt-2 max-w-5xl text-sm leading-6 text-[#6e6e80]">
                                         {task.description || '暂无描述'}
@@ -200,36 +193,30 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                                     {task.paymentAccountName ? ` · ${task.paymentAccountName}` : ''}
                                 </div>
                             </div>
-                        </article>
+                        </Card>
                     ))
                 )}
             </div>
 
             <div className="mt-5 flex items-center justify-between">
                 {tasks.links.prev ? (
-                    <a
-                        className="rounded-md border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563] hover:bg-[#f9fafb]"
-                        href={tasks.links.prev}
-                    >
-                        上一页
-                    </a>
+                    <Button asChild variant="outline">
+                        <a href={tasks.links.prev}>上一页</a>
+                    </Button>
                 ) : (
-                    <span className="rounded-md border border-[#e5e7eb] bg-[#f9fafb] px-4 py-2 text-sm text-[#9ca3af]">
+                    <Button disabled variant="muted">
                         上一页
-                    </span>
+                    </Button>
                 )}
 
                 {tasks.links.next ? (
-                    <a
-                        className="rounded-md border border-[#d1d5db] bg-white px-4 py-2 text-sm text-[#4b5563] hover:bg-[#f9fafb]"
-                        href={tasks.links.next}
-                    >
-                        下一页
-                    </a>
+                    <Button asChild variant="outline">
+                        <a href={tasks.links.next}>下一页</a>
+                    </Button>
                 ) : (
-                    <span className="rounded-md border border-[#e5e7eb] bg-[#f9fafb] px-4 py-2 text-sm text-[#9ca3af]">
+                    <Button disabled variant="muted">
                         下一页
-                    </span>
+                    </Button>
                 )}
             </div>
         </AppLayout>

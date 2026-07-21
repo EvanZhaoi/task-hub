@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { csrfToken } from '../../utils/csrf';
-import { currentSearchParams } from '../../utils/url';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { csrfToken } from '@/utils/csrf';
+import { currentSearchParams } from '@/utils/url';
 
 type CallbackState = 'processing' | 'failed';
 
@@ -64,30 +66,29 @@ export default function SsoCallback() {
 
     return (
         <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6 text-[#1a1a1a]">
-            <section className="w-full max-w-md rounded-lg border border-[#ebebeb] bg-white p-6 shadow-sm">
-                <div className="mb-4 flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
-                        T
+            <Card as="section" className="w-full max-w-md border-[#ebebeb] shadow-sm">
+                <CardContent className="p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                        <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
+                            T
+                        </div>
+                        <div>
+                            <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
+                            <p className="mt-1 text-sm text-[#6e6e80]">
+                                {callbackState === 'processing' ? '正在建立本地会话' : '登录未完成'}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
-                        <p className="mt-1 text-sm text-[#6e6e80]">
-                            {callbackState === 'processing' ? '正在建立本地会话' : '登录未完成'}
-                        </p>
-                    </div>
-                </div>
 
-                <p className="text-sm leading-6 text-[#6e6e80]">{message}</p>
+                    <p className="text-sm leading-6 text-[#6e6e80]">{message}</p>
 
-                {callbackState === 'failed' ? (
-                    <a
-                        className="mt-5 inline-flex rounded-md bg-[#5e6ad2] px-4 py-2 text-sm font-medium text-white"
-                        href="/login"
-                    >
-                        重新登录
-                    </a>
-                ) : null}
-            </section>
+                    {callbackState === 'failed' ? (
+                        <Button asChild className="mt-5">
+                            <a href="/login">重新登录</a>
+                        </Button>
+                    ) : null}
+                </CardContent>
+            </Card>
         </main>
     );
 }
