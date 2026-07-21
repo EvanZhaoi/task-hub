@@ -7,6 +7,8 @@ import { currentSearchParams } from '@/utils/url';
 
 type CallbackState = 'processing' | 'failed';
 
+// 回调页只需要两个状态：处理中和失败。
+// 成功时不会停留在当前页面，而是立即 window.location.replace 到业务页面。
 function readAuthParams(): URLSearchParams {
     // 公司 SSO 已确认使用 query string 回调，例如：
     // /sso/callback?access_token=xxx
@@ -15,6 +17,7 @@ function readAuthParams(): URLSearchParams {
 }
 
 export default function SsoCallback() {
+    // processing 用于展示“正在建立本地会话”，failed 用于展示错误和重新登录入口。
     const [callbackState, setCallbackState] = useState<CallbackState>('processing');
     const [message, setMessage] = useState('正在完成单点登录，请稍候。');
 
@@ -43,6 +46,7 @@ export default function SsoCallback() {
                 'X-CSRF-TOKEN': csrfToken(),
             },
             body: JSON.stringify({
+                // 只传 accessToken；用户姓名、部门、角色都由 Laravel 后端决定。
                 accessToken,
             }),
         })
@@ -68,6 +72,7 @@ export default function SsoCallback() {
         <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6 text-[#1a1a1a]">
             <Card as="section" className="w-full max-w-md border-[#ebebeb] shadow-sm">
                 <CardContent className="p-6">
+                    {/* 这里不是完整登录页，只是 SSO 回调过程中的中间状态提示。 */}
                     <div className="mb-4 flex items-center gap-3">
                         <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
                             T

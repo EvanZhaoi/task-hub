@@ -9,6 +9,7 @@ import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus } from '@/
 import { urlWithQuery } from '@/utils/url';
 import type { ComponentProps } from 'react';
 
+// 页面展示文案集中在这里，避免 JSX 中散落大量枚举判断。
 const statusLabels: Record<TaskStatus, string> = {
     DRAFT: '草稿',
     OPEN: '招标中',
@@ -25,6 +26,7 @@ const complexityLabels: Record<TaskComplexity, string> = {
     HIGH: '复杂',
 };
 
+// 后端只传状态值，前端在这里把状态值映射为 Badge 的视觉类型。
 const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['variant']> = {
     DRAFT: 'default',
     OPEN: 'open',
@@ -35,6 +37,7 @@ const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['vari
     CANCELLED: 'cancelled',
 };
 
+// 复杂度也使用 Badge，但颜色含义和状态不同，因此单独维护映射。
 const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badge>['variant']> = {
     LOW: 'completed',
     MEDIUM: 'default',
@@ -61,6 +64,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
         >
             <Card className="mb-4">
                 <CardContent>
+                    {/* GET 表单适合列表筛选：URL 可复制、可刷新、可用于浏览器前进后退。 */}
                     <form action="/tasks" className="flex flex-col gap-3 lg:flex-row lg:items-center" method="GET">
                         <div className="relative min-w-0 flex-1">
                             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af]">
@@ -99,6 +103,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
 
                     <div className="mt-3 flex flex-wrap gap-2">
                         {statusOptions.map((option) => {
+                            // 快捷筛选和上面的 select 使用同一套 filters，避免两个状态源不同步。
                             const isActive = filters.status === option.value;
 
                             return (
@@ -121,6 +126,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
             </Card>
 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm text-[#6e6e80]">
+                {/* 分页元数据来自 Laravel paginator，后端已经转换成 camelCase。 */}
                 <span>
                     显示 {tasks.meta.from ?? 0}-{tasks.meta.to ?? 0} / 共 {tasks.meta.total} 条
                 </span>
@@ -131,6 +137,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
 
             <div className="space-y-3">
                 {tasks.data.length === 0 ? (
+                    // 空状态要占据列表区域，告诉用户可以通过调整筛选继续操作。
                     <Card className="border-dashed border-[#d1d5db]">
                         <CardContent className="p-8 text-center">
                             <h2 className="text-base font-semibold">暂无符合条件的任务</h2>
@@ -141,6 +148,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                     </Card>
                 ) : (
                     tasks.data.map((task) => (
+                        // 单个任务卡片只做列表摘要；后续详情和操作会在卡片或模态框中继续扩展。
                         <Card
                             as="article"
                             className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
@@ -170,6 +178,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                             </div>
 
                             <div className="mt-4 grid gap-3 text-sm text-[#6e6e80] md:grid-cols-2 xl:grid-cols-4">
+                                {/* 关键业务字段用网格排列，方便用户快速扫描交期、截止、发布者和投标数。 */}
                                 <div>
                                     <span className="block text-xs text-[#9ca3af]">交付日期</span>
                                     <strong className="font-semibold text-[#1a1a1a]">
@@ -200,6 +209,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
 
             <div className="mt-5 flex items-center justify-between">
                 {tasks.links.prev ? (
+                    // asChild 让 a 标签保留链接行为，同时获得 Button 视觉样式。
                     <Button asChild variant="outline">
                         <a href={tasks.links.prev}>上一页</a>
                     </Button>
@@ -210,6 +220,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                 )}
 
                 {tasks.links.next ? (
+                    // paginator 已经保留筛选 query string，直接使用后端给出的链接即可。
                     <Button asChild variant="outline">
                         <a href={tasks.links.next}>下一页</a>
                     </Button>

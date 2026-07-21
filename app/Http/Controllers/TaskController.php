@@ -9,18 +9,28 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * 任务控制器。
+ *
+ * 当前只实现任务大厅只读列表。
+ * 发布、投标、交付、变更等写入能力后续再按模块增加，不提前塞进本控制器。
+ */
 class TaskController extends Controller
 {
+    // 页面允许筛选的状态；PENDING_SELECTION 是派生展示状态，不保存进数据库。
     private const STATUSES = ['DRAFT', 'OPEN', 'PENDING_SELECTION', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED'];
 
+    // 复杂度枚举来自 schema.sql，前端筛选和后端校验保持一致。
     private const COMPLEXITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
     public function index(Request $request): Response
     {
+        // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
         $filters = $this->filters($request);
 
         $query = Task::query()
             ->select([
+                // 列表页只选择展示需要的字段，避免把大 JSON 或暂时不用的字段都查出来。
                 'id',
                 'title',
                 'description',
@@ -38,16 +48,20 @@ class TaskController extends Controller
                 'created_at',
             ])
             ->withCount([
+                // active_bid_count 用于判断“待选标”和列表展示，不需要额外手写子查询。
                 'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
             ]);
 
         $this->applyFilters($query, $filters);
 
         $paginator = $query
+            // 任务大厅默认按发布时间倒序展示。
             ->latest('created_at')
             ->paginate(10)
+            // 保留当前筛选条件，否则翻页后会丢失 keyword/status/complexity。
             ->withQueryString();
 
+        // through() 只转换当前页数据，不改变分页结构。
         $tasks = $paginator->through(fn (Task $task): array => $this->taskItem($task));
 
         return Inertia::render('Tasks/Index', [
@@ -74,12 +88,14 @@ class TaskController extends Controller
 
     private function filters(Request $request): array
     {
+        // keyword 做 trim，但不过度清洗；LIKE 转义在 applyFilters 中处理。
         $keyword = trim((string) $request->query('keyword', ''));
         $status = (string) $request->query('status', 'ALL');
         $complexity = (string) $request->query('complexity', 'ALL');
 
         return [
             'keyword' => $keyword,
+            // 非法枚举统一回到 ALL，避免用户改 URL 导致 SQL 查询异常。
             'status' => in_array($status, self::STATUSES, true) ? $status : 'ALL',
             'complexity' => in_array($complexity, self::COMPLEXITIES, true) ? $complexity : 'ALL',
         ];
@@ -88,6 +104,7 @@ class TaskController extends Controller
     private function applyFilters(Builder $query, array $filters): void
     {
         if ($filters['keyword'] !== '') {
+            // 手动转义 LIKE 通配符，避免用户输入 % 或 _ 时意外扩大匹配范围。
             $keyword = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $filters['keyword']).'%';
 
             $query->where(function (Builder $query) use ($keyword): void {
@@ -98,6 +115,7 @@ class TaskController extends Controller
         }
 
         if ($filters['complexity'] !== 'ALL') {
+            // complexity 是真实数据库字段，可以直接 where。
             $query->where('complexity', $filters['complexity']);
         }
 
@@ -112,18 +130,22 @@ class TaskController extends Controller
         }
 
         if ($filters['status'] !== 'ALL') {
+            // 除 PENDING_SELECTION 外，其它状态都是 task.status 的真实值。
             $query->where('status', $filters['status']);
         }
     }
 
     private function taskItem(Task $task): array
     {
+        // 快照字段可能为空，统一转成数组，避免前端展示时反复判断 null。
         $createdBySnapshot = $task->created_by_snapshot ?? [];
         $paymentAccountSnapshot = $task->payment_account_snapshot ?? [];
 
         return [
+            // JS number 对大整数不安全，前端统一把业务 ID 当字符串展示和传递。
             'id' => (string) $task->id,
             'title' => $task->title,
+            // 列表页只展示短描述，详情页再展示完整描述。
             'description' => Str::limit(strip_tags((string) $task->description), 120),
             'amountLabel' => $this->amountLabel($task),
             'expectedDelivery' => $task->expected_delivery?->toDateString(),
@@ -144,6 +166,7 @@ class TaskController extends Controller
 
     private function statusOptions(): array
     {
+        // 选项由后端下发，保证文案和后端筛选值同步。
         return [
             ['value' => 'ALL', 'label' => '全部'],
             ['value' => 'OPEN', 'label' => '招标中'],
@@ -157,6 +180,7 @@ class TaskController extends Controller
 
     private function complexityOptions(): array
     {
+        // 复杂度选项同样由后端下发，未来改文案无需改前端枚举。
         return [
             ['value' => 'ALL', 'label' => '全部'],
             ['value' => 'LOW', 'label' => '简单'],
@@ -167,6 +191,7 @@ class TaskController extends Controller
 
     private function displayStatus(Task $task): string
     {
+        // 截止且有 ACTIVE 投标时，数据库仍保持 OPEN；页面派生展示为“待选标”。
         if (
             $task->status === 'OPEN'
             && $task->bidding_deadline !== null
@@ -181,6 +206,7 @@ class TaskController extends Controller
 
     private function amountLabel(Task $task): string
     {
+        // final_amount 表示协商后最终金额；没有最终金额时展示原预算。
         $amount = $task->final_amount ?? $task->budget;
 
         return '¥'.number_format((float) $amount, 2);

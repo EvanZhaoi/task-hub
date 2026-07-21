@@ -44,6 +44,8 @@
 | `resources/js/Pages/Sso/Callback.tsx` | 使用 Card 和 Button |
 | `resources/js/Pages/Tasks/Index.tsx` | 使用 UI 组件重构任务大厅 |
 
+说明：`components.json`、`package.json` 和 `tsconfig.json` 是 JSON 文件，标准 JSON 语法不能写注释。因此这些文件的字段解释放在本文档中；PHP、TS、TSX、Blade、CSS 等支持注释的项目代码会在代码内补充中文注释。
+
 ## 实际执行命令
 
 命令执行目录：项目根目录。
@@ -182,6 +184,16 @@ export default defineConfig({
 ```
 
 这个文件的作用类似“前端组件规范说明”。以后如果使用 shadcn CLI 添加组件，它会根据这里的目录和别名生成代码。
+
+字段解释：
+
+- `$schema`：让编辑器识别 shadcn 配置结构。
+- `style`：组件生成风格，当前使用 `new-york`。
+- `rsc`：React Server Components 开关；TaskHub 是 Laravel + Inertia，不使用 RSC。
+- `tsx`：表示生成 TypeScript React 组件。
+- `tailwind.css`：告诉 shadcn 当前 Tailwind 入口文件是 `resources/css/app.css`。
+- `aliases`：告诉 shadcn 组件、工具函数、hook 应该生成到哪里。
+- `iconLibrary`：后续需要图标时优先使用 `lucide`。
 
 ### 4. 新增 `cn()` 工具
 

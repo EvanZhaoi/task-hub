@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Phase 1 intentionally does not seed data.
+        // Phase 1 不通过 seeder 写入业务数据。
+        // 当前数据库结构和初始化数据都应先以 database/schema.sql 和脱敏样例为准。
     }
 }

@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+/**
+ * 任务变更申请模型。
+ *
+ * CHANGE 用 old_value/new_value 保存金额、交期、描述的整体变更。
+ * CANCEL 复用同一张表走双方确认流程，不额外创建取消申请表。
+ */
 class TaskChangeRequest extends Model
 {
     protected $table = 'task_change_request';
@@ -36,8 +42,10 @@ class TaskChangeRequest extends Model
     {
         return [
             'request_no' => 'integer',
+            // JSON 字段只保存本次涉及的字段；未修改字段不写入 JSON。
             'old_value' => 'array',
             'new_value' => 'array',
+            // 审批时必须比较 task.version 和 base_task_version，避免覆盖其他已生效修改。
             'base_task_version' => 'integer',
             'expires_at' => 'datetime',
             'responded_at' => 'datetime',
@@ -47,11 +55,13 @@ class TaskChangeRequest extends Model
 
     public function task(): BelongsTo
     {
+        // 每个变更申请都属于一个任务。
         return $this->belongsTo(Task::class, 'task_id');
     }
 
     public function attachments(): MorphMany
     {
+        // 变更申请附件同样只保存外部附件 ID。
         return $this->morphMany(AttachmentRef::class, 'owner', 'owner_type', 'owner_id');
     }
 }

@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
+/**
+ * 任务交付模型。
+ *
+ * 开发者正式提交交付时写入本表。
+ * 数据库用 delivery_no 支持未来多次交付，Phase 1 业务层暂时只允许 delivery_no = 1。
+ */
 class TaskDelivery extends Model
 {
     protected $table = 'task_delivery';
@@ -30,6 +36,7 @@ class TaskDelivery extends Model
     protected function casts(): array
     {
         return [
+            // 同一任务内 delivery_no 递增，数据库通过 unique(task_id, delivery_no) 保证不重复。
             'delivery_no' => 'integer',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
@@ -38,11 +45,13 @@ class TaskDelivery extends Model
 
     public function task(): BelongsTo
     {
+        // 交付必须归属于一个已指派的任务。
         return $this->belongsTo(Task::class, 'task_id');
     }
 
     public function attachments(): MorphMany
     {
+        // 交付附件通过 DELIVERY owner_type 挂到 AttachmentRef。
         return $this->morphMany(AttachmentRef::class, 'owner', 'owner_type', 'owner_id');
     }
 }

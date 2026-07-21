@@ -5,6 +5,12 @@ namespace App\Integrations\Sso;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * 公司 SSO 接口客户端。
+ *
+ * 这里集中封装所有真实 SSO HTTP 调用，Controller 不直接拼接口、不直接读公司响应结构。
+ * 这样以后总部协议调整时，主要修改本类和 SsoUser 解析逻辑。
+ */
 class SsoClient
 {
     public function fetchCurrentUser(string $accessToken): SsoUser
@@ -46,6 +52,8 @@ class SsoClient
                 ->asJson();
 
             if (! config('sso.verify_ssl')) {
+                // 内网测试环境可能暂时没有完整证书链，所以提供配置开关。
+                // 生产环境应开启 SSL 校验。
                 $request = $request->withoutVerifying();
             }
 
@@ -80,6 +88,7 @@ class SsoClient
 
     private function isAbsoluteUrl(string $value): bool
     {
+        // userinfo_path 必须是 path，防止 base_url + full_url 拼出错误请求地址。
         return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');
     }
 }

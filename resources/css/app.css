@@ -1,9 +1,13 @@
+/* Tailwind v4 入口。Vite 通过 app.tsx 引入本文件，再由 @tailwindcss/vite 编译。 */
 @import 'tailwindcss';
 
+/* 扫描 Laravel 分页视图，避免分页相关 class 在生产构建时被裁剪。 */
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+/* 扫描 Laravel 编译后的 Blade 缓存，保证 Blade 中出现的 Tailwind class 可被识别。 */
 @source '../../storage/framework/views/*.php';
 
 @theme {
+    /* 给 Tailwind 的 font-sans 主题变量绑定当前项目字体栈。 */
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }

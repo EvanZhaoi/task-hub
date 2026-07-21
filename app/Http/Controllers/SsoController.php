@@ -12,6 +12,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * SSO 控制器。
+ *
+ * 负责浏览器登录跳转、SSO 回调页、本地 Session 建立和退出。
+ * 真实人员信息只由后端 SsoClient 调公司接口获取，前端不能决定当前用户是谁。
+ */
 class SsoController extends Controller
 {
     public function redirect(Request $request): RedirectResponse
@@ -35,8 +41,10 @@ class SsoController extends Controller
         // 公司当前 SSO 使用隐式模式，回调时只返回 access_token。
         // 标准 OAuth/OIDC 常见的 state 校验当前不可用，因此这里不生成、不传递 state。
         $query = http_build_query(array_filter([
+            // 隐式模式要求浏览器最终拿到 access token。
             'response_type' => 'token',
             'client_id' => $clientId,
+            // Laravel 生成绝对回调地址，避免不同环境手写 callback URL。
             'redirect_uri' => route('sso.callback'),
             'scope' => config('sso.scope'),
         ], fn (mixed $value): bool => is_string($value) && $value !== ''));
@@ -56,6 +64,7 @@ class SsoController extends Controller
         // 前端只提交 accessToken，不提交姓名、部门或角色。
         // 当前登录人的可信身份必须由后端拿 token 调公司 SSO 接口得到。
         $validated = $request->validate([
+            // 字段名使用 accessToken，是为了和公司接口示例保持一致；进入后端后仍按字符串处理。
             'accessToken' => ['required', 'string'],
         ]);
 
@@ -104,6 +113,8 @@ class SsoController extends Controller
         $logoutUrl = config('sso.logout_url');
 
         if (is_string($logoutUrl) && $logoutUrl !== '') {
+            // 退出表单使用原生 POST，不是 Inertia Ajax。
+            // 因此外部 302 会作为浏览器顶层导航处理，不会触发跨域 XHR CORS。
             return redirect()->away($logoutUrl);
         }
 

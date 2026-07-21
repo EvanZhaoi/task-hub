@@ -6,7 +6,9 @@ import { csrfToken } from '@/utils/csrf';
 import type { SharedPageProps } from '@/types/page';
 
 type AppLayoutProps = {
+    // 当前只有任务大厅一个一级导航，类型先收窄，后续新增模块时再扩展。
     activeNav: 'tasks';
+    // children 是具体业务页面内容，布局只负责外壳、导航和标题区域。
     children: ReactNode;
     subtitle?: string;
     title: string;
@@ -22,6 +24,7 @@ export default function AppLayout({ activeNav, children, subtitle, title }: AppL
     const { auth } = usePage<SharedPageProps>().props;
     const user = auth?.user;
     const roles = auth?.roles ?? [];
+    // 优先展示姓名；没有姓名时展示工号；都没有说明 Session 中没有可展示用户信息。
     const userLabel = user?.displayName ?? user?.employeeNo ?? '未识别用户';
     const departmentLabel = user?.departmentName ?? '未同步部门';
 
@@ -41,6 +44,7 @@ export default function AppLayout({ activeNav, children, subtitle, title }: AppL
 
                     <nav className="flex items-center gap-1 text-sm">
                         {navItems.map((item) => {
+                            // activeNav 由页面传入，布局只负责把当前入口标成选中态。
                             const isActive = item.key === activeNav;
 
                             return (
@@ -83,11 +87,13 @@ export default function AppLayout({ activeNav, children, subtitle, title }: AppL
             <section className="mx-auto max-w-7xl px-6 py-8">
                 <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                     <div>
+                        {/* 页面标题由业务页传入，保持所有业务页标题层级一致。 */}
                         <h1 className="m-0 text-2xl font-bold tracking-normal">{title}</h1>
                         {subtitle ? <p className="mt-1 text-sm text-[#6e6e80]">{subtitle}</p> : null}
                     </div>
                 </div>
 
+                {/* 具体业务页面内容渲染在这里，例如任务大厅列表。 */}
                 {children}
             </section>
         </main>

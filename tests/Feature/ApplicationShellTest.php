@@ -13,25 +13,31 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
 test('the inertia application shell responds successfully', function (): void {
+    // Feature Test 不需要真实加载 Vite 资源；withoutVite 可以避免测试依赖前端构建产物。
     $this->withoutVite();
 
+    // 首页是最小 Inertia 应用壳，能返回 200 说明 Blade + Inertia 基础链路可用。
     $this->get('/')->assertOk();
 });
 
 test('protected task pages redirect to sso login when session is missing', function (): void {
+    // /tasks 是受保护业务页面；没有 sso_user Session 时必须进入 SSO 登录流程。
     $this->get('/tasks')->assertRedirect('/login');
 });
 
 test('the sso callback page responds successfully', function (): void {
     $this->withoutVite();
 
+    // SSO 回调页本身不验证 token，只负责把 query string 中的 access_token 交给后端。
     $this->get('/sso/callback')->assertOk();
 });
 
 test('authenticated users can view the task hall with filters', function (): void {
     $this->withoutVite();
+    // 测试数据库不执行正式 schema.sql，因此这里为本测试创建最小可用表结构。
     createTaskHallTables();
 
+    // 插入一个已截止但仍有 ACTIVE 投标的 OPEN 任务，用来验证“待选标”派生状态。
     DB::table('task')->insert([
         'id' => 10001,
         'title' => '用户登录页 UI 重构',
@@ -53,6 +59,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         'updated_at' => now(),
     ]);
 
+    // ACTIVE 投标数量会通过 withCount 统计出来，并影响 PENDING_SELECTION 展示。
     DB::table('bid')->insert([
         'id' => 20001,
         'task_id' => 10001,
@@ -65,6 +72,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         'updated_at' => now(),
     ]);
 
+    // 通过 Session 模拟已经完成 SSO 登录的用户，不真实跳转公司 SSO。
     $this->withSession([
         CurrentUserService::SESSION_KEY => [
             'employeeNo' => 'E10002',
@@ -72,10 +80,12 @@ test('authenticated users can view the task hall with filters', function (): voi
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
     ])
+        // Inertia 请求需要带这两个头，Laravel 才会返回 JSON page payload。
         ->withHeader('X-Inertia', 'true')
         ->withHeader('X-Inertia-Version', inertiaVersionForTest())
         ->get('/tasks?status=PENDING_SELECTION&complexity=MEDIUM&keyword=%E7%99%BB%E5%BD%95')
         ->assertOk()
+        // 验证后端返回的 Inertia 组件名、筛选回显和派生状态都正确。
         ->assertJsonPath('component', 'Tasks/Index')
         ->assertJsonPath('props.filters.status', 'PENDING_SELECTION')
         ->assertJsonPath('props.filters.complexity', 'MEDIUM')
@@ -85,10 +95,12 @@ test('authenticated users can view the task hall with filters', function (): voi
 });
 
 test('the sso session endpoint accepts access token without state', function (): void {
+    // 用容器替换 SsoClient，避免测试真实访问公司 SSO。
     $this->app->instance(SsoClient::class, new class extends SsoClient
     {
         public function fetchCurrentUser(string $accessToken): SsoUser
         {
+            // 确认前端提交的 accessToken 被原样传给后端 SSO 客户端。
             expect($accessToken)->toBe('token-123');
 
             return new SsoUser(
@@ -100,6 +112,7 @@ test('the sso session endpoint accepts access token without state', function ():
         }
     });
 
+    // 用容器替换角色服务，验证角色来源是后端服务，不是前端传入。
     $this->app->instance(TaskhubRoleService::class, new class extends TaskhubRoleService
     {
         public function rolesFor(SsoUser $user): array
@@ -111,6 +124,7 @@ test('the sso session endpoint accepts access token without state', function ():
     });
 
     $this->postJson('/sso/session', [
+        // 公司 SSO 回调给前端 token，前端再提交给 Laravel 建立本地 Session。
         'accessToken' => 'token-123',
     ])
         ->assertOk()
@@ -119,11 +133,13 @@ test('the sso session endpoint accepts access token without state', function ():
             'roles' => ['TOP'],
         ]);
 
+    // 登录成功后，用户快照和 TaskHub 角色都应写入 Session。
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
 });
 
 test('logout clears sso session and redirects home', function (): void {
+    // 未配置总部退出地址时，只退出 TaskHub 本地 Session，然后回到首页。
     config(['sso.logout_url' => null]);
 
     $this->withSession([
@@ -136,12 +152,14 @@ test('logout clears sso session and redirects home', function (): void {
     ])
         ->post('/logout')
         ->assertRedirect(route('home'))
+        // invalidate() 后旧 Session 数据都不应继续存在。
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
         ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
         ->assertSessionMissing('taskhub.session_marker');
 });
 
 test('logout redirects to sso logout url when configured', function (): void {
+    // 配置总部退出地址后，本地 Session 清理完成，再跳转到外部 SSO 退出页。
     config(['sso.logout_url' => 'https://sso.example.test/logout']);
 
     $this->withSession([
@@ -154,12 +172,14 @@ test('logout redirects to sso logout url when configured', function (): void {
     ])
         ->post('/logout')
         ->assertRedirect('https://sso.example.test/logout')
+        // 即使跳转到外部退出地址，本地 Session 也必须已经清理。
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
         ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
         ->assertSessionMissing('taskhub.session_marker');
 });
 
 test('sso user info path must not be a full url', function (): void {
+    // userinfo_path 只允许写 path，避免和 base_url 拼接时产生错误地址。
     config([
         'sso.base_url' => 'https://sso.example.test',
         'sso.client_id' => 'ClientID',
@@ -172,6 +192,7 @@ test('sso user info path must not be a full url', function (): void {
 });
 
 test('sso client posts json payload to user info endpoint', function (): void {
+    // 这里验证公司推荐调用方式：POST JSON，body 包含 clientId、secret、accessToken。
     config([
         'sso.base_url' => 'https://sso.example.test',
         'sso.client_id' => 'ClientID',
@@ -181,6 +202,7 @@ test('sso client posts json payload to user info endpoint', function (): void {
         'sso.verify_ssl' => false,
     ]);
 
+    // Http::fake 拦截 Laravel HTTP Client 请求，不会真实访问网络。
     Http::fake([
         'https://sso.example.test/api/current-user' => Http::response([
             'id' => 'response-001',
@@ -195,6 +217,7 @@ test('sso client posts json payload to user info endpoint', function (): void {
 
     expect($user->employeeNo())->toBe('E10001');
 
+    // 断言请求方法、地址和 JSON body，防止后续改动破坏总部接口协议。
     Http::assertSent(fn ($request): bool => $request->method() === 'POST'
         && $request->url() === 'https://sso.example.test/api/current-user'
         && $request->data()['clientId'] === 'ClientID'
@@ -203,6 +226,7 @@ test('sso client posts json payload to user info endpoint', function (): void {
 });
 
 test('sso user parses nested user payload', function (): void {
+    // 公司接口第一层包含 id 和 user，人员字段在 user 下；这里固定解析规则。
     $user = SsoUser::fromPayload([
         'id' => 'response-001',
         'user' => [
@@ -221,15 +245,19 @@ test('sso user parses nested user payload', function (): void {
 });
 
 test('task model maps to the existing task table', function (): void {
+    // 防止 Model 被误改成 Laravel 默认复数表名 tasks。
     expect((new Task)->getTable())->toBe('task');
 });
 
 test('taskhub user role model maps to the existing role table', function (): void {
+    // 角色表是 TaskHub 自己控制业务角色的入口，不依赖环境变量硬编码。
     expect((new TaskhubUserRole)->getTable())->toBe('taskhub_user_role');
 });
 
 function createTaskHallTables(): void
 {
+    // 这里只创建 TaskController@index 需要的最小字段，不复制完整 schema.sql。
+    // 完整数据库设计仍以 database/schema.sql 为准。
     Schema::create('task', function (Blueprint $table): void {
         $table->unsignedBigInteger('id')->primary();
         $table->string('title', 200);
@@ -254,6 +282,7 @@ function createTaskHallTables(): void
         $table->string('updated_by', 32)->nullable();
     });
 
+    // bid 表只需要支持 active_bid_count 和 PENDING_SELECTION 的 whereHas 查询。
     Schema::create('bid', function (Blueprint $table): void {
         $table->unsignedBigInteger('id')->primary();
         $table->unsignedBigInteger('task_id');
@@ -272,5 +301,6 @@ function inertiaVersionForTest(): string
 {
     $manifest = public_path('build/manifest.json');
 
+    // 如果本地存在 build manifest，就用 Inertia 的真实版本算法；否则返回空字符串配合 withoutVite。
     return file_exists($manifest) ? hash_file('xxh128', $manifest) : '';
 }
