@@ -1,0 +1,112 @@
+import { ReactNode } from 'react';
+import { usePage } from '@inertiajs/react';
+
+type CurrentUser = {
+    employeeNo?: string;
+    displayName?: string;
+    departmentName?: string;
+};
+
+type SharedProps = {
+    auth?: {
+        user?: CurrentUser | null;
+        roles?: string[];
+    };
+};
+
+type AppLayoutProps = {
+    activeNav: 'tasks' | 'create' | 'mine' | 'boss';
+    children: ReactNode;
+    subtitle?: string;
+    title: string;
+};
+
+const navItems = [
+    { key: 'tasks', label: '任务大厅', href: '/tasks' },
+    { key: 'create', label: '发布任务', href: '/tasks/create' },
+    { key: 'mine', label: '我的', href: '/me' },
+    { key: 'boss', label: '老板视图', href: '/boss' },
+] as const;
+
+function csrfToken(): string {
+    // 原生 POST 退出表单需要手动提交 Laravel 写入 Blade meta 的 CSRF token。
+    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+}
+
+export default function AppLayout({ activeNav, children, subtitle, title }: AppLayoutProps) {
+    const { auth } = usePage<SharedProps>().props;
+    const user = auth?.user;
+    const roles = auth?.roles ?? [];
+    const userLabel = user?.displayName ?? user?.employeeNo ?? '未识别用户';
+    const departmentLabel = user?.departmentName ?? '未同步部门';
+
+    return (
+        <main className="min-h-screen bg-[#f7f7f8] text-[#1a1a1a]">
+            <header className="sticky top-0 z-20 border-b border-[#e5e7eb] bg-white/95 px-6 py-3 backdrop-blur">
+                <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
+                            T
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold leading-5">TaskHub</div>
+                            <div className="text-xs text-[#6e6e80]">任务协作与内部悬赏</div>
+                        </div>
+                    </div>
+
+                    <nav className="flex items-center gap-1 text-sm">
+                        {navItems.map((item) => {
+                            const isActive = item.key === activeNav;
+
+                            return (
+                                <a
+                                    className={
+                                        isActive
+                                            ? 'rounded-md bg-[#f5f3ff] px-3 py-1.5 font-medium text-[#5e6ad2]'
+                                            : 'rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#f3f4f6] hover:text-[#1a1a1a]'
+                                    }
+                                    href={item.href}
+                                    key={item.key}
+                                >
+                                    {item.label}
+                                </a>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="flex items-center gap-3">
+                        <div className="hidden text-right md:block">
+                            <div className="text-sm font-medium">{userLabel}</div>
+                            <div className="text-xs text-[#6e6e80]">
+                                {departmentLabel}
+                                {roles.length > 0 ? ` · ${roles.join(' / ')}` : ''}
+                            </div>
+                        </div>
+
+                        <form action="/logout" method="POST">
+                            <input name="_token" type="hidden" value={csrfToken()} />
+
+                            <button
+                                className="rounded-md border border-[#d1d5db] bg-white px-3 py-1.5 text-sm text-[#4b5563] hover:border-[#9ca3af] hover:bg-[#f9fafb]"
+                                type="submit"
+                            >
+                                退出
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </header>
+
+            <section className="mx-auto max-w-7xl px-6 py-8">
+                <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <h1 className="m-0 text-2xl font-bold tracking-normal">{title}</h1>
+                        {subtitle ? <p className="mt-1 text-sm text-[#6e6e80]">{subtitle}</p> : null}
+                    </div>
+                </div>
+
+                {children}
+            </section>
+        </main>
+    );
+}
