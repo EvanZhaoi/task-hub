@@ -1,5 +1,3 @@
-import { router } from '@inertiajs/react';
-
 type TaskListItem = {
     id: string;
     title: string;
@@ -51,6 +49,11 @@ const complexityClassNames: Record<TaskListItem['complexity'], string> = {
     HIGH: 'bg-red-100 text-red-800',
 };
 
+function csrfToken(): string {
+    // 原生 POST 退出表单需要手动提交 Laravel 写入 Blade meta 的 CSRF token。
+    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+}
+
 export default function TaskIndex({ tasks }: TaskIndexProps) {
     return (
         <main className="min-h-screen bg-[#fafafa] text-[#1a1a1a]">
@@ -72,13 +75,16 @@ export default function TaskIndex({ tasks }: TaskIndexProps) {
                         <span className="rounded-md bg-[#f5f3ff] px-3 py-1.5 font-medium text-[#5e6ad2]">
                             任务列表
                         </span>
-                        <button
-                            className="rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#fafafa]"
-                            onClick={() => router.post('/logout')}
-                            type="button"
-                        >
-                            退出
-                        </button>
+                        <form action="/logout" method="POST">
+                            <input name="_token" type="hidden" value={csrfToken()} />
+
+                            <button
+                                className="rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#fafafa]"
+                                type="submit"
+                            >
+                                退出
+                            </button>
+                        </form>
                     </nav>
                 </div>
             </header>

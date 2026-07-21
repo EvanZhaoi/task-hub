@@ -93,6 +93,9 @@ class SsoController extends Controller
             CurrentUserService::ROLE_SESSION_KEY,
         ]);
 
+        // 让整个 Laravel Session 失效，确保旧 Session ID 不能继续使用。
+        $request->session()->invalidate();
+
         // 退出后刷新 CSRF token，避免旧页面继续复用退出前的 token。
         $request->session()->regenerateToken();
 

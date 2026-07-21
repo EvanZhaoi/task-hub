@@ -73,11 +73,13 @@ test('logout clears sso session and redirects home', function (): void {
             'displayName' => '张三',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        'taskhub.session_marker' => 'old-session',
     ])
         ->post('/logout')
         ->assertRedirect(route('home'))
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
-        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
+        ->assertSessionMissing('taskhub.session_marker');
 });
 
 test('logout redirects to sso logout url when configured', function (): void {
@@ -89,11 +91,13 @@ test('logout redirects to sso logout url when configured', function (): void {
             'displayName' => '张三',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        'taskhub.session_marker' => 'old-session',
     ])
         ->post('/logout')
         ->assertRedirect('https://sso.example.test/logout')
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
-        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
+        ->assertSessionMissing('taskhub.session_marker');
 });
 
 test('sso user info path must not be a full url', function (): void {

@@ -1400,6 +1400,9 @@ class SsoController extends Controller
             CurrentUserService::ROLE_SESSION_KEY,
         ]);
 
+        // 让整个 Laravel Session 失效，确保旧 Session ID 不能继续使用。
+        $request->session()->invalidate();
+
         // 退出后刷新 CSRF token，避免旧页面继续复用退出前的 token。
         $request->session()->regenerateToken();
 
@@ -1493,46 +1496,70 @@ Route::post('/logout', [SsoController::class, 'logout'])->name('sso.logout');
 
 但用户不能直接在浏览器地址栏访问 `POST /logout`，所以前端页面需要提供一个按钮。
 
+退出不要使用：
+
+```tsx
+router.post('/logout')
+```
+
+原因不是 `SSO_LOGOUT_URL` 错，而是请求方式错。
+
+`router.post()` 本质上是 Inertia 发起的 Ajax/XHR 请求。后端返回 `302` 到公司 SSO 外部域名时，浏览器会让这个 Ajax 请求继续跟随重定向。此时请求目标变成公司 SSO 域名，但它是由当前 TaskHub 页面发起的跨域 XHR，于是会触发浏览器 CORS 限制。
+
+这个问题不能通过修改 `config/cors.php` 解决，因为 TaskHub 只能控制自己的响应头，不能控制公司 SSO 服务端的 CORS 响应头。
+
+正确做法是使用原生 HTML Form 提交。原生表单提交后，浏览器会把后端返回的外部 `302` 当成顶层页面导航处理，而不是 Ajax 跟随跳转，所以不会出现跨域 XHR CORS 问题。
+
 文件：
 
 ```text
 resources/js/Pages/Tasks/Index.tsx
 ```
 
-先引入 Inertia 的 `router`：
+先增加读取 CSRF token 的函数：
 
 ```tsx
-import { router } from '@inertiajs/react';
+function csrfToken(): string {
+    // Laravel 的 CSRF token 由 resources/views/app.blade.php 写入 meta。
+    // 原生 POST Form 不能像 Inertia 一样自动附带 token，所以这里手动读取。
+    return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
+}
 ```
 
-然后在顶部导航中增加退出按钮：
+然后在顶部导航中增加退出表单：
 
 ```tsx
-<button
-    className="rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#fafafa]"
-    onClick={() => router.post('/logout')}
-    type="button"
->
-    退出
-</button>
+<form action="/logout" method="POST">
+    {/* Laravel Web 路由默认开启 CSRF 校验，POST 表单必须提交 _token。 */}
+    <input name="_token" type="hidden" value={csrfToken()} />
+
+    <button
+        className="rounded-md px-3 py-1.5 text-[#6e6e80] hover:bg-[#fafafa]"
+        type="submit"
+    >
+        退出
+    </button>
+</form>
 ```
 
-为什么用 `router.post('/logout')`：
+为什么不用 `<a href="/logout">`：
 
-- `/logout` 是 POST 路由，不应该用普通 `<a href="/logout">`。
-- Inertia 会按 Laravel Web 请求方式提交，并携带 CSRF token。
-- 后端清理 Session 后，如果配置了 `SSO_LOGOUT_URL`，继续跳转公司 SSO 退出地址；否则回到首页。
+- `/logout` 是 POST 路由，不是 GET 路由。
+- 退出会改变服务器状态，不能用 GET 表示。
+- 原生 `<form method="POST">` 既符合 HTTP 语义，也能让外部 `302` 变成浏览器页面导航。
 
 退出链路：
 
 ```text
 点击“退出”
 ↓
-Inertia POST /logout
+浏览器提交原生 POST Form 到 /logout
 ↓
 SsoController::logout()
 ↓
 清理 sso_user 和 taskhub_roles
+↓
+invalidate Laravel Session
 ↓
 刷新 CSRF token
 ↓
@@ -1552,6 +1579,10 @@ SsoController::logout()
 ```env
 SSO_LOGOUT_URL=https://sso.company.com/logout
 ```
+
+登录和退出都属于浏览器页面导航，不应该用 `fetch`、`axios` 或 Inertia Ajax 直接调用公司 SSO 页面地址。
+
+当前登录人信息查询不一样：它由 Laravel 后端的 `SsoClient` 使用 accessToken 调公司接口，不经过浏览器，所以不受浏览器 CORS 限制，也不会把 `clientSecret` 暴露给前端。
 
 ## 19. 第十四步：确保 Blade 提供 CSRF token
 
@@ -1903,11 +1934,13 @@ test('logout clears sso session and redirects home', function (): void {
             'displayName' => '张三',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        'taskhub.session_marker' => 'old-session',
     ])
         ->post('/logout')
         ->assertRedirect(route('home'))
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
-        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
+        ->assertSessionMissing('taskhub.session_marker');
 });
 
 test('logout redirects to sso logout url when configured', function (): void {
@@ -1919,11 +1952,13 @@ test('logout redirects to sso logout url when configured', function (): void {
             'displayName' => '张三',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        'taskhub.session_marker' => 'old-session',
     ])
         ->post('/logout')
         ->assertRedirect('https://sso.example.test/logout')
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
-        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY);
+        ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
+        ->assertSessionMissing('taskhub.session_marker');
 });
 
 test('sso user info path must not be a full url', function (): void {
@@ -2201,7 +2236,8 @@ SSO 负责身份认证，TaskHub 自己负责业务角色。
 - `Callback.tsx` 读取 `window.location.search`。
 - `Callback.tsx` 不读取 `window.location.hash`。
 - `Tasks/Index.tsx` 有退出按钮。
-- 退出按钮使用 `router.post('/logout')`。
+- 退出按钮使用原生 `<form method="POST">`，不使用 `router.post('/logout')`。
+- 退出表单通过隐藏字段 `_token` 提交 CSRF token。
 - 配置 `SSO_LOGOUT_URL` 后，退出会先清理 TaskHub Session，再跳转公司 SSO 退出地址。
 - 代码没有强制要求 `state`。
 - `taskhub_user_role` 表存在。
