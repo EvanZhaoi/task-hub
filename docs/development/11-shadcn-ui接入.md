@@ -382,6 +382,70 @@ npx shadcn@latest add badge card input
 - `Input`：统一输入框高度、边框和焦点样式。
 - `NativeSelect`：先封装浏览器原生 `select`，避免当前阶段引入过重交互。
 
+#### 7.1 修正 Badge variant 类型
+
+执行 `npx shadcn@latest add badge` 后，shadcn 生成的 `Badge` 只包含通用 variant。TaskHub 的任务大厅需要按业务状态显示颜色，所以必须把 `resources/js/components/ui/badge.tsx` 调整为 TaskHub 版本。
+
+如果你看到类似错误：
+
+```text
+不能将类型 "completed" 分配给类型 "link" | "default" | "secondary" | "destructive" | "outline" | "ghost" | null | undefined
+```
+
+说明当前 `Badge` 的 `variant` 类型里没有 `completed`、`failed`、`cancelled` 等 TaskHub 状态。处理方式是替换 `badge.tsx`，不要去删 `Tasks/Index.tsx` 里的状态映射。
+
+把 `resources/js/components/ui/badge.tsx` 改成：
+
+```tsx
+import { cva, type VariantProps } from 'class-variance-authority';
+import type { ComponentProps } from 'react';
+
+import { cn } from '@/lib/utils';
+
+// Badge 用于状态、复杂度等短标签。
+// 使用 cva 统一维护颜色方案，业务页面只传 variant，不再重复写背景色和文字色。
+const badgeVariants = cva('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium', {
+    variants: {
+        variant: {
+            // default 作为中性标签，适合草稿、中等复杂度等不强调状态。
+            default: 'bg-gray-100 text-gray-700',
+            // 以下颜色和原型图保持克制、清晰，避免整页变成单一高饱和色。
+            open: 'bg-blue-100 text-blue-800',
+            pending: 'bg-amber-100 text-amber-800',
+            assigned: 'bg-orange-100 text-orange-800',
+            completed: 'bg-emerald-100 text-emerald-800',
+            failed: 'bg-gray-200 text-gray-700',
+            cancelled: 'bg-gray-50 text-gray-400 line-through',
+            danger: 'bg-red-100 text-red-800',
+        },
+    },
+    defaultVariants: {
+        variant: 'default',
+    },
+});
+
+type BadgeProps = ComponentProps<'span'> & VariantProps<typeof badgeVariants>;
+
+export function Badge({ className, variant, ...props }: BadgeProps) {
+    // 外部 className 放在最后合并，允许页面在必要时做局部微调。
+    return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+}
+```
+
+还要检查 `Tasks/Index.tsx` 的导入，必须是：
+
+```tsx
+import { Badge } from '@/components/ui/badge';
+```
+
+不要误写成：
+
+```tsx
+import { Button as Badge } from '@/components/ui/button';
+```
+
+如果错误信息里出现 `link`、`ghost`，通常说明你正在用的是 Button 的 variant 类型，或者 `badge.tsx` 被误写成了 Button 的内容。
+
 `NativeSelect` 不是 shadcn 官方组件，而是 TaskHub 当前阶段的轻量封装。原因是任务大厅筛选只需要普通 HTML 表单提交，原生 `select` 更简单，也更适合 GET 表单。
 
 为什么暂时不用复杂 Select？
@@ -987,6 +1051,8 @@ http://127.0.0.1:8000/tasks
 | `Cannot find module 'node:path'` | 缺少 Node 类型定义 | 执行 `npm install -D @types/node` |
 | `components.json` 已存在，CLI 提示覆盖 | 项目已经初始化过 shadcn | 不要盲目覆盖，先对比当前 alias 和 css 配置 |
 | CLI 生成的组件样式和原型图不一致 | shadcn 默认样式不是 TaskHub 最终视觉 | 保留组件结构，只按原型调整颜色、间距、圆角 |
+| `completed` 不能赋值给 `Badge` 的 `variant` | shadcn 默认 Badge 没有 TaskHub 状态 variant | 按第 7.1 节替换 `resources/js/components/ui/badge.tsx` |
+| `Badge` 的 variant 类型里出现 `link`、`ghost` | 很可能导错了 Button，或 `badge.tsx` 写成了 Button 内容 | 检查 `import { Badge } from '@/components/ui/badge'` 和 `badge.tsx` |
 | 按钮样式没有变化 | 页面仍在用原始 `button` | 检查是否导入并使用 `Button` |
 | Tailwind 样式不生效 | CSS 入口断开 | 确认 `resources/js/app.tsx` 中仍有 `import '../css/app.css'` |
 | 链接按钮不能点击 | `Button asChild` 用法错误 | 使用 `<Button asChild><a href="...">...</a></Button>` |
