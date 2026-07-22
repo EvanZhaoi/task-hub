@@ -6,6 +6,7 @@ use App\Integrations\Sso\SsoUser;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
+use App\Services\SnowflakeId;
 use App\Services\TaskhubRoleService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -293,6 +294,17 @@ test('task model maps to the existing task table', function (): void {
 test('taskhub user role model maps to the existing role table', function (): void {
     // 角色表是 TaskHub 自己控制业务角色的入口，不依赖环境变量硬编码。
     expect((new TaskhubUserRole)->getTable())->toBe('taskhub_user_role');
+});
+
+test('snowflake id generates increasing ids in the same application process', function (): void {
+    $ids = new SnowflakeId;
+
+    $first = $ids->next();
+    $second = $ids->next();
+    $third = $ids->next();
+
+    expect($second)->toBeGreaterThan($first)
+        ->and($third)->toBeGreaterThan($second);
 });
 
 function createTaskHallTables(): void
