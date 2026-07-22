@@ -94,6 +94,47 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1);
 });
 
+test('authenticated users can publish a bidding task with attachment ids', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10002',
+            'displayName' => '李雷',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+    ])
+        ->post('/tasks', [
+            'title' => '报表导出优化',
+            'description' => '优化现有报表导出速度，并补充异常提示。',
+            'budget' => '3000.00',
+            'expectedDelivery' => now()->addDays(7)->toDateString(),
+            'biddingDeadline' => now()->addDay()->format('Y-m-d\TH:i'),
+            'complexity' => 'MEDIUM',
+            'paymentAccountId' => 'PAY001',
+            'paymentAccountName' => '开发一部创新预算',
+            'attachmentIds' => "ATT001\nATT002,ATT001",
+        ])
+        ->assertRedirect(route('tasks.index'))
+        ->assertSessionHas('success', '任务已发布。');
+
+    $task = DB::table('task')->where('title', '报表导出优化')->first();
+
+    expect($task)->not->toBeNull()
+        ->and($task->status)->toBe('OPEN')
+        ->and($task->assignment_type)->toBe('BIDDING')
+        ->and($task->created_by)->toBe('E10002');
+
+    expect(DB::table('attachment_ref')->where('owner_id', $task->id)->pluck('attachment_id')->sort()->values()->all())
+        ->toBe(['ATT001', 'ATT002']);
+
+    expect(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
+        ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
+});
+
 test('the sso session endpoint accepts access token without state', function (): void {
     // 用容器替换 SsoClient，避免测试真实访问公司 SSO。
     $this->app->instance(SsoClient::class, new class extends SsoClient
@@ -256,6 +297,12 @@ test('taskhub user role model maps to the existing role table', function (): voi
 
 function createTaskHallTables(): void
 {
+    // SQLite 内存库在同一测试进程内可能复用连接；创建前先清理，保证测试互不影响。
+    Schema::dropIfExists('task_event');
+    Schema::dropIfExists('attachment_ref');
+    Schema::dropIfExists('bid');
+    Schema::dropIfExists('task');
+
     // 这里只创建 TaskController@index 需要的最小字段，不复制完整 schema.sql。
     // 完整数据库设计仍以 database/schema.sql 为准。
     Schema::create('task', function (Blueprint $table): void {
@@ -294,6 +341,29 @@ function createTaskHallTables(): void
         $table->string('active_key', 160)->nullable();
         $table->timestamp('withdrawn_at')->nullable();
         $table->timestamps();
+    });
+
+    Schema::create('attachment_ref', function (Blueprint $table): void {
+        $table->unsignedBigInteger('id')->primary();
+        $table->string('owner_type', 30);
+        $table->unsignedBigInteger('owner_id');
+        $table->string('attachment_id', 128);
+        $table->string('uploaded_by', 32);
+        $table->timestamp('created_at')->nullable();
+    });
+
+    Schema::create('task_event', function (Blueprint $table): void {
+        $table->unsignedBigInteger('id')->primary();
+        $table->unsignedBigInteger('task_id');
+        $table->string('event_type', 40);
+        $table->string('operator_id', 32)->nullable();
+        $table->string('from_status', 20)->nullable();
+        $table->string('to_status', 20)->nullable();
+        $table->string('related_type', 30)->nullable();
+        $table->unsignedBigInteger('related_id')->nullable();
+        $table->json('event_data')->nullable();
+        $table->string('remark', 500)->nullable();
+        $table->timestamp('created_at')->nullable();
     });
 }
 

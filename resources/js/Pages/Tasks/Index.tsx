@@ -1,13 +1,27 @@
+import { useForm, usePage } from '@inertiajs/react';
+import type { FormEvent } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import type { SharedPageProps } from '@/types/page';
 import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus } from '@/types/task';
 import { urlWithQuery } from '@/utils/url';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 
 // 页面展示文案集中在这里，避免 JSX 中散落大量枚举判断。
 const statusLabels: Record<TaskStatus, string> = {
@@ -44,6 +58,18 @@ const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badg
     HIGH: 'danger',
 };
 
+type TaskCreateForm = {
+    title: string;
+    description: string;
+    budget: string;
+    expectedDelivery: string;
+    biddingDeadline: string;
+    complexity: TaskComplexity;
+    paymentAccountId: string;
+    paymentAccountName: string;
+    attachmentIds: string;
+};
+
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
     // 快捷筛选要保留其它筛选条件，只替换用户当前点击的那一项。
     const merged = { ...filters, ...nextFilters };
@@ -56,12 +82,169 @@ function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): str
 }
 
 export default function TaskIndex({ complexityOptions, filters, statusOptions, tasks }: TaskIndexProps) {
+    const { flash } = usePage<SharedPageProps>().props;
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const form = useForm<TaskCreateForm>({
+        title: '',
+        description: '',
+        budget: '',
+        expectedDelivery: '',
+        biddingDeadline: '',
+        complexity: 'MEDIUM',
+        paymentAccountId: '',
+        paymentAccountName: '',
+        attachmentIds: '',
+    });
+
+    function submitCreateTask(event: FormEvent<HTMLFormElement>): void {
+        event.preventDefault();
+
+        form.post('/tasks', {
+            preserveScroll: true,
+            onSuccess: () => {
+                // 发布成功后关闭弹窗并清空表单，任务列表由 Inertia 自动刷新。
+                form.reset();
+                setIsCreateOpen(false);
+            },
+        });
+    }
+
     return (
         <AppLayout
+            actions={
+                <Dialog onOpenChange={setIsCreateOpen} open={isCreateOpen}>
+                    <DialogTrigger asChild>
+                        <Button type="button">发布任务</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>发布任务</DialogTitle>
+                            <DialogDescription>
+                                当前阶段发布的是招标任务，发布后进入招标中。附件只填写外部上传接口返回的附件 ID。
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <form className="space-y-4" method="POST" onSubmit={submitCreateTask}>
+                            <Field label="任务标题" message={form.errors.title} required>
+                                <Input
+                                    autoFocus
+                                    name="title"
+                                    onChange={(event) => form.setData('title', event.target.value)}
+                                    placeholder="例如：用户登录页 UI 重构"
+                                    value={form.data.title}
+                                />
+                            </Field>
+
+                            <Field label="任务描述" message={form.errors.description}>
+                                <Textarea
+                                    name="description"
+                                    onChange={(event) => form.setData('description', event.target.value)}
+                                    placeholder="说明背景、目标、验收标准和注意事项"
+                                    value={form.data.description}
+                                />
+                            </Field>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label="预算金额" message={form.errors.budget} required>
+                                    <Input
+                                        min="0"
+                                        name="budget"
+                                        onChange={(event) => form.setData('budget', event.target.value)}
+                                        placeholder="3000.00"
+                                        step="0.01"
+                                        type="number"
+                                        value={form.data.budget}
+                                    />
+                                </Field>
+
+                                <Field label="复杂度" message={form.errors.complexity} required>
+                                    <NativeSelect
+                                        name="complexity"
+                                        onChange={(event) =>
+                                            form.setData('complexity', event.target.value as TaskComplexity)
+                                        }
+                                        value={form.data.complexity}
+                                    >
+                                        <option value="LOW">简单</option>
+                                        <option value="MEDIUM">中等</option>
+                                        <option value="HIGH">复杂</option>
+                                    </NativeSelect>
+                                </Field>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label="期望交付日期" message={form.errors.expectedDelivery} required>
+                                    <Input
+                                        name="expectedDelivery"
+                                        onChange={(event) => form.setData('expectedDelivery', event.target.value)}
+                                        type="date"
+                                        value={form.data.expectedDelivery}
+                                    />
+                                </Field>
+
+                                <Field label="招标截止时间" message={form.errors.biddingDeadline} required>
+                                    <Input
+                                        name="biddingDeadline"
+                                        onChange={(event) => form.setData('biddingDeadline', event.target.value)}
+                                        type="datetime-local"
+                                        value={form.data.biddingDeadline}
+                                    />
+                                </Field>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label="付款账号 ID" message={form.errors.paymentAccountId} required>
+                                    <Input
+                                        name="paymentAccountId"
+                                        onChange={(event) => form.setData('paymentAccountId', event.target.value)}
+                                        placeholder="PAY001"
+                                        value={form.data.paymentAccountId}
+                                    />
+                                </Field>
+
+                                <Field label="付款账号名称" message={form.errors.paymentAccountName}>
+                                    <Input
+                                        name="paymentAccountName"
+                                        onChange={(event) => form.setData('paymentAccountName', event.target.value)}
+                                        placeholder="开发一部创新预算"
+                                        value={form.data.paymentAccountName}
+                                    />
+                                </Field>
+                            </div>
+
+                            <Field label="附件 ID" message={form.errors.attachmentIds}>
+                                <Textarea
+                                    name="attachmentIds"
+                                    onChange={(event) => form.setData('attachmentIds', event.target.value)}
+                                    placeholder="多个附件 ID 可用换行、逗号或空格分隔"
+                                    value={form.data.attachmentIds}
+                                />
+                            </Field>
+
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button disabled={form.processing} type="button" variant="outline">
+                                        取消
+                                    </Button>
+                                </DialogClose>
+                                <Button disabled={form.processing} type="submit">
+                                    {form.processing ? '发布中...' : '发布'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            }
             activeNav="tasks"
             subtitle="所有公开任务 · 可投标 · 支持状态、复杂度和关键词筛选"
             title="任务大厅"
         >
+            {flash?.success ? (
+                <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    {flash.success}
+                </div>
+            ) : null}
+
             <Card className="mb-4">
                 <CardContent>
                     {/* GET 表单适合列表筛选：URL 可复制、可刷新、可用于浏览器前进后退。 */}
@@ -231,5 +414,25 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                 )}
             </div>
         </AppLayout>
+    );
+}
+
+type FieldProps = {
+    children: ReactNode;
+    label: string;
+    message?: string;
+    required?: boolean;
+};
+
+function Field({ children, label, message, required = false }: FieldProps) {
+    return (
+        <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-[#374151]">
+                {label}
+                {required ? <span className="ml-1 text-red-500">*</span> : null}
+            </span>
+            {children}
+            {message ? <span className="block text-xs leading-5 text-red-600">{message}</span> : null}
+        </label>
     );
 }

@@ -15,4 +15,8 @@ export type SharedPageProps = {
         // roles 来自本地 taskhub_user_role 表，前端只做展示和轻量 UI 控制。
         roles?: string[];
     };
+    flash?: {
+        // success 来自 Laravel redirect()->with('success', ...)，用于提交成功后的页面提示。
+        success?: string | null;
+    };
 };

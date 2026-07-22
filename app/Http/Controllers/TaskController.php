@@ -2,9 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTaskRequest;
+use App\Integrations\Sso\SsoUser;
+use App\Models\AttachmentRef;
 use App\Models\Task;
+use App\Models\TaskEvent;
+use App\Services\CurrentUserService;
+use App\Services\SnowflakeId;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -84,6 +92,92 @@ class TaskController extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function store(
+        StoreTaskRequest $request,
+        CurrentUserService $currentUser,
+        SnowflakeId $ids,
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $user = $currentUser->user();
+        $employeeNo = $user->employeeNo();
+        $attachmentIds = $request->attachmentIds();
+
+        DB::transaction(function () use ($attachmentIds, $employeeNo, $ids, $user, $validated): void {
+            $taskId = $ids->next();
+
+            // 当前发布入口只创建招标任务：发布后直接进入 OPEN，后续 DIRECT 指派单独做。
+            $task = Task::query()->create([
+                'id' => $taskId,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'payment_account_id' => $validated['paymentAccountId'],
+                'payment_account_snapshot' => $this->paymentAccountSnapshot($validated),
+                'budget' => $validated['budget'],
+                'expected_delivery' => $validated['expectedDelivery'],
+                'bidding_deadline' => $validated['biddingDeadline'],
+                'status' => 'OPEN',
+                'assignment_type' => 'BIDDING',
+                'complexity' => $validated['complexity'],
+                'created_by' => $employeeNo,
+                'created_by_snapshot' => $this->createdBySnapshot($user),
+                'version' => 0,
+                'updated_by' => $employeeNo,
+            ]);
+
+            // TASK_CREATED 记录任务第一次进入系统时的快照。
+            TaskEvent::query()->create([
+                'id' => $ids->next(),
+                'task_id' => $task->id,
+                'event_type' => 'TASK_CREATED',
+                'operator_id' => $employeeNo,
+                'from_status' => null,
+                'to_status' => 'OPEN',
+                'event_data' => [
+                    'title' => $task->title,
+                    'budget' => $task->budget,
+                    'complexity' => $task->complexity,
+                    'assignmentType' => $task->assignment_type,
+                ],
+                'remark' => '发布者创建并发布任务',
+            ]);
+
+            // TASK_PUBLISHED 单独记录发布动作，后续如果支持草稿发布，可以复用同一事件类型。
+            TaskEvent::query()->create([
+                'id' => $ids->next(),
+                'task_id' => $task->id,
+                'event_type' => 'TASK_PUBLISHED',
+                'operator_id' => $employeeNo,
+                'from_status' => 'DRAFT',
+                'to_status' => 'OPEN',
+                'event_data' => [
+                    'biddingDeadline' => $task->bidding_deadline?->toISOString(),
+                    'attachmentCount' => count($attachmentIds),
+                ],
+                'remark' => '任务进入招标中',
+            ]);
+
+            if ($attachmentIds !== []) {
+                $now = now();
+
+                AttachmentRef::query()->insert(array_map(
+                    fn (string $attachmentId): array => [
+                        'id' => $ids->next(),
+                        'owner_type' => 'TASK',
+                        'owner_id' => $task->id,
+                        'attachment_id' => $attachmentId,
+                        'uploaded_by' => $employeeNo,
+                        'created_at' => $now,
+                    ],
+                    $attachmentIds,
+                ));
+            }
+        });
+
+        return redirect()
+            ->route('tasks.index')
+            ->with('success', '任务已发布。');
     }
 
     private function filters(Request $request): array
@@ -210,5 +304,27 @@ class TaskController extends Controller
         $amount = $task->final_amount ?? $task->budget;
 
         return '¥'.number_format((float) $amount, 2);
+    }
+
+    private function createdBySnapshot(SsoUser $user): array
+    {
+        // 快照用于历史展示和审计；权限判断仍使用实时外部人员接口。
+        return array_filter([
+            'userId' => $user->employeeNo(),
+            'employeeNo' => $user->employeeNo(),
+            'displayName' => $user->displayName(),
+            'departmentId' => $user->departmentId(),
+            'departmentName' => $user->departmentName(),
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
+    }
+
+    private function paymentAccountSnapshot(array $validated): array
+    {
+        // 当前还未接外部付款账号接口，先保存表单提交的最小展示快照。
+        // 后续接入付款账号接口后，应由后端实时查询账号名称和部门信息。
+        return array_filter([
+            'accountId' => $validated['paymentAccountId'],
+            'accountName' => $validated['paymentAccountName'] ?? null,
+        ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 }

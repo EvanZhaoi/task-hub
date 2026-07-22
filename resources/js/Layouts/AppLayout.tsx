@@ -8,6 +8,8 @@ import type { SharedPageProps } from '@/types/page';
 type AppLayoutProps = {
     // 当前只有任务大厅一个一级导航，类型先收窄，后续新增模块时再扩展。
     activeNav: 'tasks';
+    // actions 用于放页面级操作按钮，例如任务大厅的“发布任务”。
+    actions?: ReactNode;
     // children 是具体业务页面内容，布局只负责外壳、导航和标题区域。
     children: ReactNode;
     subtitle?: string;
@@ -19,7 +21,7 @@ const navItems = [
     { key: 'tasks', label: '任务大厅', href: '/tasks' },
 ] as const;
 
-export default function AppLayout({ activeNav, children, subtitle, title }: AppLayoutProps) {
+export default function AppLayout({ actions, activeNav, children, subtitle, title }: AppLayoutProps) {
     // auth 来自 Inertia 全局共享 props，后端来源是 Laravel Session。
     const { auth } = usePage<SharedPageProps>().props;
     const user = auth?.user;
@@ -91,6 +93,7 @@ export default function AppLayout({ activeNav, children, subtitle, title }: AppL
                         <h1 className="m-0 text-2xl font-bold tracking-normal">{title}</h1>
                         {subtitle ? <p className="mt-1 text-sm text-[#6e6e80]">{subtitle}</p> : null}
                     </div>
+                    {actions ? <div className="flex items-center gap-3">{actions}</div> : null}
                 </div>
 
                 {/* 具体业务页面内容渲染在这里，例如任务大厅列表。 */}

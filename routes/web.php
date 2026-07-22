@@ -27,4 +27,6 @@ Route::post('/logout', [SsoController::class, 'logout'])->name('sso.logout');
 // 业务页面统一受 SSO Session 保护；未登录时会被 EnsureSsoAuthenticated 重定向到 /login。
 Route::middleware(EnsureSsoAuthenticated::class)->group(function (): void {
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    // 发布任务在任务大厅模态框内提交，不单独创建 /tasks/create 页面。
+    Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
 });

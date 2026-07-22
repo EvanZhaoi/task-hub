@@ -30,6 +30,10 @@ class HandleInertiaRequests extends Middleware
                 // 角色来自 taskhub_user_role 表，登录时写入 Session，前端只用于展示。
                 'roles' => $request->session()->get('taskhub_roles', []),
             ],
+            'flash' => [
+                // 表单提交成功后，Controller 可以通过 redirect()->with('success', ...) 给页面一次性提示。
+                'success' => $request->session()->get('success'),
+            ],
         ];
     }
 }
