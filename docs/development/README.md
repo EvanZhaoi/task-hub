@@ -77,6 +77,8 @@ Phase 1 只完成基础环境、认证骨架、数据库映射和开发文档。
 - shadcn/ui 风格基础组件：Button、Badge、Card、Input、NativeSelect
 - 发布任务模态框和写入事务
 - 外部付款账号接口快照
+- 发布任务付款账号 Select 选项来自外部账号列表接口
+- 登录时使用本据点全员人员列表增强 Session 用户信息
 - 开发任务清单
 
 尚未开发：

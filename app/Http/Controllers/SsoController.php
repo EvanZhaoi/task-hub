@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Integrations\Personnel\PersonnelClient;
+use App\Integrations\Personnel\PersonnelException;
+use App\Integrations\Personnel\PersonnelUser;
 use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
+use App\Integrations\Sso\SsoUser;
 use App\Services\CurrentUserService;
 use App\Services\TaskhubRoleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -59,8 +64,12 @@ class SsoController extends Controller
         return Inertia::render('Sso/Callback');
     }
 
-    public function store(Request $request, SsoClient $ssoClient, TaskhubRoleService $roleService): JsonResponse
-    {
+    public function store(
+        Request $request,
+        SsoClient $ssoClient,
+        PersonnelClient $personnelClient,
+        TaskhubRoleService $roleService,
+    ): JsonResponse {
         // 前端只提交 accessToken，不提交姓名、部门或角色。
         // 当前登录人的可信身份必须由后端拿 token 调公司 SSO 接口得到。
         $validated = $request->validate([
@@ -77,6 +86,10 @@ class SsoController extends Controller
             ], 401);
         }
 
+        // 总部 SSO 返回的是“登录身份”，本据点人员列表返回的是“本地更完整的展示信息”。
+        // 如果人员在本据点列表中存在，就用本据点信息写入 Session；不存在则保留总部信息。
+        $user = $this->enrichUserFromPersonnelList($user, $personnelClient);
+
         $roles = $roleService->rolesFor($user);
 
         // Laravel Session 保存的是已认证用户快照和 TaskHub 本地业务角色。
@@ -91,6 +104,37 @@ class SsoController extends Controller
             'redirectTo' => $request->session()->pull('url.intended', route('tasks.index')),
             'roles' => $roles,
         ]);
+    }
+
+    private function enrichUserFromPersonnelList(SsoUser $ssoUser, PersonnelClient $personnelClient): SsoUser
+    {
+        try {
+            $personnelUser = $personnelClient->findByEmployeeNo($ssoUser->employeeNo());
+        } catch (PersonnelException $exception) {
+            // 人员列表用于增强 Session 信息，不应该让总部 SSO 已认证用户因为本地列表接口临时失败而无法登录。
+            // 这里记录日志后回退到总部 SSO 返回的信息。
+            Log::warning('Unable to enrich SSO user from personnel list.', [
+                'employeeNo' => $ssoUser->employeeNo(),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $ssoUser;
+        }
+
+        if (! $personnelUser instanceof PersonnelUser) {
+            return $ssoUser;
+        }
+
+        return new SsoUser(
+            employeeNo: $personnelUser->employeeNo(),
+            displayName: $personnelUser->displayName() ?? $ssoUser->displayName(),
+            departmentId: $personnelUser->departmentId() ?? $ssoUser->departmentId(),
+            departmentName: $personnelUser->departmentName() ?? $ssoUser->departmentName(),
+            raw: [
+                'sso' => $ssoUser->raw(),
+                'personnel' => $personnelUser->raw(),
+            ],
+        );
     }
 
     public function logout(Request $request): RedirectResponse

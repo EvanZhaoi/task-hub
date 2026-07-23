@@ -25,7 +25,11 @@ React POST /sso/session
 ↓
 Laravel 后端用 accessToken 调公司当前登录人接口
 ↓
-拿到 employeeNo / displayName / department
+拿到总部返回的 employeeNo / displayName / department
+↓
+调用本据点全员人员列表接口，按工号查找更准确的本地人员信息
+↓
+如果找到本据点人员，就用本据点信息写 Session；否则保留总部返回信息
 ↓
 根据 employeeNo 查询 taskhub_user_role
 ↓
@@ -40,6 +44,8 @@ Laravel 后端用 accessToken 调公司当前登录人接口
 - 不使用 URL fragment：不是 `#access_token=xxx`。
 - 不支持 `state` 回传和校验。
 - TaskHub 拿到 `accessToken` 后，必须由后端调用公司接口获取当前登录人信息。
+- 总部当前登录人接口返回的信息可能不如本据点人员列表完整，因此登录时会再查询本据点全员人员列表。
+- 如果登录人存在于本据点人员列表，Session 保存本据点更准确的姓名、部门和工号；如果不存在，则继续使用总部返回的信息。
 
 后续如果公司 SSO 协议还有不确定项，例如登录 URL、参数名、用户信息接口路径、返回 JSON 结构，不要猜，先确认协议再改代码。
 
@@ -72,8 +78,9 @@ http://127.0.0.1:8000/tasks
 5. 公司 SSO 登录成功后回调 `/sso/callback?access_token=xxx`。
 6. React 回调页把 `accessToken` 提交给 Laravel。
 7. Laravel 调公司接口获取当前登录人。
-8. Laravel 写入 Session。
-9. 浏览器回到 `/tasks`。
+8. Laravel 调本据点人员列表接口尝试补全人员信息。
+9. Laravel 写入 Session。
+10. 浏览器回到 `/tasks`。
 
 没有公司真实 SSO 参数时，无法完成真实登录，但可以验证：
 
@@ -90,7 +97,11 @@ http://127.0.0.1:8000/tasks
 ```text
 .env.example
 config/sso.php
+config/personnel.php
 config/taskhub.php
+app/Integrations/Personnel/PersonnelException.php
+app/Integrations/Personnel/PersonnelUser.php
+app/Integrations/Personnel/PersonnelClient.php
 app/Integrations/Sso/SsoException.php
 app/Integrations/Sso/SsoUser.php
 app/Integrations/Sso/SsoClient.php
@@ -155,6 +166,12 @@ SSO_USERINFO_PATH=
 SSO_VALIDATE_PATH=
 SSO_TIMEOUT=3
 SSO_VERIFY_SSL=false
+
+PERSONNEL_BASE_URL=
+PERSONNEL_LIST_PATH=
+PERSONNEL_METHOD=GET
+PERSONNEL_TIMEOUT=3
+PERSONNEL_VERIFY_SSL=false
 ```
 
 这些字段的作用：
@@ -172,6 +189,11 @@ SSO_VERIFY_SSL=false
 | `SSO_VALIDATE_PATH` | 早期兼容命名；没有 `SSO_USERINFO_PATH` 时才回退使用，只填 path，不填完整 URL |
 | `SSO_TIMEOUT` | 后端调用公司 SSO 接口的超时时间，单位秒 |
 | `SSO_VERIFY_SSL` | 是否校验 SSO HTTPS 证书；公司推荐示例关闭校验，所以默认 `false` |
+| `PERSONNEL_BASE_URL` | 本据点全员人员列表接口基础地址 |
+| `PERSONNEL_LIST_PATH` | 本据点全员人员列表接口 path，只填 path，不填完整 URL |
+| `PERSONNEL_METHOD` | 人员列表接口请求方式，当前支持 `GET` / `POST` |
+| `PERSONNEL_TIMEOUT` | 后端调用人员列表接口的超时时间，单位秒 |
+| `PERSONNEL_VERIFY_SSL` | 是否校验人员列表接口 HTTPS 证书 |
 
 推荐填写方式：
 
@@ -184,6 +206,12 @@ SSO_CLIENT_SECRET=secret
 SSO_USERINFO_PATH=/api/current-user
 SSO_TIMEOUT=3
 SSO_VERIFY_SSL=false
+
+PERSONNEL_BASE_URL=https://personnel.company.com
+PERSONNEL_LIST_PATH=/api/users
+PERSONNEL_METHOD=GET
+PERSONNEL_TIMEOUT=3
+PERSONNEL_VERIFY_SSL=false
 ```
 
 不要这样写：
@@ -198,6 +226,50 @@ SSO_USERINFO_PATH=https://sso.company.com/api/current-user
 - `SSO_LOGIN_URL` 是浏览器跳转地址，所以使用完整 URL。
 - `SSO_USERINFO_PATH` 是后端接口路径，会和 `SSO_BASE_URL` 组合，所以只写 path。
 - 如果 path 也写完整 URL，`SSO_BASE_URL` 会失去意义，不同环境切换时也更容易出错。
+
+### 本据点人员列表配置的作用
+
+总部 SSO 当前登录人接口解决的是身份认证问题：它告诉 TaskHub“这个 accessToken 对应哪个人”。
+
+但对 TaskHub 的业务展示来说，还需要更准确的本据点人员信息，例如：
+
+- 本据点使用的工号格式。
+- 本据点部门名称。
+- 本据点人员展示名。
+- 未来指定开发者选择器的数据源。
+
+因此登录流程分成两步：
+
+```text
+SsoClient
+↓
+用 accessToken 查询总部当前登录人
+↓
+拿到总部 employeeNo
+↓
+PersonnelClient
+↓
+读取本据点全员人员列表
+↓
+按工号查找当前登录人
+↓
+找到：Session 写入本据点人员信息
+找不到：Session 保留总部人员信息
+```
+
+这样做的原因：
+
+- 不需要创建本地 `users` 表。
+- 不把人员信息复制进 TaskHub 数据库。
+- 本据点人员信息变化后，只要外部人员列表更新，下一次登录就能拿到新信息。
+- 非本据点人员仍然可以使用总部 SSO 返回的信息，不会因为不在本地列表中直接登录失败。
+
+当前代码中由 `app/Integrations/Personnel/PersonnelClient.php` 负责调用本据点人员列表接口。
+
+工号匹配时有一个保守处理：
+
+- 如果总部返回的是纯数字工号，例如 `00010001`，会按本据点规则去掉前导 0 后再匹配。
+- 如果总部返回的是带字母工号，例如 `E001`，不会去掉中间的 0，避免误改真实工号。
 
 然后打开你本地的：
 

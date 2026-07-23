@@ -80,7 +80,13 @@ function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): str
     });
 }
 
-export default function TaskIndex({ complexityOptions, filters, statusOptions, tasks }: TaskIndexProps) {
+export default function TaskIndex({
+    complexityOptions,
+    filters,
+    paymentAccountOptions,
+    statusOptions,
+    tasks,
+}: TaskIndexProps) {
     const { flash } = usePage<SharedPageProps>().props;
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const form = useForm<TaskCreateForm>({
@@ -190,13 +196,28 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                                 </Field>
                             </div>
 
-                            <Field label="付款账号 ID" message={form.errors.paymentAccountId} required>
-                                <Input
+                            <Field label="付款账号" message={form.errors.paymentAccountId} required>
+                                <NativeSelect
+                                    disabled={paymentAccountOptions.length === 0}
                                     name="paymentAccountId"
                                     onChange={(event) => form.setData('paymentAccountId', event.target.value)}
-                                    placeholder="PAY001"
                                     value={form.data.paymentAccountId}
-                                />
+                                >
+                                    {/* 付款账号来自后端调用外部接口得到的列表，前端只提交选中的账号 ID。 */}
+                                    <option value="">
+                                        {paymentAccountOptions.length === 0 ? '付款账号列表不可用' : '请选择付款账号'}
+                                    </option>
+                                    {paymentAccountOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </NativeSelect>
+                                {paymentAccountOptions.length === 0 ? (
+                                    <span className="block text-xs leading-5 text-amber-700">
+                                        付款账号接口未配置或暂时不可用，请确认外部接口后再发布任务。
+                                    </span>
+                                ) : null}
                             </Field>
 
                             <Field label="附件 ID" message={form.errors.attachmentIds}>
@@ -214,7 +235,7 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                                         取消
                                     </Button>
                                 </DialogClose>
-                                <Button disabled={form.processing} type="submit">
+                                <Button disabled={form.processing || paymentAccountOptions.length === 0} type="submit">
                                     {form.processing ? '发布中...' : '发布'}
                                 </Button>
                             </DialogFooter>

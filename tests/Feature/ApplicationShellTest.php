@@ -2,6 +2,8 @@
 
 use App\Integrations\Payment\PaymentAccount;
 use App\Integrations\Payment\PaymentAccountClient;
+use App\Integrations\Personnel\PersonnelClient;
+use App\Integrations\Personnel\PersonnelUser;
 use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
 use App\Integrations\Sso\SsoUser;
@@ -39,6 +41,22 @@ test('authenticated users can view the task hall with filters', function (): voi
     $this->withoutVite();
     // 测试数据库不执行正式 schema.sql，因此这里为本测试创建最小可用表结构。
     createTaskHallTables();
+
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        public function fetchAll(): array
+        {
+            // 任务大厅打开时会加载付款账号列表给发布任务 Select 使用。
+            return [
+                new PaymentAccount(
+                    accountId: 'PAY001',
+                    accountName: '产品研发预算',
+                    departmentId: 'DEV01',
+                    departmentName: '产品研发部',
+                ),
+            ];
+        }
+    });
 
     // 插入一个已截止但仍有 ACTIVE 投标的 OPEN 任务，用来验证“待选标”派生状态。
     DB::table('task')->insert([
@@ -93,6 +111,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.filters.status', 'PENDING_SELECTION')
         ->assertJsonPath('props.filters.complexity', 'MEDIUM')
         ->assertJsonPath('props.filters.keyword', '登录')
+        ->assertJsonPath('props.paymentAccountOptions.0.value', 'PAY001')
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1);
 });
@@ -165,7 +184,7 @@ test('payment account client fetches account snapshot from external service', fu
     // 测试中使用 Http::fake 拦截请求，既能验证请求地址，也不会真实访问公司接口。
     config([
         'payment_account.base_url' => 'https://payment.example.test',
-        'payment_account.path' => '/accounts/{accountId}',
+        'payment_account.detail_path' => '/accounts/{accountId}',
         'payment_account.method' => 'GET',
         'payment_account.timeout' => 3,
         'payment_account.verify_ssl' => false,
@@ -212,6 +231,17 @@ test('the sso session endpoint accepts access token without state', function ():
         }
     });
 
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
+        {
+            // 本测试只验证 SSO 建 Session 主流程，人员列表返回 null 表示不属于本据点，继续使用总部信息。
+            expect($employeeNo)->toBe('E10001');
+
+            return null;
+        }
+    });
+
     // 用容器替换角色服务，验证角色来源是后端服务，不是前端传入。
     $this->app->instance(TaskhubRoleService::class, new class extends TaskhubRoleService
     {
@@ -236,6 +266,60 @@ test('the sso session endpoint accepts access token without state', function ():
     // 登录成功后，用户快照和 TaskHub 角色都应写入 Session。
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
+});
+
+test('sso session prefers local personnel list when user belongs to current site', function (): void {
+    // 总部 SSO 返回的信息可能不完整，这里故意只返回姓名，不返回部门。
+    $this->app->instance(SsoClient::class, new class extends SsoClient
+    {
+        public function fetchCurrentUser(string $accessToken): SsoUser
+        {
+            expect($accessToken)->toBe('token-456');
+
+            return new SsoUser(
+                employeeNo: '00010001',
+                displayName: '总部张三',
+            );
+        }
+    });
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
+        {
+            // 本据点工号不带前导 0；PersonnelClient 会负责按本地规则匹配和返回准确人员信息。
+            expect($employeeNo)->toBe('00010001');
+
+            return new PersonnelUser(
+                employeeNo: '10001',
+                displayName: '张三',
+                departmentId: 'DEV01',
+                departmentName: '开发一部',
+            );
+        }
+    });
+
+    $this->app->instance(TaskhubRoleService::class, new class extends TaskhubRoleService
+    {
+        public function rolesFor(SsoUser $user): array
+        {
+            // 角色查询应该使用本据点人员列表修正后的工号，而不是总部带前导 0 的工号。
+            expect($user->employeeNo())->toBe('10001');
+
+            return ['TOP'];
+        }
+    });
+
+    $this->postJson('/sso/session', [
+        'accessToken' => 'token-456',
+    ])->assertOk();
+
+    expect(session(CurrentUserService::SESSION_KEY))->toMatchArray([
+        'employeeNo' => '10001',
+        'displayName' => '张三',
+        'departmentId' => 'DEV01',
+        'departmentName' => '开发一部',
+    ]);
 });
 
 test('logout clears sso session and redirects home', function (): void {

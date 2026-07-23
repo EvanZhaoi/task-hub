@@ -35,7 +35,7 @@ class TaskController extends Controller
     // 复杂度枚举来自 schema.sql，前端筛选和后端校验保持一致。
     private const COMPLEXITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
-    public function index(Request $request): Response
+    public function index(Request $request, PaymentAccountClient $paymentAccounts): Response
     {
         // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
         $filters = $this->filters($request);
@@ -78,6 +78,7 @@ class TaskController extends Controller
 
         return Inertia::render('Tasks/Index', [
             'filters' => $filters,
+            'paymentAccountOptions' => $this->paymentAccountOptions($paymentAccounts),
             'statusOptions' => $this->statusOptions(),
             'complexityOptions' => $this->complexityOptions(),
             'tasks' => [
@@ -296,6 +297,29 @@ class TaskController extends Controller
             ['value' => 'MEDIUM', 'label' => '中等'],
             ['value' => 'HIGH', 'label' => '复杂'],
         ];
+    }
+
+    private function paymentAccountOptions(PaymentAccountClient $paymentAccounts): array
+    {
+        try {
+            return array_map(
+                fn (PaymentAccount $account): array => [
+                    // value 是发布任务表单提交给后端的账号 ID。
+                    'value' => $account->accountId(),
+                    // label 是页面展示文案；没有账号名称时退回展示 ID，保证 Select 不出现空白项。
+                    'label' => $account->accountName() === null
+                        ? $account->accountId()
+                        : "{$account->accountName()}（{$account->accountId()}）",
+                    'accountName' => $account->accountName(),
+                    'departmentName' => $account->departmentName(),
+                ],
+                $paymentAccounts->fetchAll(),
+            );
+        } catch (PaymentAccountException $exception) {
+            // 账号列表用于页面选择；接口不可用时仍允许任务大厅打开，前端显示不可选择。
+            // 真正发布时 store() 还会再次调用外部接口并返回 paymentAccountId 字段错误。
+            return [];
+        }
     }
 
     private function displayStatus(Task $task): string

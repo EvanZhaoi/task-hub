@@ -42,6 +42,36 @@ final readonly class PaymentAccount
         );
     }
 
+    /**
+     * @return list<self>
+     */
+    public static function listFromPayload(array $payload): array
+    {
+        // 外部列表接口常见返回形式可能是：
+        // 1. 直接返回账号数组：[{"accountId": "..."}]
+        // 2. 包在 data/accounts/list 字段中：{"data": [...]}
+        // 这里做轻量兼容，但不把 Controller 和页面绑死在某一种响应包装上。
+        $items = match (true) {
+            isset($payload['accounts']) && is_array($payload['accounts']) => $payload['accounts'],
+            isset($payload['list']) && is_array($payload['list']) => $payload['list'],
+            isset($payload['data']) && is_array($payload['data']) => $payload['data'],
+            self::isList($payload) => $payload,
+            default => [],
+        };
+
+        $accounts = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $accounts[] = self::fromPayload('', $item);
+        }
+
+        return $accounts;
+    }
+
     public function accountId(): string
     {
         return $this->accountId;
@@ -76,5 +106,11 @@ final readonly class PaymentAccount
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    private static function isList(array $payload): bool
+    {
+        // array_is_list 是 PHP 8.1+ 原生函数，用来判断数组 key 是否为 0..n 的连续数字。
+        return array_is_list($payload);
     }
 }

@@ -13,6 +13,12 @@ export type SelectOption = {
     value: string;
 };
 
+export type PaymentAccountOption = SelectOption & {
+    // 账号名称和部门名称只用于选择器辅助展示，保存时后端会重新查询外部接口。
+    accountName?: string | null;
+    departmentName?: string | null;
+};
+
 export type TaskListItem = {
     // 后端把 BIGINT ID 转成 string，避免 JavaScript number 精度风险。
     id: string;
@@ -70,6 +76,7 @@ export type TaskIndexProps = {
     // 这些 props 由 TaskController@index 通过 Inertia::render() 下发。
     complexityOptions: SelectOption[];
     filters: TaskFilters;
+    paymentAccountOptions: PaymentAccountOption[];
     statusOptions: SelectOption[];
     tasks: PaginatedTasks;
 };
