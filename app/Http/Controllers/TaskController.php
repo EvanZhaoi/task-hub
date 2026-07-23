@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTaskRequest;
+use App\Integrations\Payment\PaymentAccount;
+use App\Integrations\Payment\PaymentAccountClient;
+use App\Integrations\Payment\PaymentAccountException;
 use App\Integrations\Sso\SsoUser;
 use App\Models\AttachmentRef;
 use App\Models\Task;
@@ -14,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -97,6 +101,7 @@ class TaskController extends Controller
     public function store(
         StoreTaskRequest $request,
         CurrentUserService $currentUser,
+        PaymentAccountClient $paymentAccounts,
         SnowflakeId $ids,
     ): RedirectResponse {
         $validated = $request->validated();
@@ -104,7 +109,17 @@ class TaskController extends Controller
         $employeeNo = $user->employeeNo();
         $attachmentIds = $request->attachmentIds();
 
-        DB::transaction(function () use ($attachmentIds, $employeeNo, $ids, $user, $validated): void {
+        try {
+            // 付款账号是外部主数据，前端只提交 ID；名称和部门快照必须由后端实时查询。
+            // 外部查询放在事务外，避免数据库事务等待网络请求。
+            $paymentAccount = $paymentAccounts->fetchById($validated['paymentAccountId']);
+        } catch (PaymentAccountException $exception) {
+            throw ValidationException::withMessages([
+                'paymentAccountId' => $exception->getMessage(),
+            ]);
+        }
+
+        DB::transaction(function () use ($attachmentIds, $employeeNo, $ids, $paymentAccount, $user, $validated): void {
             $taskId = $ids->next();
 
             // 当前发布入口只创建招标任务：发布后直接进入 OPEN，后续 DIRECT 指派单独做。
@@ -112,8 +127,8 @@ class TaskController extends Controller
                 'id' => $taskId,
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
-                'payment_account_id' => $validated['paymentAccountId'],
-                'payment_account_snapshot' => $this->paymentAccountSnapshot($validated),
+                'payment_account_id' => $paymentAccount->accountId(),
+                'payment_account_snapshot' => $this->paymentAccountSnapshot($paymentAccount),
                 'budget' => $validated['budget'],
                 'expected_delivery' => $validated['expectedDelivery'],
                 'bidding_deadline' => $validated['biddingDeadline'],
@@ -318,13 +333,9 @@ class TaskController extends Controller
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
-    private function paymentAccountSnapshot(array $validated): array
+    private function paymentAccountSnapshot(PaymentAccount $paymentAccount): array
     {
-        // 当前还未接外部付款账号接口，先保存表单提交的最小展示快照。
-        // 后续接入付款账号接口后，应由后端实时查询账号名称和部门信息。
-        return array_filter([
-            'accountId' => $validated['paymentAccountId'],
-            'accountName' => $validated['paymentAccountName'] ?? null,
-        ], fn (mixed $value): bool => $value !== null && $value !== '');
+        // 保留该方法用于表达业务语义：Task 保存的是付款账号历史快照，不是实时主数据。
+        return $paymentAccount->toSnapshot();
     }
 }

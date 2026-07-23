@@ -66,7 +66,6 @@ type TaskCreateForm = {
     biddingDeadline: string;
     complexity: TaskComplexity;
     paymentAccountId: string;
-    paymentAccountName: string;
     attachmentIds: string;
 };
 
@@ -92,7 +91,6 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
         biddingDeadline: '',
         complexity: 'MEDIUM',
         paymentAccountId: '',
-        paymentAccountName: '',
         attachmentIds: '',
     });
 
@@ -192,25 +190,14 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                                 </Field>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <Field label="付款账号 ID" message={form.errors.paymentAccountId} required>
-                                    <Input
-                                        name="paymentAccountId"
-                                        onChange={(event) => form.setData('paymentAccountId', event.target.value)}
-                                        placeholder="PAY001"
-                                        value={form.data.paymentAccountId}
-                                    />
-                                </Field>
-
-                                <Field label="付款账号名称" message={form.errors.paymentAccountName}>
-                                    <Input
-                                        name="paymentAccountName"
-                                        onChange={(event) => form.setData('paymentAccountName', event.target.value)}
-                                        placeholder="开发一部创新预算"
-                                        value={form.data.paymentAccountName}
-                                    />
-                                </Field>
-                            </div>
+                            <Field label="付款账号 ID" message={form.errors.paymentAccountId} required>
+                                <Input
+                                    name="paymentAccountId"
+                                    onChange={(event) => form.setData('paymentAccountId', event.target.value)}
+                                    placeholder="PAY001"
+                                    value={form.data.paymentAccountId}
+                                />
+                            </Field>
 
                             <Field label="附件 ID" message={form.errors.attachmentIds}>
                                 <Textarea

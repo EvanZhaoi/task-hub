@@ -1,5 +1,7 @@
 <?php
 
+use App\Integrations\Payment\PaymentAccount;
+use App\Integrations\Payment\PaymentAccountClient;
 use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
 use App\Integrations\Sso\SsoUser;
@@ -99,6 +101,21 @@ test('authenticated users can publish a bidding task with attachment ids', funct
     $this->withoutVite();
     createTaskHallTables();
 
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        public function fetchById(string $accountId): PaymentAccount
+        {
+            expect($accountId)->toBe('PAY001');
+
+            return new PaymentAccount(
+                accountId: 'PAY001',
+                accountName: '开发一部创新预算',
+                departmentId: 'DEV01',
+                departmentName: '开发一部',
+            );
+        }
+    });
+
     $this->withSession([
         CurrentUserService::SESSION_KEY => [
             'employeeNo' => 'E10002',
@@ -116,7 +133,6 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             'biddingDeadline' => now()->addDay()->format('Y-m-d\TH:i'),
             'complexity' => 'MEDIUM',
             'paymentAccountId' => 'PAY001',
-            'paymentAccountName' => '开发一部创新预算',
             'attachmentIds' => "ATT001\nATT002,ATT001",
         ])
         ->assertRedirect(route('tasks.index'))
@@ -129,11 +145,53 @@ test('authenticated users can publish a bidding task with attachment ids', funct
         ->and($task->assignment_type)->toBe('BIDDING')
         ->and($task->created_by)->toBe('E10002');
 
+    expect(json_decode($task->payment_account_snapshot, true, flags: JSON_THROW_ON_ERROR))
+        ->toMatchArray([
+            'accountId' => 'PAY001',
+            'accountName' => '开发一部创新预算',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+        ]);
+
     expect(DB::table('attachment_ref')->where('owner_id', $task->id)->pluck('attachment_id')->sort()->values()->all())
         ->toBe(['ATT001', 'ATT002']);
 
     expect(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
         ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
+});
+
+test('payment account client fetches account snapshot from external service', function (): void {
+    // 付款账号属于外部主数据；TaskHub 只根据账号 ID 调接口获取展示快照。
+    // 测试中使用 Http::fake 拦截请求，既能验证请求地址，也不会真实访问公司接口。
+    config([
+        'payment_account.base_url' => 'https://payment.example.test',
+        'payment_account.path' => '/accounts/{accountId}',
+        'payment_account.method' => 'GET',
+        'payment_account.timeout' => 3,
+        'payment_account.verify_ssl' => false,
+    ]);
+
+    Http::fake([
+        'https://payment.example.test/accounts/PAY001' => Http::response([
+            'accountId' => 'PAY001',
+            'accountName' => '开发一部创新预算',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+        ]),
+    ]);
+
+    $paymentAccount = app(PaymentAccountClient::class)->fetchById('PAY001');
+
+    expect($paymentAccount->toSnapshot())->toMatchArray([
+        'accountId' => 'PAY001',
+        'accountName' => '开发一部创新预算',
+        'departmentId' => 'DEV01',
+        'departmentName' => '开发一部',
+    ]);
+
+    // 断言账号 ID 由后端放进外部接口 path，防止以后又退回到前端提交账号名称的方案。
+    Http::assertSent(fn ($request): bool => $request->method() === 'GET'
+        && $request->url() === 'https://payment.example.test/accounts/PAY001');
 });
 
 test('the sso session endpoint accepts access token without state', function (): void {

@@ -38,9 +38,8 @@ class StoreTaskRequest extends FormRequest
             'biddingDeadline' => ['required', 'date', 'after:now'],
             // 枚举值必须和 database/schema.sql 的 CHECK 约束保持一致。
             'complexity' => ['required', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
-            // 付款账号来自外部系统；当前阶段只记录 ID 和可选展示名快照。
+            // 付款账号来自外部系统；前端只提交 ID，名称和部门由后端调用外部接口获取。
             'paymentAccountId' => ['required', 'string', 'max:64'],
-            'paymentAccountName' => ['nullable', 'string', 'max:100'],
             // 附件已经由外部上传接口生成 ID，这里只允许输入多个外部附件 ID。
             // 前端用换行或逗号分隔；Controller 会解析成数组后写 attachment_ref。
             'attachmentIds' => ['nullable', 'string', 'max:4000'],
