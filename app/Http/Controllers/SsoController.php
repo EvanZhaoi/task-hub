@@ -86,15 +86,18 @@ class SsoController extends Controller
             ], 401);
         }
 
-        // 总部 SSO 返回的是“登录身份”，本据点人员列表返回的是“本地更完整的展示信息”。
-        // 如果人员在本据点列表中存在，就用本据点信息写入 Session；不存在则保留总部信息。
-        $user = $this->enrichUserFromPersonnelList($user, $personnelClient);
-
         $roles = $roleService->rolesFor($user);
+        $sessionUser = $user->toSessionPayload();
+
+        if ($siteUser = $this->siteUserFromPersonnelList($user, $personnelClient)) {
+            // 总部 SSO 信息是认证来源，不能被本据点人员信息覆盖。
+            // 本据点信息作为额外数组字段保存，供页面展示和未来人员选择器使用。
+            $sessionUser['siteUser'] = $siteUser->toSessionPayload();
+        }
 
         // Laravel Session 保存的是已认证用户快照和 TaskHub 本地业务角色。
         // 角色来自 taskhub_user_role 表，变更角色不需要重新发布应用。
-        $request->session()->put(CurrentUserService::SESSION_KEY, $user->toSessionPayload());
+        $request->session()->put(CurrentUserService::SESSION_KEY, $sessionUser);
         $request->session()->put(CurrentUserService::ROLE_SESSION_KEY, $roles);
 
         // 登录成功后刷新 Session ID，降低会话固定攻击风险。
@@ -106,7 +109,7 @@ class SsoController extends Controller
         ]);
     }
 
-    private function enrichUserFromPersonnelList(SsoUser $ssoUser, PersonnelClient $personnelClient): SsoUser
+    private function siteUserFromPersonnelList(SsoUser $ssoUser, PersonnelClient $personnelClient): ?PersonnelUser
     {
         try {
             $personnelUser = $personnelClient->findByEmployeeNo($ssoUser->employeeNo());
@@ -118,23 +121,14 @@ class SsoController extends Controller
                 'message' => $exception->getMessage(),
             ]);
 
-            return $ssoUser;
+            return null;
         }
 
         if (! $personnelUser instanceof PersonnelUser) {
-            return $ssoUser;
+            return null;
         }
 
-        return new SsoUser(
-            employeeNo: $personnelUser->employeeNo(),
-            displayName: $personnelUser->displayName() ?? $ssoUser->displayName(),
-            departmentId: $personnelUser->departmentId() ?? $ssoUser->departmentId(),
-            departmentName: $personnelUser->departmentName() ?? $ssoUser->departmentName(),
-            raw: [
-                'sso' => $ssoUser->raw(),
-                'personnel' => $personnelUser->raw(),
-            ],
-        );
+        return $personnelUser;
     }
 
     public function logout(Request $request): RedirectResponse

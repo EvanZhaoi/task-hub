@@ -29,7 +29,7 @@ Laravel 后端用 accessToken 调公司当前登录人接口
 ↓
 调用本据点全员人员列表接口，按工号查找更准确的本地人员信息
 ↓
-如果找到本据点人员，就用本据点信息写 Session；否则保留总部返回信息
+如果找到本据点人员，就在 Session 中追加 siteUser 数组；总部原始人员信息仍保留
 ↓
 根据 employeeNo 查询 taskhub_user_role
 ↓
@@ -45,7 +45,7 @@ Laravel 后端用 accessToken 调公司当前登录人接口
 - 不支持 `state` 回传和校验。
 - TaskHub 拿到 `accessToken` 后，必须由后端调用公司接口获取当前登录人信息。
 - 总部当前登录人接口返回的信息可能不如本据点人员列表完整，因此登录时会再查询本据点全员人员列表。
-- 如果登录人存在于本据点人员列表，Session 保存本据点更准确的姓名、部门和工号；如果不存在，则继续使用总部返回的信息。
+- 如果登录人存在于本据点人员列表，Session 会额外保存 `siteUser` 数组；顶层总部人员信息不覆盖、不删除。
 
 后续如果公司 SSO 协议还有不确定项，例如登录 URL、参数名、用户信息接口路径、返回 JSON 结构，不要猜，先确认协议再改代码。
 
@@ -253,8 +253,8 @@ PersonnelClient
 ↓
 按工号查找当前登录人
 ↓
-找到：Session 写入本据点人员信息
-找不到：Session 保留总部人员信息
+找到：Session 顶层保留总部人员信息，并追加 siteUser 数组
+找不到：Session 只保留总部人员信息
 ```
 
 这样做的原因：
@@ -263,6 +263,26 @@ PersonnelClient
 - 不把人员信息复制进 TaskHub 数据库。
 - 本据点人员信息变化后，只要外部人员列表更新，下一次登录就能拿到新信息。
 - 非本据点人员仍然可以使用总部 SSO 返回的信息，不会因为不在本地列表中直接登录失败。
+- 总部 SSO 信息是认证来源，所以 TaskHub 不用本据点人员信息覆盖顶层 `employeeNo`、`displayName`、`departmentName`。
+
+Session 中如果匹配到本据点人员，结构类似：
+
+```php
+[
+    // 顶层仍是总部 SSO 当前登录人信息。
+    'employeeNo' => '00010001',
+    'displayName' => '总部张三',
+    'departmentId' => null,
+    'departmentName' => null,
+    // siteUser 是本据点人员列表中的准确人员信息。
+    'siteUser' => [
+        'employeeNo' => '10001',
+        'displayName' => '张三',
+        'departmentId' => 'DEV01',
+        'departmentName' => '开发一部',
+    ],
+]
+```
 
 当前代码中由 `app/Integrations/Personnel/PersonnelClient.php` 负责调用本据点人员列表接口。
 

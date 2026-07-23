@@ -303,8 +303,8 @@ test('sso session prefers local personnel list when user belongs to current site
     {
         public function rolesFor(SsoUser $user): array
         {
-            // 角色查询应该使用本据点人员列表修正后的工号，而不是总部带前导 0 的工号。
-            expect($user->employeeNo())->toBe('10001');
+            // 角色查询仍使用总部 SSO 原始用户对象；本据点人员信息只作为 Session 中的 siteUser 附加字段。
+            expect($user->employeeNo())->toBe('00010001');
 
             return ['TOP'];
         }
@@ -315,10 +315,17 @@ test('sso session prefers local personnel list when user belongs to current site
     ])->assertOk();
 
     expect(session(CurrentUserService::SESSION_KEY))->toMatchArray([
-        'employeeNo' => '10001',
-        'displayName' => '张三',
-        'departmentId' => 'DEV01',
-        'departmentName' => '开发一部',
+        // 顶层字段保留总部 SSO 当前登录人信息，不被本据点人员列表覆盖。
+        'employeeNo' => '00010001',
+        'displayName' => '总部张三',
+        // 本据点更准确的信息放在额外数组字段中，后续页面和选择器可以按需使用。
+        'siteUser' => [
+            'employeeNo' => '10001',
+            'displayName' => '张三',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+            'raw' => [],
+        ],
     ]);
 });
 

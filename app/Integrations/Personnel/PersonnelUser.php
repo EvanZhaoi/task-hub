@@ -83,6 +83,19 @@ final readonly class PersonnelUser
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
+    public function toSessionPayload(): array
+    {
+        // Session 中作为 sso_user.siteUser 保存，表示“本据点人员信息”。
+        // 它不覆盖总部 SSO 原始字段，只作为额外展示和后续选择器数据。
+        return [
+            'employeeNo' => $this->employeeNo,
+            'displayName' => $this->displayName,
+            'departmentId' => $this->departmentId,
+            'departmentName' => $this->departmentName,
+            'raw' => $this->raw,
+        ];
+    }
+
     public static function normalizeEmployeeNo(mixed $value): ?string
     {
         if (! is_string($value) || $value === '') {

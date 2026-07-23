@@ -6,6 +6,13 @@ export type CurrentUser = {
     // displayName 和 departmentName 只用于界面展示，不用于权限判断。
     displayName?: string;
     departmentName?: string;
+    // siteUser 是本据点人员列表匹配到的更完整信息；没有匹配到时不存在。
+    siteUser?: {
+        employeeNo?: string;
+        displayName?: string;
+        departmentId?: string;
+        departmentName?: string;
+    };
 };
 
 export type SharedPageProps = {
