@@ -3,7 +3,10 @@
 namespace App\Integrations\Payment;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * 外部付款账号接口客户端。
@@ -18,7 +21,37 @@ class PaymentAccountClient
      */
     public function fetchAll(): array
     {
+        if ($accounts = $this->cachedAccounts()) {
+            return $accounts;
+        }
+
         // 发布任务弹窗需要展示所有可选付款账号，所以这里按列表接口读取外部主数据。
+        $accounts = $this->fetchAllFromRemote();
+        $this->putCacheIfNotEmpty($accounts);
+
+        return $accounts;
+    }
+
+    public function refreshCache(): int
+    {
+        // 定时任务调用该方法刷新 Redis。
+        // 如果外部接口失败或返回空列表，不覆盖旧缓存，避免页面突然没有可选账号。
+        $accounts = $this->fetchAllFromRemote();
+
+        if ($accounts === []) {
+            return 0;
+        }
+
+        $this->putCacheIfNotEmpty($accounts);
+
+        return count($accounts);
+    }
+
+    /**
+     * @return list<PaymentAccount>
+     */
+    private function fetchAllFromRemote(): array
+    {
         $payload = $this->requestConfiguredPath(
             pathConfigKey: 'payment_account.list_path',
             emptyPathMessage: 'Payment account list path is not configured.',
@@ -29,6 +62,12 @@ class PaymentAccountClient
 
     public function fetchById(string $accountId): PaymentAccount
     {
+        foreach ($this->cachedAccounts() as $paymentAccount) {
+            if ($paymentAccount->accountId() === $accountId) {
+                return $paymentAccount;
+            }
+        }
+
         $detailPath = config('payment_account.detail_path');
 
         if (is_string($detailPath) && $detailPath !== '') {
@@ -106,6 +145,52 @@ class PaymentAccountClient
         }
 
         return $payload;
+    }
+
+    /**
+     * @return list<PaymentAccount>
+     */
+    private function cachedAccounts(): array
+    {
+        try {
+            $cached = Cache::store((string) config('payment_account.cache_store', 'redis'))
+                ->get((string) config('payment_account.cache_key', 'taskhub:payment_accounts'));
+        } catch (Throwable $exception) {
+            Log::warning('Unable to read payment account cache.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        if (! is_array($cached)) {
+            return [];
+        }
+
+        return PaymentAccount::listFromPayload($cached);
+    }
+
+    /**
+     * @param  list<PaymentAccount>  $accounts
+     */
+    private function putCacheIfNotEmpty(array $accounts): void
+    {
+        if ($accounts === []) {
+            return;
+        }
+
+        try {
+            Cache::store((string) config('payment_account.cache_store', 'redis'))
+                ->put(
+                    (string) config('payment_account.cache_key', 'taskhub:payment_accounts'),
+                    array_map(fn (PaymentAccount $account): array => $account->toCachePayload(), $accounts),
+                    (int) config('payment_account.cache_ttl', 86400),
+                );
+        } catch (Throwable $exception) {
+            Log::warning('Unable to write payment account cache.', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function pathWithAccountId(string $path, ?string $accountId): string

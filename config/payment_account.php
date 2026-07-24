@@ -13,4 +13,8 @@ return [
     'timeout' => (int) env('PAYMENT_ACCOUNT_TIMEOUT', 3),
     // 本地/测试环境可关闭证书校验；生产环境建议设置为 true。
     'verify_ssl' => filter_var(env('PAYMENT_ACCOUNT_VERIFY_SSL', false), FILTER_VALIDATE_BOOLEAN),
+    // 外部账号列表数据量较大，运行时优先读 Redis 缓存。
+    'cache_store' => env('EXTERNAL_DIRECTORY_CACHE_STORE', 'redis'),
+    'cache_key' => env('PAYMENT_ACCOUNT_CACHE_KEY', 'taskhub:payment_accounts'),
+    'cache_ttl' => (int) env('EXTERNAL_DIRECTORY_CACHE_TTL', 86400),
 ];

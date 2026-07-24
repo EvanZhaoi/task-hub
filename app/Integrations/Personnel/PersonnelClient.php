@@ -3,7 +3,10 @@
 namespace App\Integrations\Personnel;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * 本据点全员人员接口客户端。
@@ -17,6 +20,36 @@ class PersonnelClient
      * @return list<PersonnelUser>
      */
     public function fetchAll(): array
+    {
+        if ($users = $this->cachedUsers()) {
+            return $users;
+        }
+
+        $users = $this->fetchAllFromRemote();
+        $this->putCacheIfNotEmpty($users);
+
+        return $users;
+    }
+
+    public function refreshCache(): int
+    {
+        // 定时任务调用该方法刷新 Redis。
+        // 如果外部接口失败或返回空列表，不覆盖旧缓存，避免登录和人员选择器突然失去数据。
+        $users = $this->fetchAllFromRemote();
+
+        if ($users === []) {
+            return 0;
+        }
+
+        $this->putCacheIfNotEmpty($users);
+
+        return count($users);
+    }
+
+    /**
+     * @return list<PersonnelUser>
+     */
+    private function fetchAllFromRemote(): array
     {
         $baseUrl = config('personnel.base_url');
         $path = config('personnel.list_path');
@@ -120,5 +153,51 @@ class PersonnelClient
     {
         // list_path 必须是 path，防止 base_url + full_url 拼出错误请求地址。
         return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');
+    }
+
+    /**
+     * @return list<PersonnelUser>
+     */
+    private function cachedUsers(): array
+    {
+        try {
+            $cached = Cache::store((string) config('personnel.cache_store', 'redis'))
+                ->get((string) config('personnel.cache_key', 'taskhub:personnel_users'));
+        } catch (Throwable $exception) {
+            Log::warning('Unable to read personnel cache.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        if (! is_array($cached)) {
+            return [];
+        }
+
+        return $this->usersFromPayload($cached);
+    }
+
+    /**
+     * @param  list<PersonnelUser>  $users
+     */
+    private function putCacheIfNotEmpty(array $users): void
+    {
+        if ($users === []) {
+            return;
+        }
+
+        try {
+            Cache::store((string) config('personnel.cache_store', 'redis'))
+                ->put(
+                    (string) config('personnel.cache_key', 'taskhub:personnel_users'),
+                    array_map(fn (PersonnelUser $user): array => $user->toCachePayload(), $users),
+                    (int) config('personnel.cache_ttl', 86400),
+                );
+        } catch (Throwable $exception) {
+            Log::warning('Unable to write personnel cache.', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 }

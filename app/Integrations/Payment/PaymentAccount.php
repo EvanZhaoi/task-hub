@@ -103,6 +103,17 @@ final readonly class PaymentAccount
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
+    public function toCachePayload(): array
+    {
+        // Redis 中只缓存普通数组，不缓存 PHP 对象，避免类结构变化导致反序列化问题。
+        return [
+            'accountId' => $this->accountId,
+            'accountName' => $this->accountName,
+            'departmentId' => $this->departmentId,
+            'departmentName' => $this->departmentName,
+        ];
+    }
+
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;

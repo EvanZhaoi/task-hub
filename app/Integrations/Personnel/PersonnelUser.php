@@ -96,6 +96,17 @@ final readonly class PersonnelUser
         ];
     }
 
+    public function toCachePayload(): array
+    {
+        // Redis 中只缓存普通数组，不缓存 PHP 对象，避免类结构变化导致反序列化问题。
+        return [
+            'employeeNo' => $this->employeeNo,
+            'displayName' => $this->displayName,
+            'departmentId' => $this->departmentId,
+            'departmentName' => $this->departmentName,
+        ];
+    }
+
     public static function normalizeEmployeeNo(mixed $value): ?string
     {
         if (! is_string($value) || $value === '') {

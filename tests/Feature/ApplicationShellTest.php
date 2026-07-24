@@ -13,6 +13,7 @@ use App\Services\CurrentUserService;
 use App\Services\SnowflakeId;
 use App\Services\TaskhubRoleService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -211,6 +212,83 @@ test('payment account client fetches account snapshot from external service', fu
     // 断言账号 ID 由后端放进外部接口 path，防止以后又退回到前端提交账号名称的方案。
     Http::assertSent(fn ($request): bool => $request->method() === 'GET'
         && $request->url() === 'https://payment.example.test/accounts/PAY001');
+});
+
+test('external directory cache refresh keeps previous payment accounts when response is empty', function (): void {
+    config([
+        'payment_account.base_url' => 'https://payment.example.test',
+        'payment_account.list_path' => '/accounts',
+        'payment_account.detail_path' => null,
+        'payment_account.method' => 'GET',
+        'payment_account.timeout' => 3,
+        'payment_account.verify_ssl' => false,
+        'payment_account.cache_store' => 'array',
+        'payment_account.cache_key' => 'test:payment_accounts',
+        'payment_account.cache_ttl' => 86400,
+    ]);
+
+    Cache::store('array')->forget('test:payment_accounts');
+
+    Http::fake([
+        'https://payment.example.test/accounts' => Http::sequence()
+            ->push([
+                'data' => [
+                    [
+                        'accountId' => 'PAY001',
+                        'accountName' => '开发一部创新预算',
+                    ],
+                ],
+            ])
+            ->push([
+                'data' => [],
+            ]),
+    ]);
+
+    expect(app(PaymentAccountClient::class)->refreshCache())->toBe(1)
+        ->and(app(PaymentAccountClient::class)->fetchAll()[0]->accountId())->toBe('PAY001');
+
+    // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
+    expect(app(PaymentAccountClient::class)->refreshCache())->toBe(0)
+        ->and(app(PaymentAccountClient::class)->fetchAll()[0]->accountId())->toBe('PAY001');
+});
+
+test('external directory cache refresh keeps previous personnel users when response is empty', function (): void {
+    config([
+        'personnel.base_url' => 'https://personnel.example.test',
+        'personnel.list_path' => '/users',
+        'personnel.method' => 'GET',
+        'personnel.timeout' => 3,
+        'personnel.verify_ssl' => false,
+        'personnel.cache_store' => 'array',
+        'personnel.cache_key' => 'test:personnel_users',
+        'personnel.cache_ttl' => 86400,
+    ]);
+
+    Cache::store('array')->forget('test:personnel_users');
+
+    Http::fake([
+        'https://personnel.example.test/users' => Http::sequence()
+            ->push([
+                'users' => [
+                    [
+                        'employeeNo' => '10001',
+                        'displayName' => '张三',
+                        'departmentId' => 'DEV01',
+                        'departmentName' => '开发一部',
+                    ],
+                ],
+            ])
+            ->push([
+                'users' => [],
+            ]),
+    ]);
+
+    expect(app(PersonnelClient::class)->refreshCache())->toBe(1)
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三');
+
+    // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
+    expect(app(PersonnelClient::class)->refreshCache())->toBe(0)
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三');
 });
 
 test('the sso session endpoint accepts access token without state', function (): void {
