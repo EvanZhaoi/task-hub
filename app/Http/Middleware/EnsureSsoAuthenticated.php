@@ -14,6 +14,12 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureSsoAuthenticated
 {
+    /**
+     * 检查当前请求是否已经完成 SSO 登录。
+     *
+     * 有 `sso_user` Session 时继续进入业务页面；
+     * 没有登录态时记录用户原本访问的 URL，并跳转到 SSO 登录入口。
+     */
     public function handle(Request $request, Closure $next): Response
     {
         // 登录成功后，SsoController 会把 sso_user 写入 Session。

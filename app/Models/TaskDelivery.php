@@ -33,6 +33,11 @@ class TaskDelivery extends Model
         'review_comment',
     ];
 
+    /**
+     * 定义交付字段的类型转换规则。
+     *
+     * submitted_at 和 reviewed_at 转换为日期时间对象，便于页面格式化和业务比较。
+     */
     protected function casts(): array
     {
         return [
@@ -43,12 +48,22 @@ class TaskDelivery extends Model
         ];
     }
 
+    /**
+     * 获取交付记录所属任务。
+     *
+     * 验收交付时需要通过该关联读取任务并更新任务状态。
+     */
     public function task(): BelongsTo
     {
         // 交付必须归属于一个已指派的任务。
         return $this->belongsTo(Task::class, 'task_id');
     }
 
+    /**
+     * 获取交付内容关联的附件引用。
+     *
+     * 交付文件由外部文件服务保存，TaskHub 通过 attachment_ref 记录 ID。
+     */
     public function attachments(): MorphMany
     {
         // 交付附件通过 DELIVERY owner_type 挂到 AttachmentRef。

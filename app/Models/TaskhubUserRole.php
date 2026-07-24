@@ -25,6 +25,11 @@ class TaskhubUserRole extends Model
         'enabled',
     ];
 
+    /**
+     * 定义角色字段的类型转换规则。
+     *
+     * enabled 转换为布尔值后，角色服务可以直接按 true/false 判断是否启用。
+     */
     protected function casts(): array
     {
         return [

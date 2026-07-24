@@ -31,6 +31,11 @@ class BidMember extends Model
         'role',
     ];
 
+    /**
+     * 获取成员所属的投标记录。
+     *
+     * 通过该关联可以从成员记录回到 Bid，查询投标金额、方案和状态。
+     */
     public function bid(): BelongsTo
     {
         // 每个成员记录都属于某一次 Bid。

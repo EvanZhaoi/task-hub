@@ -35,6 +35,12 @@ class TaskController extends Controller
     // 复杂度枚举来自 schema.sql，前端筛选和后端校验保持一致。
     private const COMPLEXITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
+    /**
+     * 展示任务大厅列表页。
+     *
+     * 该方法读取筛选条件、查询任务分页数据、加载付款账号 Select 选项，
+     * 最后通过 Inertia 返回 `resources/js/Pages/Tasks/Index.tsx` 页面。
+     */
     public function index(Request $request, PaymentAccountClient $paymentAccounts): Response
     {
         // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
@@ -99,6 +105,12 @@ class TaskController extends Controller
         ]);
     }
 
+    /**
+     * 发布一个招标任务。
+     *
+     * 该方法处理发布任务模态框提交的数据，在一个数据库事务中创建 task、附件引用和任务事件。
+     * 付款账号名称不信任前端提交，必须通过 PaymentAccountClient 查询后保存历史快照。
+     */
     public function store(
         StoreTaskRequest $request,
         CurrentUserService $currentUser,
@@ -196,6 +208,11 @@ class TaskController extends Controller
             ->with('success', '任务已发布。');
     }
 
+    /**
+     * 从请求 query string 中解析并规整任务大厅筛选条件。
+     *
+     * 非法状态和复杂度会回退到 ALL，避免用户手动改 URL 导致异常查询。
+     */
     private function filters(Request $request): array
     {
         // keyword 做 trim，但不过度清洗；LIKE 转义在 applyFilters 中处理。
@@ -211,6 +228,12 @@ class TaskController extends Controller
         ];
     }
 
+    /**
+     * 把筛选条件应用到 Task 查询构造器。
+     *
+     * 该方法集中处理关键词、复杂度和状态筛选。
+     * `PENDING_SELECTION` 是派生状态，不是数据库字段值，因此需要单独拼查询条件。
+     */
     private function applyFilters(Builder $query, array $filters): void
     {
         if ($filters['keyword'] !== '') {
@@ -245,6 +268,12 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * 把 Task Model 转换成前端任务列表项数组。
+     *
+     * 前端不直接消费 Eloquent Model，而是接收已经格式化好的展示字段，
+     * 这样可以避免前端重复处理 BIGINT、日期、金额和 JSON 快照。
+     */
     private function taskItem(Task $task): array
     {
         // 快照字段可能为空，统一转成数组，避免前端展示时反复判断 null。
@@ -274,6 +303,11 @@ class TaskController extends Controller
         ];
     }
 
+    /**
+     * 返回任务大厅状态筛选选项。
+     *
+     * 选项由后端统一下发，保证前端筛选值、展示文案和后端查询逻辑保持一致。
+     */
     private function statusOptions(): array
     {
         // 选项由后端下发，保证文案和后端筛选值同步。
@@ -288,6 +322,11 @@ class TaskController extends Controller
         ];
     }
 
+    /**
+     * 返回任务复杂度筛选选项。
+     *
+     * 复杂度枚举必须和 database/schema.sql 中 task.complexity 的 CHECK 约束一致。
+     */
     private function complexityOptions(): array
     {
         // 复杂度选项同样由后端下发，未来改文案无需改前端枚举。
@@ -299,6 +338,11 @@ class TaskController extends Controller
         ];
     }
 
+    /**
+     * 获取发布任务弹窗使用的付款账号 Select 选项。
+     *
+     * 账号列表来自外部接口缓存；如果接口或缓存不可用，返回空数组，让页面显示“付款账号列表不可用”。
+     */
     private function paymentAccountOptions(PaymentAccountClient $paymentAccounts): array
     {
         try {
@@ -322,6 +366,12 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * 计算任务在列表页中的展示状态。
+     *
+     * 数据库没有 `PENDING_SELECTION` 状态；OPEN 任务已截止且存在 ACTIVE 投标时，
+     * 页面派生展示为“待选标”，数据库仍保持 OPEN。
+     */
     private function displayStatus(Task $task): string
     {
         // 截止且有 ACTIVE 投标时，数据库仍保持 OPEN；页面派生展示为“待选标”。
@@ -337,6 +387,11 @@ class TaskController extends Controller
         return $task->status;
     }
 
+    /**
+     * 格式化任务金额展示文案。
+     *
+     * 如果存在 final_amount，展示最终金额；否则展示预算金额，并统一加人民币符号和两位小数。
+     */
     private function amountLabel(Task $task): string
     {
         // final_amount 表示协商后最终金额；没有最终金额时展示原预算。
@@ -345,6 +400,12 @@ class TaskController extends Controller
         return '¥'.number_format((float) $amount, 2);
     }
 
+    /**
+     * 生成任务发布者历史快照。
+     *
+     * 快照只用于历史展示和审计，不能用于权限判断。
+     * 权限判断仍应基于实时当前用户和后端角色规则。
+     */
     private function createdBySnapshot(SsoUser $user): array
     {
         // 快照用于历史展示和审计；权限判断仍使用实时外部人员接口。
@@ -357,6 +418,12 @@ class TaskController extends Controller
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
+    /**
+     * 生成付款账号历史快照。
+     *
+     * 任务保存的是发布当时选择的付款账号展示信息，
+     * 后续外部账号名称变化不会影响已有任务的历史展示。
+     */
     private function paymentAccountSnapshot(PaymentAccount $paymentAccount): array
     {
         // 保留该方法用于表达业务语义：Task 保存的是付款账号历史快照，不是实时主数据。

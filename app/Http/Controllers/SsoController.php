@@ -25,6 +25,12 @@ use Inertia\Response;
  */
 class SsoController extends Controller
 {
+    /**
+     * 发起 SSO 登录跳转。
+     *
+     * 当用户访问受保护页面但没有本地 Session 时，会进入该方法。
+     * 方法负责拼接公司 SSO 登录地址，并记录登录完成后要返回的原始业务页面。
+     */
     public function redirect(Request $request): RedirectResponse
     {
         // 登录地址和客户端标识由公司 SSO 分配，必须来自环境配置，不能写死在代码里。
@@ -57,6 +63,12 @@ class SsoController extends Controller
         return redirect()->away($loginUrl.(str_contains($loginUrl, '?') ? '&' : '?').$query);
     }
 
+    /**
+     * 返回 SSO 回调 React 页面。
+     *
+     * 公司 SSO 登录完成后会携带 access_token 回到该页面。
+     * 页面本身不解析用户身份，只负责把 token 提交给后端 `/sso/session`。
+     */
     public function callback(): Response
     {
         // 公司 SSO 会把 access_token 作为 query string 回调到这个地址。
@@ -64,6 +76,12 @@ class SsoController extends Controller
         return Inertia::render('Sso/Callback');
     }
 
+    /**
+     * 使用 accessToken 建立 TaskHub 本地登录 Session。
+     *
+     * 该方法先通过 SsoClient 调总部接口确认当前登录人，再尝试从本据点人员列表中追加 siteUser。
+     * 前端不能提交姓名、部门或角色，角色必须由后端从 taskhub_user_role 表读取。
+     */
     public function store(
         Request $request,
         SsoClient $ssoClient,
@@ -109,6 +127,12 @@ class SsoController extends Controller
         ]);
     }
 
+    /**
+     * 根据总部 SSO 用户工号查找本据点人员信息。
+     *
+     * 找到时返回 PersonnelUser，由 store() 写入 Session 的 siteUser 字段。
+     * 找不到或人员接口失败时返回 null，保持总部 SSO 原始人员信息不变。
+     */
     private function siteUserFromPersonnelList(SsoUser $ssoUser, PersonnelClient $personnelClient): ?PersonnelUser
     {
         try {
@@ -131,6 +155,11 @@ class SsoController extends Controller
         return $personnelUser;
     }
 
+    /**
+     * 退出 TaskHub 本地会话，并按配置跳转公司 SSO 退出地址。
+     *
+     * 退出必须使用原生 POST 表单提交，避免 Inertia Ajax 跟随外部 302 跳转时触发浏览器 CORS。
+     */
     public function logout(Request $request): RedirectResponse
     {
         // 退出 TaskHub 时清理本系统保存的登录态和角色。

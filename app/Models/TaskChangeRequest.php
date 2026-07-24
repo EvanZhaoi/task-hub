@@ -38,6 +38,11 @@ class TaskChangeRequest extends Model
         'response_comment',
     ];
 
+    /**
+     * 定义变更申请字段的类型转换规则。
+     *
+     * old_value/new_value 转数组后，审批逻辑可以直接读取本次申请涉及的字段。
+     */
     protected function casts(): array
     {
         return [
@@ -53,12 +58,22 @@ class TaskChangeRequest extends Model
         ];
     }
 
+    /**
+     * 获取变更申请所属任务。
+     *
+     * 审批时需要通过该关联读取并锁定任务，校验 base_task_version。
+     */
     public function task(): BelongsTo
     {
         // 每个变更申请都属于一个任务。
         return $this->belongsTo(Task::class, 'task_id');
     }
 
+    /**
+     * 获取变更申请关联的附件引用。
+     *
+     * 例如变更说明、补充材料等文件都通过 CHANGE_REQUEST 多态类型挂载。
+     */
     public function attachments(): MorphMany
     {
         // 变更申请附件同样只保存外部附件 ID。

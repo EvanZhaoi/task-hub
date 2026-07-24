@@ -17,6 +17,10 @@ use Throwable;
 class PaymentAccountClient
 {
     /**
+     * 获取所有付款账号。
+     *
+     * 优先读取缓存；缓存不存在时才访问外部接口，并在成功后写入缓存。
+     *
      * @return list<PaymentAccount>
      */
     public function fetchAll(): array
@@ -32,6 +36,11 @@ class PaymentAccountClient
         return $accounts;
     }
 
+    /**
+     * 刷新付款账号缓存。
+     *
+     * 这个方法供定时任务调用；如果外部接口返回空列表或失败，不覆盖旧缓存。
+     */
     public function refreshCache(): int
     {
         // 定时任务调用该方法刷新 Redis。
@@ -48,6 +57,10 @@ class PaymentAccountClient
     }
 
     /**
+     * 从外部接口实时获取所有付款账号。
+     *
+     * 该方法只负责远程请求，不读取缓存，适合缓存刷新场景使用。
+     *
      * @return list<PaymentAccount>
      */
     private function fetchAllFromRemote(): array
@@ -60,6 +73,11 @@ class PaymentAccountClient
         return PaymentAccount::listFromPayload($payload);
     }
 
+    /**
+     * 根据账号 ID 获取单个付款账号。
+     *
+     * 保存任务时使用该方法重新向后端确认账号信息，避免相信前端提交的账号名称。
+     */
     public function fetchById(string $accountId): PaymentAccount
     {
         foreach ($this->cachedAccounts() as $paymentAccount) {
@@ -90,6 +108,11 @@ class PaymentAccountClient
         throw new PaymentAccountException('Selected payment account does not exist.');
     }
 
+    /**
+     * 按配置发起付款账号外部接口请求。
+     *
+     * 统一处理 base_url、path、HTTP 方法、SSL 校验、超时和 JSON 解析。
+     */
     private function requestConfiguredPath(
         string $pathConfigKey,
         string $emptyPathMessage,
@@ -148,6 +171,10 @@ class PaymentAccountClient
     }
 
     /**
+     * 从缓存读取付款账号列表。
+     *
+     * 如果 Redis 或缓存服务不可用，方法会记录 warning 并返回空数组，让调用方退回外部接口。
+     *
      * @return list<PaymentAccount>
      */
     private function cachedAccounts(): array
@@ -171,6 +198,10 @@ class PaymentAccountClient
     }
 
     /**
+     * 将非空付款账号列表写入缓存。
+     *
+     * 空列表不写入缓存，避免外部接口短暂异常时覆盖掉上一次成功同步的数据。
+     *
      * @param  list<PaymentAccount>  $accounts
      */
     private function putCacheIfNotEmpty(array $accounts): void
@@ -193,6 +224,11 @@ class PaymentAccountClient
         }
     }
 
+    /**
+     * 将账号 ID 填充到配置路径中。
+     *
+     * 支持 /accounts/{accountId} 这种 REST 风格路径。
+     */
     private function pathWithAccountId(string $path, ?string $accountId): string
     {
         // 支持 /accounts/{accountId} 形式；如果 path 没有占位符，则用 query string 传 accountId。
@@ -200,6 +236,10 @@ class PaymentAccountClient
     }
 
     /**
+     * 为 GET 详情接口生成查询参数。
+     *
+     * 如果路径中没有 {accountId} 占位符，就把 accountId 放到 query string。
+     *
      * @return array<string, string>
      */
     private function queryForPath(string $path, ?string $accountId): array
@@ -212,6 +252,10 @@ class PaymentAccountClient
     }
 
     /**
+     * 为 POST 详情接口生成 JSON body。
+     *
+     * 列表接口没有账号 ID，详情接口才需要把账号 ID 放入请求体。
+     *
      * @return array<string, string>
      */
     private function payloadForAccount(?string $accountId): array
@@ -220,6 +264,11 @@ class PaymentAccountClient
         return $accountId === null ? [] : ['accountId' => $accountId];
     }
 
+    /**
+     * 判断配置值是否是完整 URL。
+     *
+     * TaskHub 要求 path 配置只写路径，完整域名统一放在 base_url。
+     */
     private function isAbsoluteUrl(string $value): bool
     {
         return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');

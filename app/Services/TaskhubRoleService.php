@@ -8,6 +8,10 @@ use App\Models\TaskhubUserRole;
 class TaskhubRoleService
 {
     /**
+     * 根据 SSO 用户工号查询 TaskHub 本地业务角色。
+     *
+     * SSO 只证明用户身份，TaskHub 中的 TOP 等业务角色由 taskhub_user_role 表控制。
+     *
      * @return list<string>
      */
     public function rolesFor(SsoUser $user): array

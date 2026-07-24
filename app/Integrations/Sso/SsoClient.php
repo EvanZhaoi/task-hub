@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Http;
  */
 class SsoClient
 {
+    /**
+     * 使用 accessToken 调用总部当前登录人接口。
+     *
+     * 前端只把 SSO 回调得到的 accessToken 交给 Laravel；clientSecret 只在后端请求中使用。
+     */
     public function fetchCurrentUser(string $accessToken): SsoUser
     {
         // SSO 基础地址和接口路径属于公司协议配置，不在代码中写死，便于不同环境切换。
@@ -80,12 +85,22 @@ class SsoClient
         return SsoUser::fromPayload($payload);
     }
 
+    /**
+     * 校验 Bearer Token 并返回当前登录人。
+     *
+     * 当前 Inertia 页面主要走 fetchCurrentUser；保留该方法是为了未来 API 场景复用。
+     */
     public function validateToken(string $token): SsoUser
     {
         // 预留给 Bearer Token API 场景；当前 Inertia 页面登录主要使用 fetchCurrentUser。
         return $this->fetchCurrentUser($token);
     }
 
+    /**
+     * 判断配置值是否是完整 URL。
+     *
+     * SSO path 配置只允许写路径，避免和 base_url 组合出错误请求地址。
+     */
     private function isAbsoluteUrl(string $value): bool
     {
         // userinfo_path 必须是 path，防止 base_url + full_url 拼出错误请求地址。

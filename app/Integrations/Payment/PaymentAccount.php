@@ -10,6 +10,11 @@ namespace App\Integrations\Payment;
  */
 final readonly class PaymentAccount
 {
+    /**
+     * 创建一个付款账号只读对象。
+     *
+     * 外部接口返回的数据先被整理成这个对象，再交给 Controller 或快照生成逻辑使用。
+     */
     public function __construct(
         private string $accountId,
         private ?string $accountName = null,
@@ -18,6 +23,12 @@ final readonly class PaymentAccount
         private array $raw = [],
     ) {}
 
+    /**
+     * 把外部接口返回的单个账号 JSON 数组转换为 PaymentAccount 对象。
+     *
+     * $requestedAccountId 是调用详情接口时传入的账号 ID；如果外部响应里没有账号 ID，
+     * 会用它兜底，避免因为接口字段较少导致无法生成账号快照。
+     */
     public static function fromPayload(string $requestedAccountId, array $payload): self
     {
         // 兼容两类常见返回：直接返回账号字段，或包在 account/data 字段下。
@@ -43,6 +54,10 @@ final readonly class PaymentAccount
     }
 
     /**
+     * 把外部账号列表响应转换为 PaymentAccount 对象列表。
+     *
+     * 这个方法兼容 data/accounts/list 等常见包装结构，方便后续对接真实接口时少改业务层。
+     *
      * @return list<self>
      */
     public static function listFromPayload(array $payload): array
@@ -72,26 +87,51 @@ final readonly class PaymentAccount
         return $accounts;
     }
 
+    /**
+     * 获取付款账号 ID。
+     *
+     * 这是业务表 task.payment_account_id 保存的正式查询字段。
+     */
     public function accountId(): string
     {
         return $this->accountId;
     }
 
+    /**
+     * 获取付款账号名称。
+     *
+     * 名称主要用于页面展示和任务发布时的历史快照。
+     */
     public function accountName(): ?string
     {
         return $this->accountName;
     }
 
+    /**
+     * 获取付款账号所属部门 ID。
+     *
+     * 如果外部接口暂时没有返回部门信息，允许为空。
+     */
     public function departmentId(): ?string
     {
         return $this->departmentId;
     }
 
+    /**
+     * 获取付款账号所属部门名称。
+     *
+     * 该字段用于历史展示，不参与权限判断。
+     */
     public function departmentName(): ?string
     {
         return $this->departmentName;
     }
 
+    /**
+     * 生成写入 task.payment_account_snapshot 的历史快照。
+     *
+     * 快照用于保存发布任务当时的账号展示信息，避免以后账号改名后历史任务显示变化。
+     */
     public function toSnapshot(): array
     {
         // 快照只保存业务展示需要的稳定字段，不把外部接口原始响应整体塞进 task。
@@ -103,6 +143,11 @@ final readonly class PaymentAccount
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
+    /**
+     * 生成可写入 Redis 的付款账号缓存数组。
+     *
+     * 缓存只保存稳定字段，不缓存整个 PHP 对象，降低后续类结构变化带来的兼容风险。
+     */
     public function toCachePayload(): array
     {
         // Redis 中只缓存普通数组，不缓存 PHP 对象，避免类结构变化导致反序列化问题。
@@ -114,11 +159,21 @@ final readonly class PaymentAccount
         ];
     }
 
+    /**
+     * 将外部接口字段安全转换为可空字符串。
+     *
+     * 空字符串会被统一视为 null，减少前端和快照逻辑对空值的分支处理。
+     */
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    /**
+     * 判断一个数组是否是 JSON 列表结构。
+     *
+     * 外部接口如果直接返回数组列表，就需要通过这个方法识别并逐项转换。
+     */
     private static function isList(array $payload): bool
     {
         // array_is_list 是 PHP 8.1+ 原生函数，用来判断数组 key 是否为 0..n 的连续数字。

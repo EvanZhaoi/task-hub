@@ -10,6 +10,11 @@ namespace App\Integrations\Personnel;
  */
 final readonly class PersonnelUser
 {
+    /**
+     * 创建一个本据点人员只读对象。
+     *
+     * 该对象用于表达外部人员列表中的单个人员，不会写入本地 users 表。
+     */
     public function __construct(
         // employeeNo 是 TaskHub 中所有人员引用字段的统一标识。
         private string $employeeNo,
@@ -20,6 +25,11 @@ final readonly class PersonnelUser
         private array $raw = [],
     ) {}
 
+    /**
+     * 把外部人员接口返回的单个人员数组转换为 PersonnelUser。
+     *
+     * 这里统一兼容 user 包装和常见字段命名，业务层不需要理解外部响应细节。
+     */
     public static function fromPayload(array $payload): self
     {
         // 人员列表接口可能直接返回人员字段，也可能包一层 user。
@@ -43,31 +53,61 @@ final readonly class PersonnelUser
         );
     }
 
+    /**
+     * 获取标准化后的人员工号。
+     *
+     * TaskHub 所有人员引用字段最终都使用这个工号做业务标识。
+     */
     public function employeeNo(): string
     {
         return $this->employeeNo;
     }
 
+    /**
+     * 获取人员显示名称。
+     *
+     * 该字段主要用于页面展示和历史快照。
+     */
     public function displayName(): ?string
     {
         return $this->displayName;
     }
 
+    /**
+     * 获取人员所属部门 ID。
+     *
+     * 外部接口未返回时允许为空。
+     */
     public function departmentId(): ?string
     {
         return $this->departmentId;
     }
 
+    /**
+     * 获取人员所属部门名称。
+     *
+     * 该字段用于展示，不作为权限判断依据。
+     */
     public function departmentName(): ?string
     {
         return $this->departmentName;
     }
 
+    /**
+     * 获取外部接口原始响应。
+     *
+     * 保留原始数据是为了排查接口字段变化，不建议业务代码直接依赖 raw。
+     */
     public function raw(): array
     {
         return $this->raw;
     }
 
+    /**
+     * 转换为前端选择器可直接使用的 option 结构。
+     *
+     * 未来指定开发者时，React Select 或 shadcn Combobox 可以直接消费这个结构。
+     */
     public function toOption(): array
     {
         // 未来指定开发者选择器可以直接使用这个结构。
@@ -83,6 +123,11 @@ final readonly class PersonnelUser
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
+    /**
+     * 生成写入登录 Session 的本据点人员信息。
+     *
+     * 该结果会作为 sso_user.siteUser 保存，不覆盖总部 SSO 返回的原始登录人信息。
+     */
     public function toSessionPayload(): array
     {
         // Session 中作为 sso_user.siteUser 保存，表示“本据点人员信息”。
@@ -96,6 +141,11 @@ final readonly class PersonnelUser
         ];
     }
 
+    /**
+     * 生成可写入 Redis 的人员缓存数组。
+     *
+     * 缓存只保存可序列化的普通数组，不保存 PHP 对象。
+     */
     public function toCachePayload(): array
     {
         // Redis 中只缓存普通数组，不缓存 PHP 对象，避免类结构变化导致反序列化问题。
@@ -107,6 +157,11 @@ final readonly class PersonnelUser
         ];
     }
 
+    /**
+     * 按 TaskHub 本据点规则标准化工号。
+     *
+     * 纯数字工号会去掉前导 0；包含字母的工号保持原样，避免误改真实工号。
+     */
     public static function normalizeEmployeeNo(mixed $value): ?string
     {
         if (! is_string($value) || $value === '') {
@@ -120,6 +175,11 @@ final readonly class PersonnelUser
         return $normalized === '' ? '0' : $normalized;
     }
 
+    /**
+     * 将外部接口字段安全转换为可空字符串。
+     *
+     * 空字符串统一视为 null，减少调用方对空值的重复判断。
+     */
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;

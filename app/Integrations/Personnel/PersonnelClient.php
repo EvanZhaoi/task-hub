@@ -17,6 +17,10 @@ use Throwable;
 class PersonnelClient
 {
     /**
+     * 获取本据点全部人员列表。
+     *
+     * 优先读取 Redis 缓存；缓存不存在时访问外部接口，并在成功后写入缓存。
+     *
      * @return list<PersonnelUser>
      */
     public function fetchAll(): array
@@ -31,6 +35,11 @@ class PersonnelClient
         return $users;
     }
 
+    /**
+     * 刷新本据点人员缓存。
+     *
+     * 该方法供定时任务调用；如果外部接口返回空列表，不覆盖旧缓存。
+     */
     public function refreshCache(): int
     {
         // 定时任务调用该方法刷新 Redis。
@@ -47,6 +56,10 @@ class PersonnelClient
     }
 
     /**
+     * 从外部接口实时获取本据点人员列表。
+     *
+     * 该方法绕过缓存，专门给缓存刷新流程使用。
+     *
      * @return list<PersonnelUser>
      */
     private function fetchAllFromRemote(): array
@@ -103,6 +116,11 @@ class PersonnelClient
         return $this->usersFromPayload($payload);
     }
 
+    /**
+     * 根据工号查找本据点人员。
+     *
+     * 登录成功后用它判断当前人是否属于本据点，并补充更准确的 siteUser 信息。
+     */
     public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
     {
         $normalizedEmployeeNo = PersonnelUser::normalizeEmployeeNo($employeeNo);
@@ -121,6 +139,10 @@ class PersonnelClient
     }
 
     /**
+     * 把外部人员列表响应转换为 PersonnelUser 对象列表。
+     *
+     * 这里兼容 users/data/list 或直接列表，避免接口包装结构影响业务代码。
+     *
      * @return list<PersonnelUser>
      */
     private function usersFromPayload(array $payload): array
@@ -149,6 +171,11 @@ class PersonnelClient
         return $users;
     }
 
+    /**
+     * 判断配置值是否是完整 URL。
+     *
+     * list_path 只允许配置路径，域名统一从 personnel.base_url 读取。
+     */
     private function isAbsoluteUrl(string $value): bool
     {
         // list_path 必须是 path，防止 base_url + full_url 拼出错误请求地址。
@@ -156,6 +183,10 @@ class PersonnelClient
     }
 
     /**
+     * 从缓存读取本据点人员列表。
+     *
+     * 缓存不可用时记录 warning 并返回空数组，调用方会退回外部接口。
+     *
      * @return list<PersonnelUser>
      */
     private function cachedUsers(): array
@@ -179,6 +210,10 @@ class PersonnelClient
     }
 
     /**
+     * 将非空人员列表写入缓存。
+     *
+     * 空列表不写入缓存，避免接口异常时清空上一次成功同步的数据。
+     *
      * @param  list<PersonnelUser>  $users
      */
     private function putCacheIfNotEmpty(array $users): void

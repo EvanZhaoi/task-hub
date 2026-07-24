@@ -29,6 +29,11 @@ class TaskAssignee extends Model
         'role',
     ];
 
+    /**
+     * 获取执行成员所属的任务。
+     *
+     * 用于从 task_assignee 回查任务当前状态、标题和交付要求。
+     */
     public function task(): BelongsTo
     {
         // 每条执行成员记录都归属于一个任务。

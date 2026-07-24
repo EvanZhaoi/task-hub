@@ -12,7 +12,9 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * 注册应用服务到 Laravel 服务容器。
+     *
+     * register 阶段只做“绑定关系”，不应该在这里执行数据库查询或依赖请求上下文。
      */
     public function register(): void
     {
@@ -22,7 +24,9 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Bootstrap any application services.
+     * 启动应用级配置。
+     *
+     * boot 阶段在服务注册完成后执行，适合配置 Eloquent 多态映射等运行期规则。
      */
     public function boot(): void
     {

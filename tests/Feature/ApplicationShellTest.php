@@ -45,6 +45,11 @@ test('authenticated users can view the task hall with filters', function (): voi
 
     $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
     {
+        /**
+         * 返回测试用付款账号列表。
+         *
+         * 这里替代真实外部付款账号接口，让任务大厅测试只关注页面数据组装。
+         */
         public function fetchAll(): array
         {
             // 任务大厅打开时会加载付款账号列表给发布任务 Select 使用。
@@ -123,6 +128,11 @@ test('authenticated users can publish a bidding task with attachment ids', funct
 
     $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
     {
+        /**
+         * 返回测试用付款账号详情。
+         *
+         * 发布任务时后端会按账号 ID 重新查询外部账号信息，本方法用来验证这个调用发生了。
+         */
         public function fetchById(string $accountId): PaymentAccount
         {
             expect($accountId)->toBe('PAY001');
@@ -295,6 +305,11 @@ test('the sso session endpoint accepts access token without state', function ():
     // 用容器替换 SsoClient，避免测试真实访问公司 SSO。
     $this->app->instance(SsoClient::class, new class extends SsoClient
     {
+        /**
+         * 返回测试用 SSO 登录人。
+         *
+         * 该方法替代真实总部接口，验证 accessToken 会从前端提交到后端 SSO 客户端。
+         */
         public function fetchCurrentUser(string $accessToken): SsoUser
         {
             // 确认前端提交的 accessToken 被原样传给后端 SSO 客户端。
@@ -311,6 +326,11 @@ test('the sso session endpoint accepts access token without state', function ():
 
     $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
     {
+        /**
+         * 模拟本据点人员列表未找到当前人。
+         *
+         * 返回 null 表示当前登录人不是本据点人员，Session 只保存总部 SSO 用户信息。
+         */
         public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
         {
             // 本测试只验证 SSO 建 Session 主流程，人员列表返回 null 表示不属于本据点，继续使用总部信息。
@@ -323,6 +343,11 @@ test('the sso session endpoint accepts access token without state', function ():
     // 用容器替换角色服务，验证角色来源是后端服务，不是前端传入。
     $this->app->instance(TaskhubRoleService::class, new class extends TaskhubRoleService
     {
+        /**
+         * 返回测试用 TaskHub 角色。
+         *
+         * 角色由后端服务根据数据库或测试替身决定，不能由前端请求直接指定。
+         */
         public function rolesFor(SsoUser $user): array
         {
             expect($user->employeeNo())->toBe('E10001');
@@ -350,6 +375,11 @@ test('sso session prefers local personnel list when user belongs to current site
     // 总部 SSO 返回的信息可能不完整，这里故意只返回姓名，不返回部门。
     $this->app->instance(SsoClient::class, new class extends SsoClient
     {
+        /**
+         * 返回总部 SSO 登录人测试数据。
+         *
+         * 这里故意让总部数据缺少部门，用于验证本据点人员信息会作为 siteUser 额外补充。
+         */
         public function fetchCurrentUser(string $accessToken): SsoUser
         {
             expect($accessToken)->toBe('token-456');
@@ -363,6 +393,11 @@ test('sso session prefers local personnel list when user belongs to current site
 
     $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
     {
+        /**
+         * 返回本据点人员列表中的当前用户。
+         *
+         * 该方法模拟本据点接口命中人员后，把更准确的人员信息写入 Session 的 siteUser 字段。
+         */
         public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
         {
             // 本据点工号不带前导 0；PersonnelClient 会负责按本地规则匹配和返回准确人员信息。
@@ -379,6 +414,11 @@ test('sso session prefers local personnel list when user belongs to current site
 
     $this->app->instance(TaskhubRoleService::class, new class extends TaskhubRoleService
     {
+        /**
+         * 返回当前登录人的 TaskHub 角色。
+         *
+         * 测试中仍使用总部 SSO 用户对象查询角色，证明 siteUser 只是补充展示信息。
+         */
         public function rolesFor(SsoUser $user): array
         {
             // 角色查询仍使用总部 SSO 原始用户对象；本据点人员信息只作为 Session 中的 siteUser 附加字段。
@@ -534,6 +574,11 @@ test('snowflake id generates increasing ids in the same application process', fu
         ->and($third)->toBeGreaterThan($second);
 });
 
+/**
+ * 为任务大厅相关测试创建最小 SQLite 表结构。
+ *
+ * 测试环境不执行正式 MySQL schema.sql，因此只创建 Controller 当前查询和写入会用到的字段。
+ */
 function createTaskHallTables(): void
 {
     // SQLite 内存库在同一测试进程内可能复用连接；创建前先清理，保证测试互不影响。
@@ -606,6 +651,11 @@ function createTaskHallTables(): void
     });
 }
 
+/**
+ * 获取测试请求使用的 Inertia 资源版本。
+ *
+ * 如果本地存在 Vite build manifest，就返回真实版本；否则返回空字符串配合 withoutVite 使用。
+ */
 function inertiaVersionForTest(): string
 {
     $manifest = public_path('build/manifest.json');

@@ -46,6 +46,11 @@ class Task extends Model
         'updated_by',
     ];
 
+    /**
+     * 定义任务字段的类型转换规则。
+     *
+     * 这里集中声明 JSON、金额、日期、时间和 version 的 PHP 表达方式，避免 Controller 手动转换。
+     */
     protected function casts(): array
     {
         return [
@@ -64,42 +69,77 @@ class Task extends Model
         ];
     }
 
+    /**
+     * 获取任务对应的中标投标。
+     *
+     * 只有 BIDDING 分配模式会使用 assigned_bid_id；DIRECT 模式下该关联为空。
+     */
     public function assignedBid(): BelongsTo
     {
         // BIDDING 模式下任务会记录中标 Bid；DIRECT 模式下该字段为空。
         return $this->belongsTo(Bid::class, 'assigned_bid_id');
     }
 
+    /**
+     * 获取任务下的全部投标历史。
+     *
+     * 包括 ACTIVE、WITHDRAWN、ACCEPTED、LOST 等状态，便于保留撤回重投记录。
+     */
     public function bids(): HasMany
     {
         // 一个任务可以有多次投标历史，包括撤回后重新投标的记录。
         return $this->hasMany(Bid::class, 'task_id');
     }
 
+    /**
+     * 获取任务执行成员。
+     *
+     * 任务被指派后，执行人和协作者会固化到 task_assignee。
+     */
     public function assignees(): HasMany
     {
         // 中标后会把 BidMember 复制到 TaskAssignee，执行阶段不再依赖 BidMember。
         return $this->hasMany(TaskAssignee::class, 'task_id');
     }
 
+    /**
+     * 获取任务交付记录。
+     *
+     * 数据库支持多次交付，Phase 1 业务规则暂时只允许创建第一条。
+     */
     public function deliveries(): HasMany
     {
         // 数据库支持多次交付；Phase 1 业务层暂时只开放一次交付。
         return $this->hasMany(TaskDelivery::class, 'task_id');
     }
 
+    /**
+     * 获取任务变更申请列表。
+     *
+     * 金额、交期、描述变更和取消申请都通过该关联读取。
+     */
     public function changeRequests(): HasMany
     {
         // 任务金额、交期、描述或取消协商统一记录在 task_change_request。
         return $this->hasMany(TaskChangeRequest::class, 'task_id');
     }
 
+    /**
+     * 获取任务关键事件时间线。
+     *
+     * 事件用于展示历史和审计，不反向重建 task.status。
+     */
     public function events(): HasMany
     {
         // task_event 是任务详情时间线和审计记录，不用于重建 task 当前状态。
         return $this->hasMany(TaskEvent::class, 'task_id');
     }
 
+    /**
+     * 获取任务发布时关联的附件引用。
+     *
+     * 多态 owner_type 为 TASK 时会关联到当前任务。
+     */
     public function attachments(): MorphMany
     {
         // 发布任务时上传的附件通过多态关联挂到 TASK。

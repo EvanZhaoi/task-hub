@@ -16,6 +16,12 @@ class HandleInertiaRequests extends Middleware
     // rootView 对应 resources/views/app.blade.php，是 React/Inertia 的 HTML 容器。
     protected $rootView = 'app';
 
+    /**
+     * 定义所有 Inertia 页面共享的 props。
+     *
+     * 这里集中下发应用名、当前 Session 用户、角色和 flash 消息，
+     * 避免每个 Controller 重复给 React 页面传相同的基础数据。
+     */
     public function share(Request $request): array
     {
         return [

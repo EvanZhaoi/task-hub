@@ -34,6 +34,12 @@ class AttachmentRef extends Model
         'uploaded_by',
     ];
 
+    /**
+     * 获取附件所属的业务对象。
+     *
+     * owner_type 决定关联到 Task、Bid、TaskDelivery 或 TaskChangeRequest，
+     * 这样一张 attachment_ref 表就能支持多种业务附件。
+     */
     public function owner(): MorphTo
     {
         // 多态关联：owner_type 保存业务对象类型，owner_id 保存对应业务对象 ID。

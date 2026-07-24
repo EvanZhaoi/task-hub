@@ -19,6 +19,12 @@ class SnowflakeId
 
     private int $sequence = 0;
 
+    /**
+     * 生成下一个业务主键 ID。
+     *
+     * ID 结构为：当前毫秒时间戳 * 1000 + 同毫秒内自增序号。
+     * 这样可以在单体应用内得到递增 BIGINT，满足当前 schema.sql 中非自增主键的写入要求。
+     */
     public function next(): int
     {
         $millisecond = $this->currentMillis();
@@ -44,11 +50,21 @@ class SnowflakeId
         return ($millisecond * self::MILLIS_MULTIPLIER) + $this->sequence;
     }
 
+    /**
+     * 获取当前 Unix 毫秒时间戳。
+     *
+     * microtime(true) 返回秒级浮点数，这里乘以 1000 后向下取整，作为 ID 的时间部分。
+     */
     private function currentMillis(): int
     {
         return (int) floor(microtime(true) * 1000);
     }
 
+    /**
+     * 等待系统时间进入下一个毫秒。
+     *
+     * 当同一毫秒内生成超过 1000 个 ID 时，为避免 sequence 回绕导致重复 ID，需要阻塞到下一毫秒。
+     */
     private function waitNextMillisecond(int $currentMillisecond): int
     {
         do {

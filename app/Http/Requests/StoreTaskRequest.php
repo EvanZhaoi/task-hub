@@ -9,7 +9,10 @@ use Illuminate\Validation\Rule;
 class StoreTaskRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * 判断当前请求是否允许执行发布任务校验。
+     *
+     * 当前登录校验由 EnsureSsoAuthenticated 中间件负责，因此这里返回 true。
+     * 后续如果增加发布权限矩阵，可以在这里或专门的权限服务中补充角色判断。
      */
     public function authorize(): bool
     {
@@ -19,7 +22,9 @@ class StoreTaskRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * 返回发布任务表单的后端校验规则。
+     *
+     * 前端校验只能改善体验，不能作为可信边界；真正写库前必须经过这些 Laravel 校验规则。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -47,6 +52,11 @@ class StoreTaskRequest extends FormRequest
     }
 
     /**
+     * 解析表单中输入的多个外部附件 ID。
+     *
+     * 用户可以用换行、空格、英文逗号或中文逗号分隔附件 ID。
+     * 方法会去掉空值并去重，避免同一附件重复写入 attachment_ref。
+     *
      * @return list<string>
      */
     public function attachmentIds(): array
