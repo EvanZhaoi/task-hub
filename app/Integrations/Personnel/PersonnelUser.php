@@ -13,7 +13,7 @@ final readonly class PersonnelUser
     /**
      * 创建一个本据点人员只读对象。
      *
-     * 该对象用于表达外部人员列表中的单个人员，不会写入本地 users 表。
+     * 该对象用于表达外部人员列表 data 数组中的一条人员记录，不会写入本地 users 表。
      */
     public function __construct(
         // copSort 是真实接口中的公司排序字段，当前 MVP 不参与业务判断。
@@ -59,16 +59,42 @@ final readonly class PersonnelUser
     ) {}
 
     /**
-     * 把外部人员接口返回的单个人员数组转换为 PersonnelUser。
+     * 把真实人员列表接口的完整响应转换为 PersonnelUser 列表。
      *
-     * 这里统一兼容真实人员列表字段、user 包装和常见字段命名，业务层不需要理解外部响应细节。
-     * 真实人员接口字段为 eibNumCn、eibNameCn、deptInfoList 等，这里统一映射为 TaskHub 内部字段。
+     * 这个方法的入参预计是外部 API 直接返回的完整 JSON 数组，例如：
+     * {"code": "", "data": [{...人员字段...}], "msg": "", "timestamp": 0, "total": 0}。
+     *
+     * @return list<self>
      */
-    public static function fromPayload(array $payload): self
+    public static function listFromPayload(array $payload): array
     {
-        // 人员列表接口可能直接返回人员字段，也可能包一层 user。
-        // 这里做轻量兼容，避免页面和 Controller 依赖外部接口的包装结构。
-        $user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+        // 真实接口返回 data 数组；array_is_list 兼容 Redis 中已经缓存成列表的结构。
+        $items = match (true) {
+            isset($payload['data']) && is_array($payload['data']) => $payload['data'],
+            array_is_list($payload) => $payload,
+            default => [],
+        };
+
+        $users = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $users[] = self::fromItem($item);
+        }
+
+        return $users;
+    }
+
+    /**
+     * 把 data 数组中的一条人员记录转换为 PersonnelUser。
+     *
+     * 该方法是私有方法，只服务于 listFromPayload()；外部代码不应该直接调用它。
+     */
+    private static function fromItem(array $user): self
+    {
         $deptInfoList = self::arrayList($user['deptInfoList'] ?? []);
 
         $employeeNo = self::normalizeEmployeeNo(
@@ -100,7 +126,7 @@ final readonly class PersonnelUser
             id: self::nullableString($user['id'] ?? null),
             joinDate: self::nullableString($user['joinDate'] ?? null),
             obiUuid: self::nullableString($user['obiUuid'] ?? null),
-            raw: $payload,
+            raw: $user,
         );
     }
 

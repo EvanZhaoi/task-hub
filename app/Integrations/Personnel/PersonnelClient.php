@@ -141,34 +141,14 @@ class PersonnelClient
     /**
      * 把外部人员列表响应转换为 PersonnelUser 对象列表。
      *
-     * 这里兼容 users/data/list 或直接列表，避免接口包装结构影响业务代码。
+     * 这里直接把外部 API 完整响应交给 PersonnelUser::listFromPayload()。
+     * 人员接口没有“单个人员详情”返回，公开解析入口必须基于完整列表响应。
      *
      * @return list<PersonnelUser>
      */
     private function usersFromPayload(array $payload): array
     {
-        // 外部列表接口常见返回形式可能是：
-        // 1. 直接返回人员数组：[{"employeeNo": "..."}]
-        // 2. 包在 users/data/list 字段中：{"users": [...]}
-        $items = match (true) {
-            isset($payload['users']) && is_array($payload['users']) => $payload['users'],
-            isset($payload['list']) && is_array($payload['list']) => $payload['list'],
-            isset($payload['data']) && is_array($payload['data']) => $payload['data'],
-            array_is_list($payload) => $payload,
-            default => [],
-        };
-
-        $users = [];
-
-        foreach ($items as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
-            $users[] = PersonnelUser::fromPayload($item);
-        }
-
-        return $users;
+        return PersonnelUser::listFromPayload($payload);
     }
 
     /**
