@@ -26,8 +26,7 @@ final readonly class PaymentAccount
     /**
      * 把外部接口返回的单个账号 JSON 数组转换为 PaymentAccount 对象。
      *
-     * $requestedAccountId 是调用详情接口时传入的账号 ID；如果外部响应里没有账号 ID，
-     * 会用它兜底，避免因为接口字段较少导致无法生成账号快照。
+     * $requestedAccountId 是兜底账号 ID；当前主要来自列表筛选，通常外部列表项本身就会包含账号 ID。
      */
     public static function fromPayload(string $requestedAccountId, array $payload): self
     {

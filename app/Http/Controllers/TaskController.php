@@ -109,7 +109,7 @@ class TaskController extends Controller
      * 发布一个招标任务。
      *
      * 该方法处理发布任务模态框提交的数据，在一个数据库事务中创建 task、附件引用和任务事件。
-     * 付款账号名称不信任前端提交，必须通过 PaymentAccountClient 查询后保存历史快照。
+     * 付款账号名称不信任前端提交，必须通过 PaymentAccountClient 从外部账号列表缓存中匹配后保存历史快照。
      */
     public function store(
         StoreTaskRequest $request,
@@ -123,7 +123,7 @@ class TaskController extends Controller
         $attachmentIds = $request->attachmentIds();
 
         try {
-            // 付款账号是外部主数据，前端只提交 ID；名称和部门快照必须由后端实时查询。
+            // 付款账号是外部主数据，前端只提交 ID；名称和部门快照必须由后端从外部账号列表中匹配。
             // 外部查询放在事务外，避免数据库事务等待网络请求。
             $paymentAccount = $paymentAccounts->fetchById($validated['paymentAccountId']);
         } catch (PaymentAccountException $exception) {

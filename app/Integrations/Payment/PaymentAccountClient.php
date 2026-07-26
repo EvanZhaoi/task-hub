@@ -74,31 +74,13 @@ class PaymentAccountClient
     }
 
     /**
-     * 根据账号 ID 获取单个付款账号。
+     * 根据账号 ID 从全量列表中查找付款账号。
      *
-     * 保存任务时使用该方法重新向后端确认账号信息，避免相信前端提交的账号名称。
+     * 当前外部系统没有“按账号 ID 查询单个账号”的接口。
+     * 因此这里不会再调用单条详情接口，而是从全量账号列表缓存或列表接口结果中筛选。
      */
     public function fetchById(string $accountId): PaymentAccount
     {
-        foreach ($this->cachedAccounts() as $paymentAccount) {
-            if ($paymentAccount->accountId() === $accountId) {
-                return $paymentAccount;
-            }
-        }
-
-        $detailPath = config('payment_account.detail_path');
-
-        if (is_string($detailPath) && $detailPath !== '') {
-            // 如果外部系统提供单账号详情接口，就按账号 ID 查询，减少不必要的列表数据传输。
-            return PaymentAccount::fromPayload($accountId, $this->requestConfiguredPath(
-                pathConfigKey: 'payment_account.detail_path',
-                emptyPathMessage: 'Payment account detail path is not configured.',
-                accountId: $accountId,
-            ));
-        }
-
-        // 如果当前只有“全部账号列表”接口，就从列表中查找用户选择的账号。
-        // 这样保存时仍然不相信前端提交的账号名称，只保存外部接口返回的那条账号快照。
         foreach ($this->fetchAll() as $paymentAccount) {
             if ($paymentAccount->accountId() === $accountId) {
                 return $paymentAccount;
@@ -116,7 +98,6 @@ class PaymentAccountClient
     private function requestConfiguredPath(
         string $pathConfigKey,
         string $emptyPathMessage,
-        ?string $accountId = null,
     ): array {
         $baseUrl = config('payment_account.base_url');
         $path = config($pathConfigKey);
@@ -146,8 +127,8 @@ class PaymentAccountClient
             }
 
             $response = match ($method) {
-                'POST' => $request->asJson()->post($path, $this->payloadForAccount($accountId)),
-                'GET' => $request->get($this->pathWithAccountId($path, $accountId), $this->queryForPath($path, $accountId)),
+                'POST' => $request->asJson()->post($path),
+                'GET' => $request->get($path),
                 default => throw new PaymentAccountException('Unsupported payment account HTTP method.'),
             };
         } catch (ConnectionException $exception) {
@@ -222,46 +203,6 @@ class PaymentAccountClient
                 'message' => $exception->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * 将账号 ID 填充到配置路径中。
-     *
-     * 支持 /accounts/{accountId} 这种 REST 风格路径。
-     */
-    private function pathWithAccountId(string $path, ?string $accountId): string
-    {
-        // 支持 /accounts/{accountId} 形式；如果 path 没有占位符，则用 query string 传 accountId。
-        return $accountId === null ? $path : str_replace('{accountId}', rawurlencode($accountId), $path);
-    }
-
-    /**
-     * 为 GET 详情接口生成查询参数。
-     *
-     * 如果路径中没有 {accountId} 占位符，就把 accountId 放到 query string。
-     *
-     * @return array<string, string>
-     */
-    private function queryForPath(string $path, ?string $accountId): array
-    {
-        if ($accountId === null || str_contains($path, '{accountId}')) {
-            return [];
-        }
-
-        return ['accountId' => $accountId];
-    }
-
-    /**
-     * 为 POST 详情接口生成 JSON body。
-     *
-     * 列表接口没有账号 ID，详情接口才需要把账号 ID 放入请求体。
-     *
-     * @return array<string, string>
-     */
-    private function payloadForAccount(?string $accountId): array
-    {
-        // 列表接口通常不需要 body；详情接口才把账号 ID 放到 JSON body 中。
-        return $accountId === null ? [] : ['accountId' => $accountId];
     }
 
     /**

@@ -129,9 +129,9 @@ test('authenticated users can publish a bidding task with attachment ids', funct
     $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
     {
         /**
-         * 返回测试用付款账号详情。
+         * 返回测试用付款账号。
          *
-         * 发布任务时后端会按账号 ID 重新查询外部账号信息，本方法用来验证这个调用发生了。
+         * 发布任务时后端会按账号 ID 从付款账号列表中筛选账号，本方法用来隔离外部接口依赖。
          */
         public function fetchById(string $accountId): PaymentAccount
         {
@@ -190,23 +190,31 @@ test('authenticated users can publish a bidding task with attachment ids', funct
         ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
 });
 
-test('payment account client fetches account snapshot from external service', function (): void {
-    // 付款账号属于外部主数据；TaskHub 只根据账号 ID 调接口获取展示快照。
-    // 测试中使用 Http::fake 拦截请求，既能验证请求地址，也不会真实访问公司接口。
+test('payment account client finds account snapshot from external account list', function (): void {
+    // 付款账号属于外部主数据；当前公司接口只提供全量列表，不提供单账号详情。
+    // 测试中使用 Http::fake 拦截列表请求，既能验证请求地址，也不会真实访问公司接口。
     config([
         'payment_account.base_url' => 'https://payment.example.test',
-        'payment_account.detail_path' => '/accounts/{accountId}',
+        'payment_account.list_path' => '/accounts',
         'payment_account.method' => 'GET',
         'payment_account.timeout' => 3,
         'payment_account.verify_ssl' => false,
     ]);
 
     Http::fake([
-        'https://payment.example.test/accounts/PAY001' => Http::response([
-            'accountId' => 'PAY001',
-            'accountName' => '开发一部创新预算',
-            'departmentId' => 'DEV01',
-            'departmentName' => '开发一部',
+        'https://payment.example.test/accounts' => Http::response([
+            'data' => [
+                [
+                    'accountId' => 'PAY001',
+                    'accountName' => '开发一部创新预算',
+                    'departmentId' => 'DEV01',
+                    'departmentName' => '开发一部',
+                ],
+                [
+                    'accountId' => 'PAY002',
+                    'accountName' => '测试预算',
+                ],
+            ],
         ]),
     ]);
 
@@ -219,16 +227,15 @@ test('payment account client fetches account snapshot from external service', fu
         'departmentName' => '开发一部',
     ]);
 
-    // 断言账号 ID 由后端放进外部接口 path，防止以后又退回到前端提交账号名称的方案。
+    // 断言后端只调用全量列表接口，然后在本地按 accountId 筛选。
     Http::assertSent(fn ($request): bool => $request->method() === 'GET'
-        && $request->url() === 'https://payment.example.test/accounts/PAY001');
+        && $request->url() === 'https://payment.example.test/accounts');
 });
 
 test('external directory cache refresh keeps previous payment accounts when response is empty', function (): void {
     config([
         'payment_account.base_url' => 'https://payment.example.test',
         'payment_account.list_path' => '/accounts',
-        'payment_account.detail_path' => null,
         'payment_account.method' => 'GET',
         'payment_account.timeout' => 3,
         'payment_account.verify_ssl' => false,
