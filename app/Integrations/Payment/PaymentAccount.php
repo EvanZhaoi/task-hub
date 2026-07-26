@@ -28,26 +28,48 @@ final readonly class PaymentAccount
     ) {}
 
     /**
-     * 把外部接口返回的单个账号 JSON 数组转换为 PaymentAccount 对象。
+     * 把真实付款账号列表接口的完整响应转换为 PaymentAccount 列表。
      *
-     * $requestedAccountId 是兜底账号 ID；当前主要来自列表筛选，通常外部列表项本身就会包含账号 ID。
-     * 真实账号接口字段为 wbaAccountCode、wbaAccountName、deptName，这里统一映射为 TaskHub 内部字段。
+     * 这个方法的入参预计是外部 API 直接返回的完整 JSON 数组，例如：
+     * {"code": "", "data": [{...账号字段...}], "msg": "", "timestamp": 0, "total": 0}。
+     *
+     * @return list<self>
      */
-    public static function fromPayload(string $requestedAccountId, array $payload): self
+    public static function listFromPayload(array $payload): array
     {
-        // 兼容两类常见返回：直接返回账号字段，或包在 account/data 字段下。
-        $account = match (true) {
-            isset($payload['account']) && is_array($payload['account']) => $payload['account'],
+        // 真实接口返回 data 数组；array_is_list 兼容 Redis 中已经缓存成列表的结构。
+        $items = match (true) {
             isset($payload['data']) && is_array($payload['data']) => $payload['data'],
-            default => $payload,
+            array_is_list($payload) => $payload,
+            default => [],
         };
 
+        $accounts = [];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $accounts[] = self::fromItem($item);
+        }
+
+        return $accounts;
+    }
+
+    /**
+     * 把 data 数组中的一条账号记录转换为 PaymentAccount。
+     *
+     * 该方法是私有方法，只服务于 listFromPayload()；外部代码不应该直接调用它。
+     */
+    private static function fromItem(array $account): self
+    {
         // wbaAccountCode 是真实接口里的交易/付款账号编码，TaskHub 内部统一叫 accountId。
         $accountId = $account['wbaAccountCode']
             ?? $account['accountId']
             ?? $account['account_id']
             ?? $account['id']
-            ?? $requestedAccountId;
+            ?? null;
 
         if (! is_string($accountId) || $accountId === '') {
             throw new PaymentAccountException('Payment account response does not contain account id.');
@@ -60,43 +82,8 @@ final readonly class PaymentAccount
             // deptName 是真实接口里的部门名称；接口未提供部门 ID，因此 departmentId 可以为空。
             deptName: self::nullableString($account['deptName'] ?? $account['departmentName'] ?? $account['department_name'] ?? null),
             wbaType: self::nullableString($account['wbaType'] ?? null),
-            raw: $payload,
+            raw: $account,
         );
-    }
-
-    /**
-     * 把外部账号列表响应转换为 PaymentAccount 对象列表。
-     *
-     * 这个方法兼容 data/accounts/list 等常见包装结构，方便后续对接真实接口时少改业务层。
-     *
-     * @return list<self>
-     */
-    public static function listFromPayload(array $payload): array
-    {
-        // 外部列表接口常见返回形式可能是：
-        // 1. 真实接口返回：{"code": "", "data": [{"wbaAccountCode": "..."}], "msg": "", "timestamp": 0, "total": 0}
-        // 2. 兼容直接返回账号数组：[{"accountId": "..."}]
-        // 3. 兼容包在 accounts/list 字段中：{"accounts": [...]}
-        // 这里做轻量兼容，但不把 Controller 和页面绑死在某一种响应包装上。
-        $items = match (true) {
-            isset($payload['accounts']) && is_array($payload['accounts']) => $payload['accounts'],
-            isset($payload['list']) && is_array($payload['list']) => $payload['list'],
-            isset($payload['data']) && is_array($payload['data']) => $payload['data'],
-            self::isList($payload) => $payload,
-            default => [],
-        };
-
-        $accounts = [];
-
-        foreach ($items as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
-            $accounts[] = self::fromPayload('', $item);
-        }
-
-        return $accounts;
     }
 
     /**
@@ -219,16 +206,5 @@ final readonly class PaymentAccount
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
-    }
-
-    /**
-     * 判断一个数组是否是 JSON 列表结构。
-     *
-     * 外部接口如果直接返回数组列表，就需要通过这个方法识别并逐项转换。
-     */
-    private static function isList(array $payload): bool
-    {
-        // array_is_list 是 PHP 8.1+ 原生函数，用来判断数组 key 是否为 0..n 的连续数字。
-        return array_is_list($payload);
     }
 }
