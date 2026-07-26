@@ -55,10 +55,9 @@ test('authenticated users can view the task hall with filters', function (): voi
             // 任务大厅打开时会加载付款账号列表给发布任务 Select 使用。
             return [
                 new PaymentAccount(
-                    accountId: 'PAY001',
-                    accountName: '产品研发预算',
-                    departmentId: 'DEV01',
-                    departmentName: '产品研发部',
+                    wbaAccountCode: 'PAY001',
+                    wbaAccountName: '产品研发预算',
+                    deptName: '产品研发部',
                 ),
             ];
         }
@@ -138,10 +137,9 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             expect($accountId)->toBe('PAY001');
 
             return new PaymentAccount(
-                accountId: 'PAY001',
-                accountName: '开发一部创新预算',
-                departmentId: 'DEV01',
-                departmentName: '开发一部',
+                wbaAccountCode: 'PAY001',
+                wbaAccountName: '开发一部创新预算',
+                deptName: '开发一部',
             );
         }
     });
@@ -179,7 +177,6 @@ test('authenticated users can publish a bidding task with attachment ids', funct
         ->toMatchArray([
             'accountId' => 'PAY001',
             'accountName' => '开发一部创新预算',
-            'departmentId' => 'DEV01',
             'departmentName' => '开发一部',
         ]);
 
@@ -443,10 +440,15 @@ test('sso session prefers local personnel list when user belongs to current site
             expect($employeeNo)->toBe('00010001');
 
             return new PersonnelUser(
-                employeeNo: '10001',
-                displayName: '张三',
-                departmentId: 'DEV01',
-                departmentName: '开发一部',
+                department: '开发一部',
+                deptInfoList: [
+                    [
+                        'obiCode' => 'DEV01',
+                        'obiName' => '开发一部',
+                    ],
+                ],
+                eibNameCn: '张三',
+                eibNumCn: '10001',
             );
         }
     });

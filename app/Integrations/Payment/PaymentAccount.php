@@ -16,10 +16,14 @@ final readonly class PaymentAccount
      * 外部接口返回的数据先被整理成这个对象，再交给 Controller 或快照生成逻辑使用。
      */
     public function __construct(
-        private string $accountId,
-        private ?string $accountName = null,
-        private ?string $departmentId = null,
-        private ?string $departmentName = null,
+        // wbaAccountCode 是真实接口里的交易/付款账号编码。
+        private string $wbaAccountCode,
+        // wbaAccountName 是真实接口里的交易/付款账号名称。
+        private ?string $wbaAccountName = null,
+        // deptName 是真实接口里的部门名称；接口没有单独给部门 ID。
+        private ?string $deptName = null,
+        // wbaType 是真实接口里的账号类型，当前 MVP 暂不参与业务判断。
+        private ?string $wbaType = null,
         private array $raw = [],
     ) {}
 
@@ -50,12 +54,12 @@ final readonly class PaymentAccount
         }
 
         return new self(
-            accountId: $accountId,
+            wbaAccountCode: $accountId,
             // wbaAccountName 是真实接口里的账号名称，TaskHub 内部统一叫 accountName。
-            accountName: self::nullableString($account['wbaAccountName'] ?? $account['accountName'] ?? $account['account_name'] ?? $account['name'] ?? null),
-            departmentId: self::nullableString($account['departmentId'] ?? $account['department_id'] ?? null),
+            wbaAccountName: self::nullableString($account['wbaAccountName'] ?? $account['accountName'] ?? $account['account_name'] ?? $account['name'] ?? null),
             // deptName 是真实接口里的部门名称；接口未提供部门 ID，因此 departmentId 可以为空。
-            departmentName: self::nullableString($account['deptName'] ?? $account['departmentName'] ?? $account['department_name'] ?? null),
+            deptName: self::nullableString($account['deptName'] ?? $account['departmentName'] ?? $account['department_name'] ?? null),
+            wbaType: self::nullableString($account['wbaType'] ?? null),
             raw: $payload,
         );
     }
@@ -102,7 +106,7 @@ final readonly class PaymentAccount
      */
     public function accountId(): string
     {
-        return $this->accountId;
+        return $this->wbaAccountCode;
     }
 
     /**
@@ -112,7 +116,7 @@ final readonly class PaymentAccount
      */
     public function accountName(): ?string
     {
-        return $this->accountName;
+        return $this->wbaAccountName;
     }
 
     /**
@@ -122,7 +126,7 @@ final readonly class PaymentAccount
      */
     public function departmentId(): ?string
     {
-        return $this->departmentId;
+        return null;
     }
 
     /**
@@ -132,7 +136,7 @@ final readonly class PaymentAccount
      */
     public function departmentName(): ?string
     {
-        return $this->departmentName;
+        return $this->deptName;
     }
 
     /**
@@ -144,10 +148,10 @@ final readonly class PaymentAccount
     {
         // 快照只保存业务展示需要的稳定字段，不把外部接口原始响应整体塞进 task。
         return array_filter([
-            'accountId' => $this->accountId,
-            'accountName' => $this->accountName,
-            'departmentId' => $this->departmentId,
-            'departmentName' => $this->departmentName,
+            'accountId' => $this->accountId(),
+            'accountName' => $this->accountName(),
+            'departmentId' => $this->departmentId(),
+            'departmentName' => $this->departmentName(),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
@@ -160,10 +164,10 @@ final readonly class PaymentAccount
     {
         // Redis 中只缓存普通数组，不缓存 PHP 对象，避免类结构变化导致反序列化问题。
         return [
-            'accountId' => $this->accountId,
-            'accountName' => $this->accountName,
-            'departmentId' => $this->departmentId,
-            'departmentName' => $this->departmentName,
+            'deptName' => $this->deptName,
+            'wbaAccountCode' => $this->wbaAccountCode,
+            'wbaAccountName' => $this->wbaAccountName,
+            'wbaType' => $this->wbaType,
         ];
     }
 

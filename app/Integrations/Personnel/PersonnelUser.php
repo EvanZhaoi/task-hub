@@ -16,11 +16,44 @@ final readonly class PersonnelUser
      * 该对象用于表达外部人员列表中的单个人员，不会写入本地 users 表。
      */
     public function __construct(
-        // employeeNo 是 TaskHub 中所有人员引用字段的统一标识。
-        private string $employeeNo,
-        private ?string $displayName = null,
-        private ?string $departmentId = null,
-        private ?string $departmentName = null,
+        // copSort 是真实接口中的公司排序字段，当前 MVP 不参与业务判断。
+        private ?int $copSort = null,
+        // department 是真实接口中的部门文本，deptInfoList 缺失时作为部门名称兜底。
+        private ?string $department = null,
+        // deptInfoList 是真实接口中的部门列表，当前 MVP 取第一条有效部门用于展示。
+        private array $deptInfoList = [],
+        // transferDate 是真实接口中的调动日期，当前 MVP 暂不使用。
+        private ?string $transferDate = null,
+        // eibClassification 是真实接口中的人员分类，当前 MVP 暂不使用。
+        private ?string $eibClassification = null,
+        // eibEmail 是真实接口中的邮箱，未来人员选择器可按需展示。
+        private ?string $eibEmail = null,
+        // eibName 是真实接口中的姓名字段。
+        private ?string $eibName = null,
+        // eibNameCn 是真实接口中的中文姓名，页面展示优先使用它。
+        private ?string $eibNameCn = null,
+        // eibNameEn 是真实接口中的英文姓名，当前 MVP 暂不使用。
+        private ?string $eibNameEn = null,
+        // eibNumCn 是真实接口中的中文工号，TaskHub 会用它作为人员工号来源。
+        private ?string $eibNumCn = null,
+        // eibNumJp 是真实接口中的日方工号，eibNumCn 缺失时才兜底使用。
+        private ?string $eibNumJp = null,
+        // eibPhoto 是真实接口中的人员照片地址或标识，当前 MVP 暂不展示。
+        private ?string $eibPhoto = null,
+        // eibTurnPositiveDate 是真实接口中的转正日期，当前 MVP 暂不使用。
+        private ?string $eibTurnPositiveDate = null,
+        // eibUserName 是真实接口中的用户名，姓名缺失时可作为展示兜底。
+        private ?string $eibUserName = null,
+        // eibWorkStatus 是真实接口中的在职状态，当前 MVP 暂不做过滤。
+        private ?int $eibWorkStatus = null,
+        // firstWorkDate 是真实接口中的首次工作日期，当前 MVP 暂不使用。
+        private ?string $firstWorkDate = null,
+        // id 是真实接口中的人员记录 ID，工号缺失时才兜底使用。
+        private ?string $id = null,
+        // joinDate 是真实接口中的入职日期，当前 MVP 暂不使用。
+        private ?string $joinDate = null,
+        // obiUuid 是真实接口中的组织 UUID，部门列表缺失时可作为部门 ID 兜底。
+        private ?string $obiUuid = null,
         // raw 保留原始响应，方便接口字段变化时排查。
         private array $raw = [],
     ) {}
@@ -36,7 +69,7 @@ final readonly class PersonnelUser
         // 人员列表接口可能直接返回人员字段，也可能包一层 user。
         // 这里做轻量兼容，避免页面和 Controller 依赖外部接口的包装结构。
         $user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
-        $primaryDepartment = self::primaryDepartment($user);
+        $deptInfoList = self::arrayList($user['deptInfoList'] ?? []);
 
         $employeeNo = self::normalizeEmployeeNo(
             // eibNumCn 是本据点人员接口里的中文工号字段，优先作为 TaskHub 人员工号。
@@ -48,13 +81,25 @@ final readonly class PersonnelUser
         }
 
         return new self(
-            employeeNo: $employeeNo,
-            // eibNameCn 是真实接口里的中文姓名；没有时再退回其它姓名字段。
-            displayName: self::nullableString($user['eibNameCn'] ?? $user['eibName'] ?? $user['eibUserName'] ?? $user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
-            // deptInfoList 第一项中的 obiCode/obiUuid 表示部门标识；接口缺失时允许为空。
-            departmentId: self::nullableString($primaryDepartment['obiCode'] ?? $primaryDepartment['obiUuid'] ?? $user['departmentId'] ?? $user['department_id'] ?? null),
-            // deptInfoList 第一项中的 obiName 是部门名称；没有时退回 department 字符串。
-            departmentName: self::nullableString($primaryDepartment['obiName'] ?? $user['department'] ?? $user['departmentName'] ?? $user['department_name'] ?? null),
+            copSort: self::nullableInt($user['copSort'] ?? null),
+            department: self::nullableString($user['department'] ?? $user['departmentName'] ?? $user['department_name'] ?? null),
+            deptInfoList: $deptInfoList,
+            transferDate: self::nullableString($user['transferDate'] ?? null),
+            eibClassification: self::nullableString($user['eibClassification'] ?? null),
+            eibEmail: self::nullableString($user['eibEmail'] ?? null),
+            eibName: self::nullableString($user['eibName'] ?? $user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
+            eibNameCn: self::nullableString($user['eibNameCn'] ?? null),
+            eibNameEn: self::nullableString($user['eibNameEn'] ?? null),
+            eibNumCn: self::nullableString($user['eibNumCn'] ?? $user['employeeNo'] ?? $user['employee_no'] ?? null),
+            eibNumJp: self::nullableString($user['eibNumJp'] ?? null),
+            eibPhoto: self::nullableString($user['eibPhoto'] ?? null),
+            eibTurnPositiveDate: self::nullableString($user['eibTurnPositiveDate'] ?? null),
+            eibUserName: self::nullableString($user['eibUserName'] ?? null),
+            eibWorkStatus: self::nullableInt($user['eibWorkStatus'] ?? null),
+            firstWorkDate: self::nullableString($user['firstWorkDate'] ?? null),
+            id: self::nullableString($user['id'] ?? null),
+            joinDate: self::nullableString($user['joinDate'] ?? null),
+            obiUuid: self::nullableString($user['obiUuid'] ?? null),
             raw: $payload,
         );
     }
@@ -66,7 +111,7 @@ final readonly class PersonnelUser
      */
     public function employeeNo(): string
     {
-        return $this->employeeNo;
+        return self::normalizeEmployeeNo($this->eibNumCn ?? $this->eibNumJp ?? $this->id) ?? '';
     }
 
     /**
@@ -76,7 +121,7 @@ final readonly class PersonnelUser
      */
     public function displayName(): ?string
     {
-        return $this->displayName;
+        return $this->eibNameCn ?? $this->eibName ?? $this->eibUserName;
     }
 
     /**
@@ -86,7 +131,9 @@ final readonly class PersonnelUser
      */
     public function departmentId(): ?string
     {
-        return $this->departmentId;
+        $primaryDepartment = self::primaryDepartment($this->deptInfoList);
+
+        return self::nullableString($primaryDepartment['obiCode'] ?? $primaryDepartment['obiUuid'] ?? $this->obiUuid);
     }
 
     /**
@@ -96,7 +143,9 @@ final readonly class PersonnelUser
      */
     public function departmentName(): ?string
     {
-        return $this->departmentName;
+        $primaryDepartment = self::primaryDepartment($this->deptInfoList);
+
+        return self::nullableString($primaryDepartment['obiName'] ?? $this->department);
     }
 
     /**
@@ -117,15 +166,18 @@ final readonly class PersonnelUser
     public function toOption(): array
     {
         // 未来指定开发者选择器可以直接使用这个结构。
+        $displayName = $this->displayName();
+        $employeeNo = $this->employeeNo();
+
         return array_filter([
-            'employeeNo' => $this->employeeNo,
-            'displayName' => $this->displayName,
-            'departmentId' => $this->departmentId,
-            'departmentName' => $this->departmentName,
-            'label' => $this->displayName === null
-                ? $this->employeeNo
-                : "{$this->displayName}（{$this->employeeNo}）",
-            'value' => $this->employeeNo,
+            'employeeNo' => $employeeNo,
+            'displayName' => $displayName,
+            'departmentId' => $this->departmentId(),
+            'departmentName' => $this->departmentName(),
+            'label' => $displayName === null
+                ? $employeeNo
+                : "{$displayName}（{$employeeNo}）",
+            'value' => $employeeNo,
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
@@ -139,10 +191,10 @@ final readonly class PersonnelUser
         // Session 中作为 sso_user.siteUser 保存，表示“本据点人员信息”。
         // 它不覆盖总部 SSO 原始字段，只作为额外展示和后续选择器数据。
         return [
-            'employeeNo' => $this->employeeNo,
-            'displayName' => $this->displayName,
-            'departmentId' => $this->departmentId,
-            'departmentName' => $this->departmentName,
+            'employeeNo' => $this->employeeNo(),
+            'displayName' => $this->displayName(),
+            'departmentId' => $this->departmentId(),
+            'departmentName' => $this->departmentName(),
             'raw' => $this->raw,
         ];
     }
@@ -156,10 +208,25 @@ final readonly class PersonnelUser
     {
         // Redis 中只缓存普通数组，不缓存 PHP 对象，避免类结构变化导致反序列化问题。
         return [
-            'employeeNo' => $this->employeeNo,
-            'displayName' => $this->displayName,
-            'departmentId' => $this->departmentId,
-            'departmentName' => $this->departmentName,
+            'copSort' => $this->copSort,
+            'department' => $this->department,
+            'deptInfoList' => $this->deptInfoList,
+            'transferDate' => $this->transferDate,
+            'eibClassification' => $this->eibClassification,
+            'eibEmail' => $this->eibEmail,
+            'eibName' => $this->eibName,
+            'eibNameCn' => $this->eibNameCn,
+            'eibNameEn' => $this->eibNameEn,
+            'eibNumCn' => $this->eibNumCn,
+            'eibNumJp' => $this->eibNumJp,
+            'eibPhoto' => $this->eibPhoto,
+            'eibTurnPositiveDate' => $this->eibTurnPositiveDate,
+            'eibUserName' => $this->eibUserName,
+            'eibWorkStatus' => $this->eibWorkStatus,
+            'firstWorkDate' => $this->firstWorkDate,
+            'id' => $this->id,
+            'joinDate' => $this->joinDate,
+            'obiUuid' => $this->obiUuid,
         ];
     }
 
@@ -192,19 +259,33 @@ final readonly class PersonnelUser
     }
 
     /**
+     * 将外部接口字段安全转换为可空整数。
+     *
+     * 真实接口中排序和状态字段是数字；如果字段缺失或格式不对，TaskHub 暂时按 null 处理。
+     */
+    private static function nullableInt(mixed $value): ?int
+    {
+        return is_int($value) ? $value : null;
+    }
+
+    /**
+     * 将外部接口中的列表字段规整为数组列表。
+     *
+     * deptInfoList 必须是数组列表；如果接口返回异常结构，当前 MVP 直接按空列表处理。
+     */
+    private static function arrayList(mixed $value): array
+    {
+        return is_array($value) && array_is_list($value) ? $value : [];
+    }
+
+    /**
      * 从真实人员接口的 deptInfoList 中取主要部门。
      *
      * 当前接口返回的是部门列表，TaskHub MVP 只需要一个部门用于展示和快照，所以取第一条有效部门。
      */
-    private static function primaryDepartment(array $user): array
+    private static function primaryDepartment(array $deptInfoList): array
     {
-        $departments = $user['deptInfoList'] ?? null;
-
-        if (! is_array($departments)) {
-            return [];
-        }
-
-        foreach ($departments as $department) {
+        foreach ($deptInfoList as $department) {
             if (is_array($department)) {
                 return $department;
             }
