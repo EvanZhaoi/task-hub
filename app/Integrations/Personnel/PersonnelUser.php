@@ -28,16 +28,19 @@ final readonly class PersonnelUser
     /**
      * 把外部人员接口返回的单个人员数组转换为 PersonnelUser。
      *
-     * 这里统一兼容 user 包装和常见字段命名，业务层不需要理解外部响应细节。
+     * 这里统一兼容真实人员列表字段、user 包装和常见字段命名，业务层不需要理解外部响应细节。
+     * 真实人员接口字段为 eibNumCn、eibNameCn、deptInfoList 等，这里统一映射为 TaskHub 内部字段。
      */
     public static function fromPayload(array $payload): self
     {
         // 人员列表接口可能直接返回人员字段，也可能包一层 user。
         // 这里做轻量兼容，避免页面和 Controller 依赖外部接口的包装结构。
         $user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+        $primaryDepartment = self::primaryDepartment($user);
 
         $employeeNo = self::normalizeEmployeeNo(
-            $user['employeeNo'] ?? $user['employee_no'] ?? $user['id'] ?? null,
+            // eibNumCn 是本据点人员接口里的中文工号字段，优先作为 TaskHub 人员工号。
+            $user['eibNumCn'] ?? $user['employeeNo'] ?? $user['employee_no'] ?? $user['eibNumJp'] ?? $user['id'] ?? null,
         );
 
         if ($employeeNo === null) {
@@ -46,9 +49,12 @@ final readonly class PersonnelUser
 
         return new self(
             employeeNo: $employeeNo,
-            displayName: self::nullableString($user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
-            departmentId: self::nullableString($user['departmentId'] ?? $user['department_id'] ?? null),
-            departmentName: self::nullableString($user['departmentName'] ?? $user['department_name'] ?? null),
+            // eibNameCn 是真实接口里的中文姓名；没有时再退回其它姓名字段。
+            displayName: self::nullableString($user['eibNameCn'] ?? $user['eibName'] ?? $user['eibUserName'] ?? $user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
+            // deptInfoList 第一项中的 obiCode/obiUuid 表示部门标识；接口缺失时允许为空。
+            departmentId: self::nullableString($primaryDepartment['obiCode'] ?? $primaryDepartment['obiUuid'] ?? $user['departmentId'] ?? $user['department_id'] ?? null),
+            // deptInfoList 第一项中的 obiName 是部门名称；没有时退回 department 字符串。
+            departmentName: self::nullableString($primaryDepartment['obiName'] ?? $user['department'] ?? $user['departmentName'] ?? $user['department_name'] ?? null),
             raw: $payload,
         );
     }
@@ -183,5 +189,27 @@ final readonly class PersonnelUser
     private static function nullableString(mixed $value): ?string
     {
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * 从真实人员接口的 deptInfoList 中取主要部门。
+     *
+     * 当前接口返回的是部门列表，TaskHub MVP 只需要一个部门用于展示和快照，所以取第一条有效部门。
+     */
+    private static function primaryDepartment(array $user): array
+    {
+        $departments = $user['deptInfoList'] ?? null;
+
+        if (! is_array($departments)) {
+            return [];
+        }
+
+        foreach ($departments as $department) {
+            if (is_array($department)) {
+                return $department;
+            }
+        }
+
+        return [];
     }
 }

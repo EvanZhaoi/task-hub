@@ -205,16 +205,21 @@ test('payment account client finds account snapshot from external account list',
         'https://payment.example.test/accounts' => Http::response([
             'data' => [
                 [
-                    'accountId' => 'PAY001',
-                    'accountName' => '开发一部创新预算',
-                    'departmentId' => 'DEV01',
-                    'departmentName' => '开发一部',
+                    'deptName' => '开发一部',
+                    'wbaAccountCode' => 'PAY001',
+                    'wbaAccountName' => '开发一部创新预算',
+                    'wbaType' => 'BUDGET',
                 ],
                 [
-                    'accountId' => 'PAY002',
-                    'accountName' => '测试预算',
+                    'deptName' => '测试部',
+                    'wbaAccountCode' => 'PAY002',
+                    'wbaAccountName' => '测试预算',
+                    'wbaType' => 'BUDGET',
                 ],
             ],
+            'msg' => '',
+            'timestamp' => 0,
+            'total' => 2,
         ]),
     ]);
 
@@ -223,7 +228,6 @@ test('payment account client finds account snapshot from external account list',
     expect($paymentAccount->toSnapshot())->toMatchArray([
         'accountId' => 'PAY001',
         'accountName' => '开发一部创新预算',
-        'departmentId' => 'DEV01',
         'departmentName' => '开发一部',
     ]);
 
@@ -251,13 +255,21 @@ test('external directory cache refresh keeps previous payment accounts when resp
             ->push([
                 'data' => [
                     [
-                        'accountId' => 'PAY001',
-                        'accountName' => '开发一部创新预算',
+                        'deptName' => '开发一部',
+                        'wbaAccountCode' => 'PAY001',
+                        'wbaAccountName' => '开发一部创新预算',
+                        'wbaType' => 'BUDGET',
                     ],
                 ],
+                'msg' => '',
+                'timestamp' => 0,
+                'total' => 1,
             ])
             ->push([
                 'data' => [],
+                'msg' => '',
+                'timestamp' => 0,
+                'total' => 0,
             ]),
     ]);
 
@@ -286,17 +298,37 @@ test('external directory cache refresh keeps previous personnel users when respo
     Http::fake([
         'https://personnel.example.test/users' => Http::sequence()
             ->push([
-                'users' => [
+                'data' => [
                     [
-                        'employeeNo' => '10001',
-                        'displayName' => '张三',
-                        'departmentId' => 'DEV01',
-                        'departmentName' => '开发一部',
+                        'copSort' => 0,
+                        'department' => '开发一部',
+                        'deptInfoList' => [
+                            [
+                                'copName' => '',
+                                'copSort' => 0,
+                                'obiCode' => 'DEV01',
+                                'obiName' => '开发一部',
+                                'obiUuid' => 'DEPT-UUID-01',
+                            ],
+                        ],
+                        'eibEmail' => 'zhangsan@example.test',
+                        'eibName' => '张三',
+                        'eibNameCn' => '张三',
+                        'eibNumCn' => '10001',
+                        'eibUserName' => 'zhangsan',
+                        'id' => 'person-001',
+                        'obiUuid' => 'DEPT-UUID-01',
                     ],
                 ],
+                'msg' => '',
+                'timestamp' => 0,
+                'total' => 1,
             ])
             ->push([
-                'users' => [],
+                'data' => [],
+                'msg' => '',
+                'timestamp' => 0,
+                'total' => 0,
             ]),
     ]);
 

@@ -27,6 +27,7 @@ final readonly class PaymentAccount
      * 把外部接口返回的单个账号 JSON 数组转换为 PaymentAccount 对象。
      *
      * $requestedAccountId 是兜底账号 ID；当前主要来自列表筛选，通常外部列表项本身就会包含账号 ID。
+     * 真实账号接口字段为 wbaAccountCode、wbaAccountName、deptName，这里统一映射为 TaskHub 内部字段。
      */
     public static function fromPayload(string $requestedAccountId, array $payload): self
     {
@@ -37,7 +38,12 @@ final readonly class PaymentAccount
             default => $payload,
         };
 
-        $accountId = $account['accountId'] ?? $account['account_id'] ?? $account['id'] ?? $requestedAccountId;
+        // wbaAccountCode 是真实接口里的交易/付款账号编码，TaskHub 内部统一叫 accountId。
+        $accountId = $account['wbaAccountCode']
+            ?? $account['accountId']
+            ?? $account['account_id']
+            ?? $account['id']
+            ?? $requestedAccountId;
 
         if (! is_string($accountId) || $accountId === '') {
             throw new PaymentAccountException('Payment account response does not contain account id.');
@@ -45,9 +51,11 @@ final readonly class PaymentAccount
 
         return new self(
             accountId: $accountId,
-            accountName: self::nullableString($account['accountName'] ?? $account['account_name'] ?? $account['name'] ?? null),
+            // wbaAccountName 是真实接口里的账号名称，TaskHub 内部统一叫 accountName。
+            accountName: self::nullableString($account['wbaAccountName'] ?? $account['accountName'] ?? $account['account_name'] ?? $account['name'] ?? null),
             departmentId: self::nullableString($account['departmentId'] ?? $account['department_id'] ?? null),
-            departmentName: self::nullableString($account['departmentName'] ?? $account['department_name'] ?? null),
+            // deptName 是真实接口里的部门名称；接口未提供部门 ID，因此 departmentId 可以为空。
+            departmentName: self::nullableString($account['deptName'] ?? $account['departmentName'] ?? $account['department_name'] ?? null),
             raw: $payload,
         );
     }
@@ -62,8 +70,9 @@ final readonly class PaymentAccount
     public static function listFromPayload(array $payload): array
     {
         // 外部列表接口常见返回形式可能是：
-        // 1. 直接返回账号数组：[{"accountId": "..."}]
-        // 2. 包在 data/accounts/list 字段中：{"data": [...]}
+        // 1. 真实接口返回：{"code": "", "data": [{"wbaAccountCode": "..."}], "msg": "", "timestamp": 0, "total": 0}
+        // 2. 兼容直接返回账号数组：[{"accountId": "..."}]
+        // 3. 兼容包在 accounts/list 字段中：{"accounts": [...]}
         // 这里做轻量兼容，但不把 Controller 和页面绑死在某一种响应包装上。
         $items = match (true) {
             isset($payload['accounts']) && is_array($payload['accounts']) => $payload['accounts'],
