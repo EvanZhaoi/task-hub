@@ -115,6 +115,196 @@ final readonly class PersonnelUser
     }
 
     /**
+     * 获取真实接口字段 copSort。
+     *
+     * 当前 MVP 不使用该排序字段，只保留给后续需要按公司排序展示人员列表时使用。
+     */
+    public function copSort(): ?int
+    {
+        return $this->copSort;
+    }
+
+    /**
+     * 获取真实接口字段 department。
+     *
+     * deptInfoList 缺失时，TaskHub 会用它作为部门名称兜底。
+     */
+    public function department(): ?string
+    {
+        return $this->department;
+    }
+
+    /**
+     * 获取真实接口字段 deptInfoList。
+     *
+     * 返回值保持外部接口原结构，业务层通常应优先使用 departmentId() 和 departmentName()。
+     */
+    public function deptInfoList(): array
+    {
+        return $this->deptInfoList;
+    }
+
+    /**
+     * 获取真实接口字段 transferDate。
+     *
+     * 当前 MVP 暂不使用调动日期。
+     */
+    public function transferDate(): ?string
+    {
+        return $this->transferDate;
+    }
+
+    /**
+     * 获取真实接口字段 eibClassification。
+     *
+     * 当前 MVP 暂不使用人员分类。
+     */
+    public function eibClassification(): ?string
+    {
+        return $this->eibClassification;
+    }
+
+    /**
+     * 获取真实接口字段 eibEmail。
+     *
+     * 未来人员选择器或通知场景可以使用该邮箱字段。
+     */
+    public function eibEmail(): ?string
+    {
+        return $this->eibEmail;
+    }
+
+    /**
+     * 获取真实接口字段 eibName。
+     *
+     * 该字段是姓名兜底来源之一。
+     */
+    public function eibName(): ?string
+    {
+        return $this->eibName;
+    }
+
+    /**
+     * 获取真实接口字段 eibNameCn。
+     *
+     * 页面展示人员姓名时优先使用该中文姓名字段。
+     */
+    public function eibNameCn(): ?string
+    {
+        return $this->eibNameCn;
+    }
+
+    /**
+     * 获取真实接口字段 eibNameEn。
+     *
+     * 当前 MVP 暂不展示英文姓名。
+     */
+    public function eibNameEn(): ?string
+    {
+        return $this->eibNameEn;
+    }
+
+    /**
+     * 获取真实接口字段 eibNumCn。
+     *
+     * 该字段是 TaskHub 本据点工号的主要来源。
+     */
+    public function eibNumCn(): ?string
+    {
+        return $this->eibNumCn;
+    }
+
+    /**
+     * 获取真实接口字段 eibNumJp。
+     *
+     * eibNumCn 缺失时，TaskHub 才会用该字段作为工号兜底。
+     */
+    public function eibNumJp(): ?string
+    {
+        return $this->eibNumJp;
+    }
+
+    /**
+     * 获取真实接口字段 eibPhoto。
+     *
+     * 当前 MVP 暂不展示人员照片。
+     */
+    public function eibPhoto(): ?string
+    {
+        return $this->eibPhoto;
+    }
+
+    /**
+     * 获取真实接口字段 eibTurnPositiveDate。
+     *
+     * 当前 MVP 暂不使用转正日期。
+     */
+    public function eibTurnPositiveDate(): ?string
+    {
+        return $this->eibTurnPositiveDate;
+    }
+
+    /**
+     * 获取真实接口字段 eibUserName。
+     *
+     * 姓名缺失时，TaskHub 会用它作为显示名称兜底。
+     */
+    public function eibUserName(): ?string
+    {
+        return $this->eibUserName;
+    }
+
+    /**
+     * 获取真实接口字段 eibWorkStatus。
+     *
+     * 当前 MVP 暂不按在职状态过滤人员。
+     */
+    public function eibWorkStatus(): ?int
+    {
+        return $this->eibWorkStatus;
+    }
+
+    /**
+     * 获取真实接口字段 firstWorkDate。
+     *
+     * 当前 MVP 暂不使用首次工作日期。
+     */
+    public function firstWorkDate(): ?string
+    {
+        return $this->firstWorkDate;
+    }
+
+    /**
+     * 获取真实接口字段 id。
+     *
+     * 这是外部人员记录 ID，只有工号缺失时才作为 employeeNo 的兜底来源。
+     */
+    public function id(): ?string
+    {
+        return $this->id;
+    }
+
+    /**
+     * 获取真实接口字段 joinDate。
+     *
+     * 当前 MVP 暂不使用入职日期。
+     */
+    public function joinDate(): ?string
+    {
+        return $this->joinDate;
+    }
+
+    /**
+     * 获取真实接口字段 obiUuid。
+     *
+     * 部门列表缺失时可作为部门标识兜底。
+     */
+    public function obiUuid(): ?string
+    {
+        return $this->obiUuid;
+    }
+
+    /**
      * 获取人员显示名称。
      *
      * 该字段主要用于页面展示和历史快照。

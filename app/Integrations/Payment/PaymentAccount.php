@@ -100,13 +100,53 @@ final readonly class PaymentAccount
     }
 
     /**
+     * 获取真实接口字段 wbaAccountCode。
+     *
+     * 该字段是交易/付款账号编码，也是 TaskHub 内部 accountId 的来源。
+     */
+    public function wbaAccountCode(): string
+    {
+        return $this->wbaAccountCode;
+    }
+
+    /**
+     * 获取真实接口字段 wbaAccountName。
+     *
+     * 该字段是交易/付款账号名称，也是 TaskHub 内部 accountName 的来源。
+     */
+    public function wbaAccountName(): ?string
+    {
+        return $this->wbaAccountName;
+    }
+
+    /**
+     * 获取真实接口字段 deptName。
+     *
+     * 该字段是账号所属部门名称，也是 TaskHub 内部 departmentName 的来源。
+     */
+    public function deptName(): ?string
+    {
+        return $this->deptName;
+    }
+
+    /**
+     * 获取真实接口字段 wbaType。
+     *
+     * 当前 MVP 暂不使用账号类型做业务判断，但保留读取方法方便后续扩展。
+     */
+    public function wbaType(): ?string
+    {
+        return $this->wbaType;
+    }
+
+    /**
      * 获取付款账号 ID。
      *
      * 这是业务表 task.payment_account_id 保存的正式查询字段。
      */
     public function accountId(): string
     {
-        return $this->wbaAccountCode;
+        return $this->wbaAccountCode();
     }
 
     /**
@@ -116,7 +156,7 @@ final readonly class PaymentAccount
      */
     public function accountName(): ?string
     {
-        return $this->wbaAccountName;
+        return $this->wbaAccountName();
     }
 
     /**
@@ -136,7 +176,7 @@ final readonly class PaymentAccount
      */
     public function departmentName(): ?string
     {
-        return $this->deptName;
+        return $this->deptName();
     }
 
     /**

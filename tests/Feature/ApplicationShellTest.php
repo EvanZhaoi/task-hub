@@ -226,7 +226,11 @@ test('payment account client finds account snapshot from external account list',
         'accountId' => 'PAY001',
         'accountName' => '开发一部创新预算',
         'departmentName' => '开发一部',
-    ]);
+    ])
+        ->and($paymentAccount->wbaAccountCode())->toBe('PAY001')
+        ->and($paymentAccount->wbaAccountName())->toBe('开发一部创新预算')
+        ->and($paymentAccount->deptName())->toBe('开发一部')
+        ->and($paymentAccount->wbaType())->toBe('BUDGET');
 
     // 断言后端只调用全量列表接口，然后在本地按 accountId 筛选。
     Http::assertSent(fn ($request): bool => $request->method() === 'GET'
@@ -330,7 +334,10 @@ test('external directory cache refresh keeps previous personnel users when respo
     ]);
 
     expect(app(PersonnelClient::class)->refreshCache())->toBe(1)
-        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三');
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三')
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->eibNumCn())->toBe('10001')
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->eibNameCn())->toBe('张三')
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->deptInfoList()[0]['obiCode'])->toBe('DEV01');
 
     // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
     expect(app(PersonnelClient::class)->refreshCache())->toBe(0)
