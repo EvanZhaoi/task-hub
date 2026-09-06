@@ -78,18 +78,32 @@ npm run typecheck
 
 修改 `tsconfig.json`。
 
+当前项目完整内容如下。这里必须写完整文件，而不是只写 `paths` 片段，因为 TypeScript 能否识别 `@/`、React JSX、Vite 类型，取决于这些配置共同生效。
+
 ```jsonc
 {
     "compilerOptions": {
-        // 省略其它配置。
+        "allowJs": false,
+        "allowSyntheticDefaultImports": true,
+        "jsx": "react-jsx",
+        "lib": ["DOM", "DOM.Iterable", "ES2023"],
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "noEmit": true,
         // @/* 统一指向 resources/js/*。
         // 这样页面里可以写 @/components/ui/button，
         // 不需要写 ../../components/ui/button。
         "paths": {
             "@/*": ["./resources/js/*"]
         },
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "target": "ES2023",
+        // vite/client 提供 import.meta、import.meta.glob 等 Vite 专属类型。
         "types": ["vite/client"]
-    }
+    },
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx", "resources/js/**/*.d.ts"]
 }
 ```
 
@@ -657,7 +671,9 @@ resources/js/Pages/Tasks/Index.tsx
 
 #### 8.5 任务卡片外层使用 Card，内部信息布局保持不变
 
-第 10 章任务卡片外层重复写了边框、白底和 hover。第 11 章改为：
+第 10 章任务卡片外层重复写了边框、白底和 hover。第 11 章改为 `Card` 组件承载外层结构。
+
+这里先看替换后的外层写法，完整 `Index.tsx` 在 8.9 给出：
 
 ```tsx
 <Card
@@ -665,7 +681,7 @@ resources/js/Pages/Tasks/Index.tsx
     className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
     key={task.id}
 >
-    ...
+    {/* 任务标题、状态、金额、交付日期等内部结构保持第 10 章的列表布局。 */}
 </Card>
 ```
 
