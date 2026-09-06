@@ -7,10 +7,10 @@ use App\Integrations\Personnel\PersonnelException;
 use App\Integrations\Personnel\PersonnelUser;
 use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
+use App\Integrations\Sso\SsoToken;
 use App\Integrations\Sso\SsoUser;
 use App\Services\CurrentUserService;
 use App\Services\TaskhubRoleService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +20,7 @@ use Inertia\Response;
 /**
  * SSO 控制器。
  *
- * 负责浏览器登录跳转、SSO 回调页、本地 Session 建立和退出。
+ * 负责浏览器登录跳转、授权码回调、本地 Session 建立和退出。
  * 真实人员信息只由后端 SsoClient 调公司接口获取，前端不能决定当前用户是谁。
  */
 class SsoController extends Controller
@@ -49,11 +49,11 @@ class SsoController extends Controller
         // 如果没有明确的目标页面，则默认进入任务列表。
         $request->session()->put('url.intended', $request->session()->get('url.intended', route('tasks.index')));
 
-        // 公司当前 SSO 使用隐式模式，回调时只返回 access_token。
-        // 标准 OAuth/OIDC 常见的 state 校验当前不可用，因此这里不生成、不传递 state。
+        // 公司当前 SSO 使用授权码模式，回调时返回 code。
+        // 之后由 Laravel 后端使用 code + client_secret 换 access_token。
         $query = http_build_query(array_filter([
-            // 隐式模式要求浏览器最终拿到 access token。
-            'response_type' => 'token',
+            // 授权码模式固定传 code，不能再使用隐式模式的 token。
+            'response_type' => 'code',
             'client_id' => $clientId,
             // Laravel 生成绝对回调地址，避免不同环境手写 callback URL。
             'redirect_uri' => route('sso.callback'),
@@ -64,46 +64,59 @@ class SsoController extends Controller
     }
 
     /**
-     * 返回 SSO 回调 React 页面。
+     * 处理公司 SSO 授权码回调。
      *
-     * 公司 SSO 登录完成后会携带 access_token 回到该页面。
-     * 页面本身不解析用户身份，只负责把 token 提交给后端 `/sso/session`。
+     * 公司 SSO 登录完成后会携带 code 回到该地址。
+     * Laravel 后端使用 code 换 access_token，再用 access_token 查询当前登录人并建立 Session。
      */
-    public function callback(): Response
-    {
-        // 公司 SSO 会把 access_token 作为 query string 回调到这个地址。
-        // 这里仍返回 React 回调页，由前端统一处理登录中、失败提示和提交 /sso/session。
-        return Inertia::render('Sso/Callback');
-    }
-
-    /**
-     * 使用 accessToken 建立 TaskHub 本地登录 Session。
-     *
-     * 该方法先通过 SsoClient 调总部接口确认当前登录人，再尝试从本据点人员列表中追加 siteUser。
-     * 前端不能提交姓名、部门或角色，角色必须由后端从 taskhub_user_role 表读取。
-     */
-    public function store(
+    public function callback(
         Request $request,
         SsoClient $ssoClient,
         PersonnelClient $personnelClient,
         TaskhubRoleService $roleService,
-    ): JsonResponse {
-        // 前端只提交 accessToken，不提交姓名、部门或角色。
-        // 当前登录人的可信身份必须由后端拿 token 调公司 SSO 接口得到。
-        $validated = $request->validate([
-            // 字段名使用 accessToken，是为了和公司接口示例保持一致；进入后端后仍按字符串处理。
-            'accessToken' => ['required', 'string'],
-        ]);
+    ): Response|RedirectResponse {
+        // 授权码模式下，公司 SSO 回调到 TaskHub 时必须携带 code。
+        // 缺少 code 时直接显示错误页，避免 Laravel 表单校验重定向让登录问题变得难排查。
+        $code = $request->query('code');
 
-        try {
-            // 使用 accessToken 获取当前登录人信息，这是 TaskHub 建立本地会话的身份依据。
-            $user = $ssoClient->fetchCurrentUser($validated['accessToken']);
-        } catch (SsoException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 401);
+        if (! is_string($code) || $code === '') {
+            return Inertia::render('Sso/Callback', [
+                'status' => 'failed',
+                'message' => 'SSO 回调缺少 code。',
+            ]);
         }
 
+        try {
+            // redirect_uri 必须和 /login 发起授权请求时传递给 SSO 的值保持一致。
+            $token = $ssoClient->exchangeCodeForToken($code, route('sso.callback'));
+            // 拿到 access_token 后，继续由后端调用总部当前登录人接口。
+            $user = $ssoClient->fetchCurrentUser($token->accessToken());
+        } catch (SsoException $exception) {
+            // 回调失败时返回 React 提示页，不把 code、access_token 或 client_secret 暴露给页面。
+            return Inertia::render('Sso/Callback', [
+                'status' => 'failed',
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        $this->establishSession($request, $user, $token, $personnelClient, $roleService);
+
+        return redirect()->intended(route('tasks.index'));
+    }
+
+    /**
+     * 建立 TaskHub 本地登录 Session。
+     *
+     * 该方法先保存总部 SSO 当前登录人，再尝试从本据点人员列表中追加 siteUser。
+     * 前端不能提交姓名、部门或角色，角色必须由后端从 taskhub_user_role 表读取。
+     */
+    private function establishSession(
+        Request $request,
+        SsoUser $user,
+        SsoToken $token,
+        PersonnelClient $personnelClient,
+        TaskhubRoleService $roleService,
+    ): void {
         $roles = $roleService->rolesFor($user);
         $sessionUser = $user->toSessionPayload();
 
@@ -117,20 +130,16 @@ class SsoController extends Controller
         // 角色来自 taskhub_user_role 表，变更角色不需要重新发布应用。
         $request->session()->put(CurrentUserService::SESSION_KEY, $sessionUser);
         $request->session()->put(CurrentUserService::ROLE_SESSION_KEY, $roles);
+        $request->session()->put(CurrentUserService::TOKEN_SESSION_KEY, $token->toSessionPayload());
 
         // 登录成功后刷新 Session ID，降低会话固定攻击风险。
         $request->session()->regenerate();
-
-        return response()->json([
-            'redirectTo' => $request->session()->pull('url.intended', route('tasks.index')),
-            'roles' => $roles,
-        ]);
     }
 
     /**
      * 根据总部 SSO 用户工号查找本据点人员信息。
      *
-     * 找到时返回 PersonnelUser，由 store() 写入 Session 的 siteUser 字段。
+     * 找到时返回 PersonnelUser，由 establishSession() 写入 Session 的 siteUser 字段。
      * 找不到或人员接口失败时返回 null，保持总部 SSO 原始人员信息不变。
      */
     private function siteUserFromPersonnelList(SsoUser $ssoUser, PersonnelClient $personnelClient): ?PersonnelUser
@@ -167,6 +176,7 @@ class SsoController extends Controller
         $request->session()->forget([
             CurrentUserService::SESSION_KEY,
             CurrentUserService::ROLE_SESSION_KEY,
+            CurrentUserService::TOKEN_SESSION_KEY,
         ]);
 
         // 让整个 Laravel Session 失效，确保旧 Session ID 不能继续使用。

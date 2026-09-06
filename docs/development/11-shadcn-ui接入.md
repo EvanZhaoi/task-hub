@@ -509,15 +509,15 @@ resources/js/Layouts/AppLayout.tsx
 resources/js/Pages/Sso/Callback.tsx
 ```
 
-第 10 章之前的 SSO 回调页已经有居中卡片。第 11 章只把卡片和重新登录按钮替换成 UI 组件。
+SSO 授权码模式下，登录成功会由 Laravel 后端直接重定向到业务页面。这个 React 回调页只在缺少 code、token 接口失败等异常情况下展示错误。
 
 保留不变：
 
 - 页面整体居中。
 - 背景色 `bg-[#fafafa]`。
 - TaskHub 标识区域。
-- 登录中 / 登录失败的状态文案。
-- `fetch('/sso/session')` 的认证流程。
+- 登录失败的状态文案。
+- 重新登录入口。
 
 替换为：
 
@@ -533,24 +533,22 @@ resources/js/Pages/Sso/Callback.tsx
                 <div>
                     <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
                     <p className="mt-1 text-sm text-[#6e6e80]">
-                        {callbackState === 'processing' ? '正在建立本地会话' : '登录未完成'}
+                        {status === 'failed' ? '登录未完成' : '正在完成单点登录'}
                     </p>
                 </div>
             </div>
 
-            <p className="text-sm leading-6 text-[#6e6e80]">{message}</p>
+            <p className="text-sm leading-6 text-[#6e6e80]">{message ?? 'SSO 授权码登录失败。'}</p>
 
-            {callbackState === 'failed' ? (
-                <Button asChild className="mt-5">
-                    <a href="/login">重新登录</a>
-                </Button>
-            ) : null}
+            <Button asChild className="mt-5">
+                <a href="/login">重新登录</a>
+            </Button>
         </CardContent>
     </Card>
 </main>
 ```
 
-注意：SSO 逻辑不要因为 UI 重构而变。前端仍然只把 `accessToken` 提交给 Laravel，当前登录人和角色仍由后端决定。
+注意：SSO 逻辑不要因为 UI 重构而变。授权码模式下前端不读取 `access_token`，当前登录人和角色仍由 Laravel 后端决定。
 
 #### 8.3 任务大厅筛选区使用 Card、Input、NativeSelect、Button
 

@@ -6,6 +6,7 @@ use App\Integrations\Personnel\PersonnelClient;
 use App\Integrations\Personnel\PersonnelUser;
 use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
+use App\Integrations\Sso\SsoToken;
 use App\Integrations\Sso\SsoUser;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
@@ -34,7 +35,7 @@ test('protected task pages redirect to sso login when session is missing', funct
 test('the sso callback page responds successfully', function (): void {
     $this->withoutVite();
 
-    // SSO 回调页本身不验证 token，只负责把 query string 中的 access_token 交给后端。
+    // 授权码模式下缺少 code 时，回调页直接展示错误提示，方便开发阶段排查 SSO 参数问题。
     $this->get('/sso/callback')->assertOk();
 });
 
@@ -105,6 +106,10 @@ test('authenticated users can view the task hall with filters', function (): voi
             'displayName' => '李雷',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
     ])
         // Inertia 请求需要带这两个头，Laravel 才会返回 JSON page payload。
         ->withHeader('X-Inertia', 'true')
@@ -152,6 +157,10 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             'departmentName' => '开发一部',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
     ])
         ->post('/tasks', [
             'title' => '报表导出优化',
@@ -344,18 +353,36 @@ test('external directory cache refresh keeps previous personnel users when respo
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三');
 });
 
-test('the sso session endpoint accepts access token without state', function (): void {
+test('the sso callback exchanges code and creates local session', function (): void {
     // 用容器替换 SsoClient，避免测试真实访问公司 SSO。
     $this->app->instance(SsoClient::class, new class extends SsoClient
     {
         /**
+         * 返回测试用 SSO token。
+         *
+         * 该方法替代真实 token 接口，验证 callback 收到的 code 会交给后端 SSO 客户端。
+         */
+        public function exchangeCodeForToken(string $code, string $redirectUri): SsoToken
+        {
+            expect($code)->toBe('code-123')
+                ->and($redirectUri)->toBe(route('sso.callback'));
+
+            return new SsoToken(
+                accessToken: 'token-123',
+                tokenType: 'bearer',
+                expiresIn: 35999,
+                expiresAt: now()->addHour()->toImmutable(),
+            );
+        }
+
+        /**
          * 返回测试用 SSO 登录人。
          *
-         * 该方法替代真实总部接口，验证 accessToken 会从前端提交到后端 SSO 客户端。
+         * 该方法替代真实总部当前登录人接口，验证 accessToken 会由后端传入。
          */
         public function fetchCurrentUser(string $accessToken): SsoUser
         {
-            // 确认前端提交的 accessToken 被原样传给后端 SSO 客户端。
+            // 确认 code 换到的 accessToken 被原样传给后端 SSO 当前登录人接口。
             expect($accessToken)->toBe('token-123');
 
             return new SsoUser(
@@ -399,25 +426,37 @@ test('the sso session endpoint accepts access token without state', function ():
         }
     });
 
-    $this->postJson('/sso/session', [
-        // 公司 SSO 回调给前端 token，前端再提交给 Laravel 建立本地 Session。
-        'accessToken' => 'token-123',
-    ])
-        ->assertOk()
-        ->assertJson([
-            'redirectTo' => route('tasks.index'),
-            'roles' => ['TOP'],
-        ]);
+    $this->get('/sso/callback?code=code-123')
+        ->assertRedirect(route('tasks.index'));
 
-    // 登录成功后，用户快照和 TaskHub 角色都应写入 Session。
+    // 登录成功后，用户快照、TaskHub 角色和 token 快照都应写入 Session。
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
-        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP']);
+        ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP'])
+        ->and(session(CurrentUserService::TOKEN_SESSION_KEY)['accessToken'])->toBe('token-123');
 });
 
 test('sso session prefers local personnel list when user belongs to current site', function (): void {
     // 总部 SSO 返回的信息可能不完整，这里故意只返回姓名，不返回部门。
     $this->app->instance(SsoClient::class, new class extends SsoClient
     {
+        /**
+         * 返回测试用 SSO token。
+         *
+         * 本测试重点验证本据点人员信息补充，因此 token 接口只返回固定 accessToken。
+         */
+        public function exchangeCodeForToken(string $code, string $redirectUri): SsoToken
+        {
+            expect($code)->toBe('code-456')
+                ->and($redirectUri)->toBe(route('sso.callback'));
+
+            return new SsoToken(
+                accessToken: 'token-456',
+                tokenType: 'bearer',
+                expiresIn: 35999,
+                expiresAt: now()->addHour()->toImmutable(),
+            );
+        }
+
         /**
          * 返回总部 SSO 登录人测试数据。
          *
@@ -476,9 +515,7 @@ test('sso session prefers local personnel list when user belongs to current site
         }
     });
 
-    $this->postJson('/sso/session', [
-        'accessToken' => 'token-456',
-    ])->assertOk();
+    $this->get('/sso/callback?code=code-456')->assertRedirect(route('tasks.index'));
 
     expect(session(CurrentUserService::SESSION_KEY))->toMatchArray([
         // 顶层字段保留总部 SSO 当前登录人信息，不被本据点人员列表覆盖。
@@ -505,6 +542,10 @@ test('logout clears sso session and redirects home', function (): void {
             'displayName' => '张三',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
         'taskhub.session_marker' => 'old-session',
     ])
         ->post('/logout')
@@ -512,6 +553,7 @@ test('logout clears sso session and redirects home', function (): void {
         // invalidate() 后旧 Session 数据都不应继续存在。
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
         ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
+        ->assertSessionMissing(CurrentUserService::TOKEN_SESSION_KEY)
         ->assertSessionMissing('taskhub.session_marker');
 });
 
@@ -525,6 +567,10 @@ test('logout redirects to sso logout url when configured', function (): void {
             'displayName' => '张三',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
         'taskhub.session_marker' => 'old-session',
     ])
         ->post('/logout')
@@ -532,6 +578,7 @@ test('logout redirects to sso logout url when configured', function (): void {
         // 即使跳转到外部退出地址，本地 Session 也必须已经清理。
         ->assertSessionMissing(CurrentUserService::SESSION_KEY)
         ->assertSessionMissing(CurrentUserService::ROLE_SESSION_KEY)
+        ->assertSessionMissing(CurrentUserService::TOKEN_SESSION_KEY)
         ->assertSessionMissing('taskhub.session_marker');
 });
 
@@ -546,6 +593,52 @@ test('sso user info path must not be a full url', function (): void {
 
     expect(fn () => app(SsoClient::class)->fetchCurrentUser('token-123'))
         ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
+});
+
+test('sso client exchanges authorization code with form request', function (): void {
+    // 授权码换 token 接口使用 application/x-www-form-urlencoded，不是 JSON。
+    config([
+        'sso.base_url' => 'https://sso.example.test',
+        'sso.client_id' => 'ClientID',
+        'sso.client_secret' => 'secret',
+        'sso.token_path' => '/auth/oauth/token',
+        'sso.timeout' => 3,
+        'sso.verify_ssl' => false,
+    ]);
+
+    Http::fake([
+        'https://sso.example.test/auth/oauth/token' => Http::response([
+            'code' => '00000',
+            'data' => [
+                'access_token' => 'token-123',
+                'token_type' => 'bearer',
+                'refresh_token' => 'refresh-123',
+                'expires_in' => 35999,
+                'scope' => 'all',
+                'user_id' => '1384064503753146370',
+                'jti' => '8da795ab-d22f-4598-b081-afe99e8840ce',
+            ],
+            'msg' => 'OK',
+            'timestamp' => 1788680326193,
+        ]),
+    ]);
+
+    $token = app(SsoClient::class)->exchangeCodeForToken('code-123', 'http://127.0.0.1:8000/sso/callback');
+
+    expect($token->accessToken())->toBe('token-123')
+        ->and($token->tokenType())->toBe('bearer')
+        ->and($token->refreshToken())->toBe('refresh-123')
+        ->and($token->expiresIn())->toBe(35999)
+        ->and($token->isValid())->toBeTrue();
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+        && $request->url() === 'https://sso.example.test/auth/oauth/token'
+        && str_contains($request->header('Content-Type')[0] ?? '', 'application/x-www-form-urlencoded')
+        && $request->data()['code'] === 'code-123'
+        && $request->data()['client_id'] === 'ClientID'
+        && $request->data()['client_secret'] === 'secret'
+        && $request->data()['redirect_uri'] === 'http://127.0.0.1:8000/sso/callback'
+        && $request->data()['grant_type'] === 'authorization_code');
 });
 
 test('sso client posts json payload to user info endpoint', function (): void {

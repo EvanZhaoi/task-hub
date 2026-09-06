@@ -13,12 +13,14 @@ class CurrentUserService
 
     public const ROLE_SESSION_KEY = 'taskhub_roles';
 
+    public const TOKEN_SESSION_KEY = 'sso_token';
+
     private ?SsoUser $resolvedUser = null;
 
     /**
      * 注入当前 HTTP 请求和 SSO 客户端。
      *
-     * Request 用于读取 Laravel Session 或 Bearer Token；SsoClient 只在 Bearer Token API 兜底场景使用。
+     * Request 用于读取 Laravel Session 或 Bearer Token；授权码登录后的页面请求优先使用 Session。
      */
     public function __construct(
         private readonly Request $request,
@@ -28,7 +30,7 @@ class CurrentUserService
     /**
      * 获取当前登录用户。
      *
-     * Inertia 页面优先从 Session 读取；如果没有 Session，则尝试 Bearer Token。
+     * Inertia 页面优先从授权码登录后写入的 Session 读取；如果没有 Session，则尝试 Bearer Token。
      * 同一次请求内会缓存解析结果，避免重复创建 SsoUser 对象或重复调用外部接口。
      */
     public function user(): SsoUser

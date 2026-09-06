@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Integrations\Sso\SsoToken;
+use App\Services\CurrentUserService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,10 +24,21 @@ class EnsureSsoAuthenticated
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // 登录成功后，SsoController 会把 sso_user 写入 Session。
-        if ($request->session()->has('sso_user')) {
+        // 登录成功后，SsoController 会把 sso_user 和 sso_token 写入 Session。
+        // 授权码模式下不能只看 sso_user；如果 access_token 已过期，需要重新走 SSO。
+        if (
+            $request->session()->has(CurrentUserService::SESSION_KEY)
+            && SsoToken::sessionPayloadIsValid($request->session()->get(CurrentUserService::TOKEN_SESSION_KEY))
+        ) {
             return $next($request);
         }
+
+        // 登录态缺失或 token 过期时，清理旧 Session 片段，避免后续误用过期用户信息。
+        $request->session()->forget([
+            CurrentUserService::SESSION_KEY,
+            CurrentUserService::ROLE_SESSION_KEY,
+            CurrentUserService::TOKEN_SESSION_KEY,
+        ]);
 
         // 未登录时保存完整目标 URL，SSO 登录完成后可以回到原页面。
         $request->session()->put('url.intended', $request->fullUrl());

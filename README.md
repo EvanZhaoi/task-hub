@@ -84,11 +84,11 @@ php artisan db:show
 - `app/Services/CurrentUserService.php`
 - `app/Http/Middleware/EnsureSsoAuthenticated.php`
 
-SSO 真实地址需要按公司协议填写。`SSO_LOGIN_URL` 使用浏览器可跳转的完整 URL；`SSO_USERINFO_PATH` / `SSO_VALIDATE_PATH` 只填写接口 path，由代码与 `SSO_BASE_URL` 组合。获取当前登录人信息按公司推荐方式使用 POST JSON，提交 `clientId`、`secret`、`accessToken`。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表。
+SSO 真实地址需要按公司协议填写。当前采用授权码模式：`SSO_LOGIN_URL` 使用浏览器可跳转的 authorize 完整 URL，`SSO_TOKEN_PATH` 用于 code 换 access token，`SSO_USERINFO_PATH` 用于后端查询当前登录人。`SSO_TOKEN_PATH`、`SSO_USERINFO_PATH` 只填写接口 path，由代码与 `SSO_BASE_URL` 组合。项目不使用 Mock 登录、不硬编码工号、不创建本地用户表，`client_secret` 不暴露给前端。
 
 详细说明见：
 
-- [09-SSO隐式模式接入](./docs/development/09-SSO隐式模式接入.md)
+- [09-SSO授权码模式接入](./docs/development/09-SSO授权码模式接入.md)
 
 ## 已完成
 

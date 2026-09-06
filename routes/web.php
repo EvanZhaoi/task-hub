@@ -17,10 +17,8 @@ Route::get('/', function () {
 
 // 登录入口：浏览器跳转到公司 SSO。
 Route::get('/login', [SsoController::class, 'redirect'])->name('sso.login');
-// SSO 回调路径可配置，便于和公司登记的 callback 保持一致。
+// SSO 授权码回调路径可配置，Laravel 后端会在这里用 code 换 access_token 并建立 Session。
 Route::get(config('sso.callback_path', '/sso/callback'), [SsoController::class, 'callback'])->name('sso.callback');
-// React 回调页把 accessToken 提交到这里，由 Laravel 后端换取当前登录人信息并建立 Session。
-Route::post('/sso/session', [SsoController::class, 'store'])->name('sso.session.store');
 // 退出必须走原生 POST 表单，避免 Inertia Ajax 跟随外部 SSO 302 造成 CORS。
 Route::post('/logout', [SsoController::class, 'logout'])->name('sso.logout');
 

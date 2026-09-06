@@ -3,7 +3,7 @@
 return [
     // 公司 SSO 服务基础地址，只放域名和公共前缀，例如 https://sso.example.com。
     'base_url' => env('SSO_BASE_URL'),
-    // 浏览器登录跳转完整地址；它可能不是 base_url + path，因此独立配置。
+    // 浏览器登录跳转完整地址；它通常是公司 SSO 的 authorize 地址。
     'login_url' => env('SSO_LOGIN_URL'),
     // 公司统一退出地址；为空时只退出 TaskHub 本地 Session。
     'logout_url' => env('SSO_LOGOUT_URL'),
@@ -15,6 +15,8 @@ return [
     'scope' => env('SSO_SCOPE'),
     // SSO 回调到 TaskHub 的站内 path。
     'callback_path' => env('SSO_CALLBACK_PATH', '/sso/callback'),
+    // 使用授权码 code 换取 access_token 的接口 path，只写 path，不写完整 URL。
+    'token_path' => env('SSO_TOKEN_PATH'),
     // 推荐使用的当前登录人接口 path，只写 path，不写完整 URL。
     'userinfo_path' => env('SSO_USERINFO_PATH'),
     // 早期文档中的 token 校验 path，保留兼容，优先级低于 userinfo_path。
