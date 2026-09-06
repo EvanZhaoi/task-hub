@@ -641,13 +641,14 @@ test('sso client exchanges authorization code with form request', function (): v
         && $request->data()['grant_type'] === 'authorization_code');
 });
 
-test('sso client posts json payload to user info endpoint', function (): void {
-    // 这里验证公司推荐调用方式：POST JSON，body 包含 clientId、secret、accessToken。
+test('sso client sends bearer token header to user info endpoint', function (): void {
+    // 当前人员信息接口通过 Authorization Header 识别登录人，默认使用 GET 请求。
     config([
         'sso.base_url' => 'https://sso.example.test',
         'sso.client_id' => 'ClientID',
         'sso.client_secret' => 'secret',
         'sso.userinfo_path' => '/api/current-user',
+        'sso.userinfo_method' => 'GET',
         'sso.timeout' => 3,
         'sso.verify_ssl' => false,
     ]);
@@ -655,11 +656,22 @@ test('sso client posts json payload to user info endpoint', function (): void {
     // Http::fake 拦截 Laravel HTTP Client 请求，不会真实访问网络。
     Http::fake([
         'https://sso.example.test/api/current-user' => Http::response([
-            'id' => 'response-001',
-            'user' => [
-                'employeeNo' => 'E10001',
-                'displayName' => '张三',
+            'code' => '',
+            'data' => [
+                [
+                    'empCnNum' => 'E10001',
+                    'empName' => '张三',
+                    'deptInfoList' => [
+                        [
+                            'obiCode' => 'DEV01',
+                            'obiName' => '开发一部',
+                        ],
+                    ],
+                ],
             ],
+            'msg' => '',
+            'timestamp' => 0,
+            'total' => 1,
         ]),
     ]);
 
@@ -667,31 +679,40 @@ test('sso client posts json payload to user info endpoint', function (): void {
 
     expect($user->employeeNo())->toBe('E10001');
 
-    // 断言请求方法、地址和 JSON body，防止后续改动破坏总部接口协议。
-    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+    // 断言请求方法、地址和 Authorization Header，防止后续改动破坏总部接口协议。
+    Http::assertSent(fn ($request): bool => $request->method() === 'GET'
         && $request->url() === 'https://sso.example.test/api/current-user'
-        && $request->data()['clientId'] === 'ClientID'
-        && $request->data()['secret'] === 'secret'
-        && $request->data()['accessToken'] === 'token-123');
+        && ($request->header('Authorization')[0] ?? '') === 'bearer token-123');
 });
 
-test('sso user parses nested user payload', function (): void {
-    // 公司接口第一层包含 id 和 user，人员字段在 user 下；这里固定解析规则。
+test('sso user parses current employee list payload', function (): void {
+    // 当前人员信息接口第一层包含 code 和 data，人员字段在 data 第一条记录中。
     $user = SsoUser::fromPayload([
-        'id' => 'response-001',
-        'user' => [
-            'employeeNo' => 'E10001',
-            'displayName' => '张三',
-            'departmentId' => 'DEV01',
-            'departmentName' => '开发一部',
+        'code' => '',
+        'data' => [
+            [
+                'empCnNum' => 'E10001',
+                'empName' => '张三',
+                'empNameCn' => '张三',
+                'empJpNum' => 'JP10001',
+                'deptInfoList' => [
+                    [
+                        'obiCode' => 'DEV01',
+                        'obiName' => '开发一部',
+                    ],
+                ],
+            ],
         ],
+        'msg' => '',
+        'timestamp' => 0,
+        'total' => 1,
     ]);
 
     expect($user->employeeNo())->toBe('E10001')
         ->and($user->displayName())->toBe('张三')
         ->and($user->departmentId())->toBe('DEV01')
         ->and($user->departmentName())->toBe('开发一部')
-        ->and($user->raw())->toHaveKey('user');
+        ->and($user->raw())->toHaveKey('data');
 });
 
 test('task model maps to the existing task table', function (): void {

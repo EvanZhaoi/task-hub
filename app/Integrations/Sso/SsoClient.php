@@ -81,13 +81,12 @@ class SsoClient
      *
      * 授权码模式下 accessToken 由 Laravel 后端用 code 换取。
      * clientSecret 只在后端请求中使用，不能暴露给 React 或浏览器。
+     * 当前人员信息接口通过 Authorization Header 识别登录人。
      */
     public function fetchCurrentUser(string $accessToken): SsoUser
     {
         // SSO 基础地址和接口路径属于公司协议配置，不在代码中写死，便于不同环境切换。
         $baseUrl = $this->configuredBaseUrl();
-        $clientId = $this->configuredClientId();
-        $clientSecret = $this->configuredClientSecret();
 
         // userinfo_path 是当前推荐命名；validate_path 保留为早期配置兼容入口。
         $userInfoPath = config('sso.userinfo_path') ?: config('sso.validate_path');
@@ -100,12 +99,17 @@ class SsoClient
             throw new SsoException('SSO user info path must be a path, not a full URL.');
         }
 
+        $method = strtoupper((string) config('sso.userinfo_method', 'GET'));
+
         try {
-            // 按公司推荐方式：POST JSON，body 中提交 clientId、secret 和 accessToken。
+            // 当前人员信息接口要求在 Header 中携带 Authorization。
+            // 注意用户明确要求格式是 bearer + token，因此这里使用小写 bearer。
             $request = Http::baseUrl($baseUrl)
                 ->timeout((int) config('sso.timeout', 3))
                 ->acceptJson()
-                ->asJson();
+                ->withHeaders([
+                    'Authorization' => 'bearer '.$accessToken,
+                ]);
 
             if (! config('sso.verify_ssl')) {
                 // 内网测试环境可能暂时没有完整证书链，所以提供配置开关。
@@ -113,11 +117,11 @@ class SsoClient
                 $request = $request->withoutVerifying();
             }
 
-            $response = $request->post($userInfoPath, [
-                'clientId' => $clientId,
-                'secret' => $clientSecret,
-                'accessToken' => $accessToken,
-            ]);
+            $response = match ($method) {
+                'POST' => $request->asJson()->post($userInfoPath),
+                'GET' => $request->get($userInfoPath),
+                default => throw new SsoException('Unsupported SSO user info HTTP method.'),
+            };
         } catch (ConnectionException $exception) {
             throw new SsoException('Unable to connect to SSO user info service.', previous: $exception);
         }

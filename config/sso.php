@@ -19,6 +19,8 @@ return [
     'token_path' => env('SSO_TOKEN_PATH'),
     // 推荐使用的当前登录人接口 path，只写 path，不写完整 URL。
     'userinfo_path' => env('SSO_USERINFO_PATH'),
+    // 当前登录人接口请求方法；新接口通过 Authorization Header 识别用户，默认 GET。
+    'userinfo_method' => env('SSO_USERINFO_METHOD', 'GET'),
     // 早期文档中的 token 校验 path，保留兼容，优先级低于 userinfo_path。
     'validate_path' => env('SSO_VALIDATE_PATH'),
     // 公司接口调用超时时间，避免登录请求长时间挂起。

@@ -28,26 +28,58 @@ final readonly class SsoUser
     /**
      * 把总部 SSO 当前登录人响应转换为 SsoUser。
      *
-     * 当前接口第一层有 id 和 user，人员字段在 user 下；这里统一解析后提供稳定访问方法。
+     * 当前人员信息接口第一层是 code、data、msg、timestamp、total。
+     * data 是人员数组；当前登录人接口通常只返回一条人员记录，所以 TaskHub 取 data[0]。
+     * 为了兼容旧 Session 和旧接口，也保留 user 嵌套结构和扁平结构解析。
      */
     public static function fromPayload(array $payload): self
     {
-        // 公司当前登录人接口第一层返回 id 和 user，真实人员属性在 user 下。
-        // Session 中保存的是扁平结构，因此这里保留扁平结构兼容读取。
-        $user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+        // 新接口返回 data 数组，当前登录人信息取第一条。
+        // 旧接口返回 user 对象；Session 中保存的是扁平结构。这里三个来源都兼容。
+        $user = self::firstUserPayload($payload);
 
-        // 兼容不同命名：优先 employeeNo，其次 snake_case，再退回 id。
-        $employeeNo = $user['employeeNo'] ?? $user['employee_no'] ?? $user['id'] ?? $payload['id'] ?? null;
+        // 工号字段优先取中方工号，其次兼容旧 employeeNo 和其它可能命名。
+        $employeeNo = $user['empCnNum']
+            ?? $user['empNumCn']
+            ?? $user['employeeNo']
+            ?? $user['employee_no']
+            ?? $user['empNo']
+            ?? $user['id']
+            ?? $payload['id']
+            ?? null;
 
         if (! is_string($employeeNo) || $employeeNo === '') {
             throw new SsoException('SSO response does not contain employee number.');
         }
 
+        $primaryDepartment = self::primaryDepartment($user['deptInfoList'] ?? []);
+
         return new self(
             employeeNo: $employeeNo,
-            displayName: self::nullableString($user['displayName'] ?? $user['display_name'] ?? $user['name'] ?? null),
-            departmentId: self::nullableString($user['departmentId'] ?? $user['department_id'] ?? null),
-            departmentName: self::nullableString($user['departmentName'] ?? $user['department_name'] ?? null),
+            displayName: self::nullableString(
+                $user['empName']
+                ?? $user['empNameCn']
+                ?? $user['displayName']
+                ?? $user['display_name']
+                ?? $user['name']
+                ?? null
+            ),
+            departmentId: self::nullableString(
+                $primaryDepartment['obiCode']
+                ?? $primaryDepartment['obCode']
+                ?? $primaryDepartment['obiUuid']
+                ?? $user['departmentId']
+                ?? $user['department_id']
+                ?? null
+            ),
+            departmentName: self::nullableString(
+                $primaryDepartment['obiName']
+                ?? $primaryDepartment['obName']
+                ?? $user['department']
+                ?? $user['departmentName']
+                ?? $user['department_name']
+                ?? null
+            ),
             raw: $payload,
         );
     }
@@ -128,5 +160,49 @@ final readonly class SsoUser
     {
         // 空字符串统一视为 null，避免前端同时处理 '' 和 null 两种“无值”状态。
         return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * 从当前人员信息接口响应中取出单条人员数据。
+     *
+     * 新接口：payload.data 是数组，取第一条。
+     * 旧接口：payload.user 是对象。
+     * Session：payload 本身就是扁平人员数组。
+     */
+    private static function firstUserPayload(array $payload): array
+    {
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $first = $payload['data'][0] ?? null;
+
+            if (is_array($first)) {
+                return $first;
+            }
+        }
+
+        if (isset($payload['user']) && is_array($payload['user'])) {
+            return $payload['user'];
+        }
+
+        return $payload;
+    }
+
+    /**
+     * 从 deptInfoList 中取主要部门。
+     *
+     * 当前 MVP 只需要一个部门用于展示和历史快照，因此取第一条有效部门。
+     */
+    private static function primaryDepartment(mixed $deptInfoList): array
+    {
+        if (! is_array($deptInfoList)) {
+            return [];
+        }
+
+        foreach ($deptInfoList as $department) {
+            if (is_array($department)) {
+                return $department;
+            }
+        }
+
+        return [];
     }
 }

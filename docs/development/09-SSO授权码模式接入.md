@@ -83,8 +83,9 @@ http://127.0.0.1:8000/tasks
 - TaskHub 不创建本地 `users` 表。
 - 当前登录人员工号来自公司 SSO。
 - TaskHub 业务角色来自本地 `taskhub_user_role` 表。
-- 公司 SSO 当前登录人接口返回 JSON：第一层包含 `id` 和 `user`，人员字段在 `user` 下。
+- 公司 SSO 当前登录人接口返回 JSON：第一层包含 `code`、`data`、`msg`、`timestamp`、`total`，人员字段在 `data[0]` 下。
 - 公司 token 接口使用 `application/x-www-form-urlencoded`。
+- 拿到 access token 之后，请求当前登录人等受保护接口时，Header 必须增加 `Authorization: bearer {token}`。
 
 ## 涉及文件
 
@@ -212,6 +213,8 @@ return [
     'token_path' => env('SSO_TOKEN_PATH'),
     // 推荐使用的当前登录人接口 path，只写 path，不写完整 URL。
     'userinfo_path' => env('SSO_USERINFO_PATH'),
+    // 当前登录人接口请求方法；新接口通过 Authorization Header 识别用户，默认 GET。
+    'userinfo_method' => env('SSO_USERINFO_METHOD', 'GET'),
     // 早期文档中的 token 校验 path，保留兼容，优先级低于 userinfo_path。
     'validate_path' => env('SSO_VALIDATE_PATH'),
     // 公司接口调用超时时间，避免登录请求长时间挂起。
@@ -274,24 +277,46 @@ app/Integrations/Sso/SsoUser.php
 
 ```json
 {
-  "id": "response-001",
-  "user": {
-    "employeeNo": "E10001",
-    "displayName": "张三",
-    "departmentId": "DEV01",
-    "departmentName": "开发一部"
-  }
+  "code": "",
+  "data": [
+    {
+      "deptInfoList": [
+        {
+          "obiCode": "DEV01",
+          "obiName": "开发一部",
+          "obiUuid": "dept-uuid"
+        }
+      ],
+      "empCnNum": "E10001",
+      "empEmail": "zhangsan@example.com",
+      "empJpNum": "JP10001",
+      "empName": "张三",
+      "empNameCn": "张三",
+      "empNameEn": "Zhang San",
+      "empPhoto": "",
+      "empPosition": "工程师",
+      "empSex": "M",
+      "empUserName": "zhangsan",
+      "empWorkStatus": "在职",
+      "id": "employee-row-id"
+    }
+  ],
+  "msg": "",
+  "timestamp": 0,
+  "total": 1
 }
 ```
 
 解析规则：
 
 ```php
-// 人员字段在 user 下；如果未来接口直接返回扁平结构，也兼容。
-$user = isset($payload['user']) && is_array($payload['user']) ? $payload['user'] : $payload;
+// 新接口返回 data 数组，当前登录人信息取第一条。
+$user = isset($payload['data'][0]) && is_array($payload['data'][0])
+    ? $payload['data'][0]
+    : $payload;
 
 // TaskHub 所有人员引用字段统一使用工号。
-$employeeNo = $user['employeeNo'] ?? $user['employee_no'] ?? $user['id'] ?? $payload['id'] ?? null;
+$employeeNo = $user['empCnNum'] ?? $user['empNumCn'] ?? $user['employeeNo'] ?? null;
 ```
 
 注意：
@@ -299,6 +324,9 @@ $employeeNo = $user['employeeNo'] ?? $user['employee_no'] ?? $user['id'] ?? $pay
 - `SsoUser` 不是数据库 Model。
 - 它不对应 `users` 表。
 - 它只表示“总部 SSO 当前登录人接口返回的人”。
+- `displayName` 优先取 `empName`，其次取 `empNameCn`。
+- `departmentId` 优先取 `deptInfoList[0].obiCode`。
+- `departmentName` 优先取 `deptInfoList[0].obiName`，缺失时再使用人员记录中的 `department`。
 - 本据点更准确的人员信息会放在 Session 的 `sso_user.siteUser` 中，不覆盖总部原始信息。
 
 ## 第 5 步：创建 SsoClient
@@ -342,19 +370,37 @@ content-type: application/x-www-form-urlencoded
 第二个请求：用 `accessToken` 查询当前登录人。
 
 ```php
-$response = $request->post($userInfoPath, [
-    'clientId' => $clientId,
-    'secret' => $clientSecret,
-    'accessToken' => $accessToken,
-]);
+$request = Http::baseUrl($baseUrl)
+    ->timeout((int) config('sso.timeout', 3))
+    ->acceptJson()
+    // 当前人员信息接口要求在 Header 中携带 Authorization。
+    // 注意这里按公司要求使用小写 bearer。
+    ->withHeaders([
+        'Authorization' => 'bearer '.$accessToken,
+    ]);
+
+$response = match ($method) {
+    'POST' => $request->asJson()->post($userInfoPath),
+    'GET' => $request->get($userInfoPath),
+};
 ```
 
-当前登录人接口仍按之前确认的方式：`POST JSON`，body 包含 `clientId`、`secret`、`accessToken`。
+当前登录人接口已经改为通过 Header 识别用户，默认使用 `GET`。如果公司实际接口要求 `POST`，在 `.env` 中设置：
+
+```env
+SSO_USERINFO_METHOD=POST
+```
+
+注意：
+
+- token 接口还没有 access token，因此 token 接口不加 `Authorization`。
+- 拿到 access token 之后调用的受保护接口，都应该使用 `Authorization: bearer {token}`。
+- 当前登录人接口不再依赖前端传 token，也不把 `clientSecret` 暴露给浏览器。
 
 为什么不在 Controller 中直接写 `Http::post()`：
 
 - Controller 应该编排登录流程，不应该关心公司接口细节。
-- token 接口是 form，userinfo 接口是 JSON，两者差异集中在 Client 更清晰。
+- token 接口是 form，userinfo 接口是 Header 鉴权，两者差异集中在 Client 更清晰。
 - 测试可以替换 `SsoClient`，不用访问真实公司接口。
 
 ## 第 6 步：修改 CurrentUserService
@@ -617,7 +663,8 @@ Route::post('/sso/session', [SsoController::class, 'store'])->name('sso.session.
 - 换到 token 后会调用 `fetchCurrentUser()`。
 - Session 中写入 `sso_user`、`sso_token`、`taskhub_roles`。
 - token 接口使用 `application/x-www-form-urlencoded`。
-- 当前登录人接口继续使用 `POST JSON`。
+- 当前登录人接口使用 `Authorization: bearer {token}`。
+- 当前登录人接口返回 `code + data[]`，由 `SsoUser::fromPayload()` 解析 `data[0]`。
 - 退出时清理用户、角色和 token。
 
 执行：
@@ -639,6 +686,7 @@ SSO_SCOPE=all
 SSO_CALLBACK_PATH=/sso/callback
 SSO_TOKEN_PATH=/auth/oauth/token
 SSO_USERINFO_PATH=/你的当前登录人接口路径
+SSO_USERINFO_METHOD=GET
 SSO_TIMEOUT=3
 SSO_VERIFY_SSL=false
 ```
@@ -687,7 +735,7 @@ storage/logs/laravel.log
 | `SSO token path must be a path` | `SSO_TOKEN_PATH` 写成完整 URL | 域名放 `SSO_BASE_URL`，path 只写 `/auth/oauth/token` |
 | token 接口 400 | `redirect_uri` 和注册地址不一致 | 确认 `/login` 和 token 请求里的 `redirect_uri` 完全一致 |
 | token 接口 401 | `client_id` 或 `client_secret` 错误 | 核对公司分配的客户端信息 |
-| 当前登录人接口失败 | `SSO_USERINFO_PATH` 或请求体不符合协议 | 确认接口要求的字段名是 `clientId`、`secret`、`accessToken` |
+| 当前登录人接口失败 | `SSO_USERINFO_PATH`、`SSO_USERINFO_METHOD` 或 Authorization Header 不符合协议 | 确认请求 Header 是 `Authorization: bearer {token}` |
 | 登录成功后又跳回登录 | Session 没写入或 token 已过期 | 检查 `SESSION_DRIVER=file`，并查看 Session 中是否有 `sso_token.expiresAt` |
 | 退出 CORS | 使用 Inertia Ajax 调 `/logout` | 退出必须使用原生 POST Form |
 
