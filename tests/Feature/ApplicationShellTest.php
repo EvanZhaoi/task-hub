@@ -397,6 +397,7 @@ test('the sso callback exchanges code and creates local session', function (): v
                 displayName: '张三',
                 departmentId: 'DEV01',
                 departmentName: '开发一部',
+                avatarId: 'avatar-001',
             );
         }
     });
@@ -438,6 +439,7 @@ test('the sso callback exchanges code and creates local session', function (): v
 
     // 登录成功后，用户快照、TaskHub 角色和 token 快照都应写入 Session。
     expect(session(CurrentUserService::SESSION_KEY)['employeeNo'])->toBe('E10001')
+        ->and(session(CurrentUserService::SESSION_KEY)['avatarId'])->toBe('avatar-001')
         ->and(session(CurrentUserService::ROLE_SESSION_KEY))->toBe(['TOP'])
         ->and(session(CurrentUserService::TOKEN_SESSION_KEY)['accessToken'])->toBe('token-123');
 });
@@ -668,6 +670,7 @@ test('sso client sends bearer token header to user info endpoint', function (): 
                 [
                     'empCnNum' => 'E10001',
                     'empName' => '张三',
+                    'empPhoto' => 'avatar-001',
                     'deptInfoList' => [
                         [
                             'copSort' => 9,
@@ -692,7 +695,8 @@ test('sso client sends bearer token header to user info endpoint', function (): 
 
     expect($user->employeeNo())->toBe('E10001')
         ->and($user->departmentId())->toBe('DEV02')
-        ->and($user->departmentName())->toBe('开发二部');
+        ->and($user->departmentName())->toBe('开发二部')
+        ->and($user->avatarId())->toBe('avatar-001');
 
     // 断言请求方法、地址和 Authorization Header，防止后续改动破坏总部接口协议。
     Http::assertSent(fn ($request): bool => $request->method() === 'GET'
@@ -710,6 +714,7 @@ test('sso user parses current employee list payload', function (): void {
                 'empName' => '张三',
                 'empNameCn' => '张三',
                 'empJpNum' => 'JP10001',
+                'empPhoto' => 'avatar-002',
                 'deptInfoList' => [
                     [
                         'copSort' => 3,
@@ -733,6 +738,7 @@ test('sso user parses current employee list payload', function (): void {
         ->and($user->displayName())->toBe('张三')
         ->and($user->departmentId())->toBe('DEV01')
         ->and($user->departmentName())->toBe('开发一部')
+        ->and($user->avatarId())->toBe('avatar-002')
         ->and($user->raw())->toHaveKey('data');
 });
 

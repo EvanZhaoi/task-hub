@@ -21,6 +21,8 @@ final readonly class SsoUser
         private ?string $displayName = null,
         private ?string $departmentId = null,
         private ?string $departmentName = null,
+        // avatarId 是员工头像 ID，未来可以和头像服务 URL 拼接成完整图片地址。
+        private ?string $avatarId = null,
         // raw 保留原始响应，便于排查总部接口字段变化。
         private array $raw = [],
     ) {}
@@ -80,6 +82,14 @@ final readonly class SsoUser
                 ?? $user['department_name']
                 ?? null
             ),
+            avatarId: self::nullableString(
+                $user['empPhoto']
+                ?? $user['avatarId']
+                ?? $user['avatar_id']
+                ?? $user['photoId']
+                ?? $user['photo_id']
+                ?? null
+            ),
             raw: $payload,
         );
     }
@@ -125,6 +135,17 @@ final readonly class SsoUser
     }
 
     /**
+     * 获取总部 SSO 返回的员工头像 ID。
+     *
+     * 当前只保存头像 ID，不在这里拼接完整图片地址。
+     * 未来如果头像服务 URL 确认，可以在前端或专门的头像服务中组合完整访问地址。
+     */
+    public function avatarId(): ?string
+    {
+        return $this->avatarId;
+    }
+
+    /**
      * 获取总部 SSO 原始响应。
      *
      * raw 只用于排查接口字段变化，不建议普通业务代码直接读取。
@@ -147,6 +168,7 @@ final readonly class SsoUser
             'displayName' => $this->displayName,
             'departmentId' => $this->departmentId,
             'departmentName' => $this->departmentName,
+            'avatarId' => $this->avatarId,
             'raw' => $this->raw,
         ];
     }

@@ -3,9 +3,11 @@
 export type CurrentUser = {
     // employeeNo 是公司工号，也是 TaskHub 中所有人员引用的统一标识。
     employeeNo?: string;
-    // displayName 和 departmentName 只用于界面展示，不用于权限判断。
+    // displayName、departmentName 和 avatarId 只用于界面展示，不用于权限判断。
     displayName?: string;
     departmentName?: string;
+    // avatarId 是总部返回的头像 ID；完整头像 URL 后续由头像服务规则拼接。
+    avatarId?: string | null;
     // siteUser 是本据点人员列表匹配到的更完整信息；没有匹配到时不存在。
     siteUser?: {
         employeeNo?: string;

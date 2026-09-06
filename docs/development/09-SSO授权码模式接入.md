@@ -300,7 +300,7 @@ app/Integrations/Sso/SsoUser.php
       "empName": "张三",
       "empNameCn": "张三",
       "empNameEn": "Zhang San",
-      "empPhoto": "",
+      "empPhoto": "avatar-001",
       "empPosition": "工程师",
       "empSex": "M",
       "empUserName": "zhangsan",
@@ -334,6 +334,7 @@ $employeeNo = $user['empCnNum'] ?? $user['empNumCn'] ?? $user['employeeNo'] ?? n
 - `displayName` 优先取 `empName`，其次取 `empNameCn`。
 - `departmentId` 优先取 `deptInfoList` 中 `copSort` 数字最小那一条的 `obiCode`。
 - `departmentName` 优先取 `deptInfoList` 中 `copSort` 数字最小那一条的 `obiName`，缺失时再使用人员记录中的 `department`。
+- `avatarId` 取总部返回的 `empPhoto`，这里只保存头像 ID，不在认证对象中拼完整图片地址；未来头像服务 URL 规则确认后，再由前端工具或独立头像服务拼接。
 - 本据点更准确的人员信息会放在 Session 的 `sso_user.siteUser` 中，不覆盖总部原始信息。
 
 ## 第 5 步：创建 SsoClient
