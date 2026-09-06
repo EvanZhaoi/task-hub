@@ -315,7 +315,14 @@ test('external directory cache refresh keeps previous personnel users when respo
                         'deptInfoList' => [
                             [
                                 'copName' => '',
-                                'copSort' => 0,
+                                'copSort' => 5,
+                                'obiCode' => 'DEV05',
+                                'obiName' => '开发五部',
+                                'obiUuid' => 'DEPT-UUID-05',
+                            ],
+                            [
+                                'copName' => '',
+                                'copSort' => 1,
                                 'obiCode' => 'DEV01',
                                 'obiName' => '开发一部',
                                 'obiUuid' => 'DEPT-UUID-01',
@@ -346,7 +353,7 @@ test('external directory cache refresh keeps previous personnel users when respo
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三')
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->eibNumCn())->toBe('10001')
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->eibNameCn())->toBe('张三')
-        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->deptInfoList()[0]['obiCode'])->toBe('DEV01');
+        ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->departmentId())->toBe('DEV01');
 
     // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
     expect(app(PersonnelClient::class)->refreshCache())->toBe(0)
@@ -663,8 +670,14 @@ test('sso client sends bearer token header to user info endpoint', function (): 
                     'empName' => '张三',
                     'deptInfoList' => [
                         [
-                            'obiCode' => 'DEV01',
-                            'obiName' => '开发一部',
+                            'copSort' => 9,
+                            'obiCode' => 'DEV09',
+                            'obiName' => '开发九部',
+                        ],
+                        [
+                            'copSort' => 2,
+                            'obiCode' => 'DEV02',
+                            'obiName' => '开发二部',
                         ],
                     ],
                 ],
@@ -677,7 +690,9 @@ test('sso client sends bearer token header to user info endpoint', function (): 
 
     $user = app(SsoClient::class)->fetchCurrentUser('token-123');
 
-    expect($user->employeeNo())->toBe('E10001');
+    expect($user->employeeNo())->toBe('E10001')
+        ->and($user->departmentId())->toBe('DEV02')
+        ->and($user->departmentName())->toBe('开发二部');
 
     // 断言请求方法、地址和 Authorization Header，防止后续改动破坏总部接口协议。
     Http::assertSent(fn ($request): bool => $request->method() === 'GET'
@@ -697,6 +712,12 @@ test('sso user parses current employee list payload', function (): void {
                 'empJpNum' => 'JP10001',
                 'deptInfoList' => [
                     [
+                        'copSort' => 3,
+                        'obiCode' => 'DEV03',
+                        'obiName' => '开发三部',
+                    ],
+                    [
+                        'copSort' => 1,
                         'obiCode' => 'DEV01',
                         'obiName' => '开发一部',
                     ],

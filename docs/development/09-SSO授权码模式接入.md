@@ -282,9 +282,16 @@ app/Integrations/Sso/SsoUser.php
     {
       "deptInfoList": [
         {
+          "copSort": 5,
+          "obiCode": "DEV05",
+          "obiName": "开发五部",
+          "obiUuid": "dept-uuid-05"
+        },
+        {
+          "copSort": 1,
           "obiCode": "DEV01",
           "obiName": "开发一部",
-          "obiUuid": "dept-uuid"
+          "obiUuid": "dept-uuid-01"
         }
       ],
       "empCnNum": "E10001",
@@ -325,8 +332,8 @@ $employeeNo = $user['empCnNum'] ?? $user['empNumCn'] ?? $user['employeeNo'] ?? n
 - 它不对应 `users` 表。
 - 它只表示“总部 SSO 当前登录人接口返回的人”。
 - `displayName` 优先取 `empName`，其次取 `empNameCn`。
-- `departmentId` 优先取 `deptInfoList[0].obiCode`。
-- `departmentName` 优先取 `deptInfoList[0].obiName`，缺失时再使用人员记录中的 `department`。
+- `departmentId` 优先取 `deptInfoList` 中 `copSort` 数字最小那一条的 `obiCode`。
+- `departmentName` 优先取 `deptInfoList` 中 `copSort` 数字最小那一条的 `obiName`，缺失时再使用人员记录中的 `department`。
 - 本据点更准确的人员信息会放在 Session 的 `sso_user.siteUser` 中，不覆盖总部原始信息。
 
 ## 第 5 步：创建 SsoClient

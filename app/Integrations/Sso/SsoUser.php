@@ -189,7 +189,8 @@ final readonly class SsoUser
     /**
      * 从 deptInfoList 中取主要部门。
      *
-     * 当前 MVP 只需要一个部门用于展示和历史快照，因此取第一条有效部门。
+     * 当前 MVP 只需要一个部门用于展示和历史快照。
+     * 当接口返回多个部门时，按用户确认的规则选择 copSort 数字最小的那一条。
      */
     private static function primaryDepartment(mixed $deptInfoList): array
     {
@@ -197,12 +198,26 @@ final readonly class SsoUser
             return [];
         }
 
+        $selected = null;
+        $selectedSort = null;
+
         foreach ($deptInfoList as $department) {
-            if (is_array($department)) {
-                return $department;
+            if (! is_array($department)) {
+                continue;
+            }
+
+            // copSort 表示部门排序优先级；数字越小优先级越高。
+            // 如果字段缺失或不是数字，放到最后，仅在没有有效 copSort 时兜底使用。
+            $sort = is_numeric($department['copSort'] ?? null)
+                ? (int) $department['copSort']
+                : PHP_INT_MAX;
+
+            if ($selected === null || $sort < $selectedSort) {
+                $selected = $department;
+                $selectedSort = $sort;
             }
         }
 
-        return [];
+        return $selected ?? [];
     }
 }

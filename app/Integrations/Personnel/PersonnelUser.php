@@ -20,7 +20,7 @@ final readonly class PersonnelUser
         private ?int $copSort = null,
         // department 是真实接口中的部门文本，deptInfoList 缺失时作为部门名称兜底。
         private ?string $department = null,
-        // deptInfoList 是真实接口中的部门列表，当前 MVP 取第一条有效部门用于展示。
+        // deptInfoList 是真实接口中的部门列表，当前 MVP 取 copSort 最小的部门用于展示。
         private array $deptInfoList = [],
         // transferDate 是真实接口中的调动日期，当前 MVP 暂不使用。
         private ?string $transferDate = null,
@@ -497,16 +497,31 @@ final readonly class PersonnelUser
     /**
      * 从真实人员接口的 deptInfoList 中取主要部门。
      *
-     * 当前接口返回的是部门列表，TaskHub MVP 只需要一个部门用于展示和快照，所以取第一条有效部门。
+     * 当前接口返回的是部门列表，TaskHub MVP 只需要一个部门用于展示和快照。
+     * 当存在多条部门信息时，按用户确认的规则取 copSort 数字最小的那一条。
      */
     private static function primaryDepartment(array $deptInfoList): array
     {
+        $selected = null;
+        $selectedSort = null;
+
         foreach ($deptInfoList as $department) {
-            if (is_array($department)) {
-                return $department;
+            if (! is_array($department)) {
+                continue;
+            }
+
+            // copSort 表示部门排序优先级；数字越小越优先。
+            // 缺失或非数字时排到最后，避免覆盖明确排序的部门。
+            $sort = is_numeric($department['copSort'] ?? null)
+                ? (int) $department['copSort']
+                : PHP_INT_MAX;
+
+            if ($selected === null || $sort < $selectedSort) {
+                $selected = $department;
+                $selectedSort = $sort;
             }
         }
 
-        return [];
+        return $selected ?? [];
     }
 }
