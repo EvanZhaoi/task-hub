@@ -415,6 +415,8 @@ class TaskController extends Controller
             'displayName' => $user->displayName(),
             'departmentId' => $user->departmentId(),
             'departmentName' => $user->departmentName(),
+            // avatarId 只保存头像 ID，不拼头像 URL；未来头像服务规则确认后再统一生成完整地址。
+            'avatarId' => $user->avatarId(),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }
 

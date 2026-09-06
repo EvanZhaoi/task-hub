@@ -155,6 +155,7 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             'displayName' => '李雷',
             'departmentId' => 'DEV01',
             'departmentName' => '开发一部',
+            'avatarId' => 'avatar-002',
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
         CurrentUserService::TOKEN_SESSION_KEY => [
@@ -187,6 +188,14 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             'accountId' => 'PAY001',
             'accountName' => '开发一部创新预算',
             'departmentName' => '开发一部',
+        ]);
+
+    expect(json_decode($task->created_by_snapshot, true, flags: JSON_THROW_ON_ERROR))
+        ->toMatchArray([
+            'employeeNo' => 'E10002',
+            'displayName' => '李雷',
+            'departmentName' => '开发一部',
+            'avatarId' => 'avatar-002',
         ]);
 
     expect(DB::table('attachment_ref')->where('owner_id', $task->id)->pluck('attachment_id')->sort()->values()->all())
