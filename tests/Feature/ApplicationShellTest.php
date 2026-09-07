@@ -51,8 +51,10 @@ test('authenticated users can view the task hall with filters', function (): voi
          *
          * 这里替代真实外部付款账号接口，让任务大厅测试只关注页面数据组装。
          */
-        public function fetchAll(): array
+        public function fetchAll(?string $accessToken = null): array
         {
+            expect($accessToken)->toBe('token-123');
+
             // 任务大厅打开时会加载付款账号列表给发布任务 Select 使用。
             return [
                 new PaymentAccount(
@@ -137,9 +139,10 @@ test('authenticated users can publish a bidding task with attachment ids', funct
          *
          * 发布任务时后端会按账号 ID 从付款账号列表中筛选账号，本方法用来隔离外部接口依赖。
          */
-        public function fetchById(string $accountId): PaymentAccount
+        public function fetchById(string $accountId, ?string $accessToken = null): PaymentAccount
         {
-            expect($accountId)->toBe('PAY001');
+            expect($accountId)->toBe('PAY001')
+                ->and($accessToken)->toBe('token-123');
 
             return new PaymentAccount(
                 wbaAccountCode: 'PAY001',
@@ -238,7 +241,7 @@ test('payment account client finds account snapshot from external account list',
         ]),
     ]);
 
-    $paymentAccount = app(PaymentAccountClient::class)->fetchById('PAY001');
+    $paymentAccount = app(PaymentAccountClient::class)->fetchById('PAY001', 'token-pay');
 
     expect($paymentAccount->toSnapshot())->toMatchArray([
         'accountId' => 'PAY001',
@@ -252,7 +255,8 @@ test('payment account client finds account snapshot from external account list',
 
     // 断言后端只调用全量列表接口，然后在本地按 accountId 筛选。
     Http::assertSent(fn ($request): bool => $request->method() === 'GET'
-        && $request->url() === 'https://payment.example.test/accounts');
+        && $request->url() === 'https://payment.example.test/accounts'
+        && ($request->header('Authorization')[0] ?? '') === 'bearer token-pay');
 });
 
 test('external directory cache refresh keeps previous payment accounts when response is empty', function (): void {
@@ -265,6 +269,7 @@ test('external directory cache refresh keeps previous payment accounts when resp
         'payment_account.cache_store' => 'array',
         'payment_account.cache_key' => 'test:payment_accounts',
         'payment_account.cache_ttl' => 86400,
+        'payment_account.access_token' => 'token-pay',
     ]);
 
     Cache::store('array')->forget('test:payment_accounts');
@@ -298,6 +303,8 @@ test('external directory cache refresh keeps previous payment accounts when resp
     // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
     expect(app(PaymentAccountClient::class)->refreshCache())->toBe(0)
         ->and(app(PaymentAccountClient::class)->fetchAll()[0]->accountId())->toBe('PAY001');
+
+    Http::assertSent(fn ($request): bool => ($request->header('Authorization')[0] ?? '') === 'bearer token-pay');
 });
 
 test('external directory cache refresh keeps previous personnel users when response is empty', function (): void {
@@ -310,6 +317,7 @@ test('external directory cache refresh keeps previous personnel users when respo
         'personnel.cache_store' => 'array',
         'personnel.cache_key' => 'test:personnel_users',
         'personnel.cache_ttl' => 86400,
+        'personnel.access_token' => 'token-personnel',
     ]);
 
     Cache::store('array')->forget('test:personnel_users');
@@ -367,6 +375,8 @@ test('external directory cache refresh keeps previous personnel users when respo
     // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
     expect(app(PersonnelClient::class)->refreshCache())->toBe(0)
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三');
+
+    Http::assertSent(fn ($request): bool => ($request->header('Authorization')[0] ?? '') === 'bearer token-personnel');
 });
 
 test('the sso callback exchanges code and creates local session', function (): void {
@@ -418,10 +428,11 @@ test('the sso callback exchanges code and creates local session', function (): v
          *
          * 返回 null 表示当前登录人不是本据点人员，Session 只保存总部 SSO 用户信息。
          */
-        public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
+        public function findByEmployeeNo(string $employeeNo, ?string $accessToken = null): ?PersonnelUser
         {
             // 本测试只验证 SSO 建 Session 主流程，人员列表返回 null 表示不属于本据点，继续使用总部信息。
-            expect($employeeNo)->toBe('E10001');
+            expect($employeeNo)->toBe('E10001')
+                ->and($accessToken)->toBe('token-123');
 
             return null;
         }
@@ -498,10 +509,11 @@ test('sso session prefers local personnel list when user belongs to current site
          *
          * 该方法模拟本据点接口命中人员后，把更准确的人员信息写入 Session 的 siteUser 字段。
          */
-        public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
+        public function findByEmployeeNo(string $employeeNo, ?string $accessToken = null): ?PersonnelUser
         {
             // 本据点工号不带前导 0；PersonnelClient 会负责按本地规则匹配和返回准确人员信息。
-            expect($employeeNo)->toBe('00010001');
+            expect($employeeNo)->toBe('00010001')
+                ->and($accessToken)->toBe('token-456');
 
             return new PersonnelUser(
                 department: '开发一部',

@@ -120,7 +120,7 @@ class SsoController extends Controller
         $roles = $roleService->rolesFor($user);
         $sessionUser = $user->toSessionPayload();
 
-        if ($siteUser = $this->siteUserFromPersonnelList($user, $personnelClient)) {
+        if ($siteUser = $this->siteUserFromPersonnelList($user, $personnelClient, $token->accessToken())) {
             // 总部 SSO 信息是认证来源，不能被本据点人员信息覆盖。
             // 本据点信息作为额外数组字段保存，供页面展示和未来人员选择器使用。
             $sessionUser['siteUser'] = $siteUser->toSessionPayload();
@@ -142,10 +142,13 @@ class SsoController extends Controller
      * 找到时返回 PersonnelUser，由 establishSession() 写入 Session 的 siteUser 字段。
      * 找不到或人员接口失败时返回 null，保持总部 SSO 原始人员信息不变。
      */
-    private function siteUserFromPersonnelList(SsoUser $ssoUser, PersonnelClient $personnelClient): ?PersonnelUser
-    {
+    private function siteUserFromPersonnelList(
+        SsoUser $ssoUser,
+        PersonnelClient $personnelClient,
+        string $accessToken,
+    ): ?PersonnelUser {
         try {
-            $personnelUser = $personnelClient->findByEmployeeNo($ssoUser->employeeNo());
+            $personnelUser = $personnelClient->findByEmployeeNo($ssoUser->employeeNo(), $accessToken);
         } catch (PersonnelException $exception) {
             // 人员列表用于增强 Session 信息，不应该让总部 SSO 已认证用户因为本地列表接口临时失败而无法登录。
             // 这里记录日志后回退到总部 SSO 返回的信息。

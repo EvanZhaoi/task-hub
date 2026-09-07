@@ -23,14 +23,14 @@ class PaymentAccountClient
      *
      * @return list<PaymentAccount>
      */
-    public function fetchAll(): array
+    public function fetchAll(?string $accessToken = null): array
     {
         if ($accounts = $this->cachedAccounts()) {
             return $accounts;
         }
 
         // 发布任务弹窗需要展示所有可选付款账号，所以这里按列表接口读取外部主数据。
-        $accounts = $this->fetchAllFromRemote();
+        $accounts = $this->fetchAllFromRemote($accessToken);
         $this->putCacheIfNotEmpty($accounts);
 
         return $accounts;
@@ -41,11 +41,11 @@ class PaymentAccountClient
      *
      * 这个方法供定时任务调用；如果外部接口返回空列表或失败，不覆盖旧缓存。
      */
-    public function refreshCache(): int
+    public function refreshCache(?string $accessToken = null): int
     {
         // 定时任务调用该方法刷新 Redis。
         // 如果外部接口失败或返回空列表，不覆盖旧缓存，避免页面突然没有可选账号。
-        $accounts = $this->fetchAllFromRemote();
+        $accounts = $this->fetchAllFromRemote($accessToken ?? $this->configuredAccessToken());
 
         if ($accounts === []) {
             return 0;
@@ -63,11 +63,12 @@ class PaymentAccountClient
      *
      * @return list<PaymentAccount>
      */
-    private function fetchAllFromRemote(): array
+    private function fetchAllFromRemote(?string $accessToken): array
     {
         $payload = $this->requestConfiguredPath(
             pathConfigKey: 'payment_account.list_path',
             emptyPathMessage: 'Payment account list path is not configured.',
+            accessToken: $accessToken,
         );
 
         return PaymentAccount::listFromPayload($payload);
@@ -79,9 +80,9 @@ class PaymentAccountClient
      * 当前外部系统没有“按账号 ID 查询单个账号”的接口。
      * 因此这里不会再调用单条详情接口，而是从全量账号列表缓存或列表接口结果中筛选。
      */
-    public function fetchById(string $accountId): PaymentAccount
+    public function fetchById(string $accountId, ?string $accessToken = null): PaymentAccount
     {
-        foreach ($this->fetchAll() as $paymentAccount) {
+        foreach ($this->fetchAll($accessToken) as $paymentAccount) {
             if ($paymentAccount->accountId() === $accountId) {
                 return $paymentAccount;
             }
@@ -98,6 +99,7 @@ class PaymentAccountClient
     private function requestConfiguredPath(
         string $pathConfigKey,
         string $emptyPathMessage,
+        ?string $accessToken,
     ): array {
         $baseUrl = config('payment_account.base_url');
         $path = config($pathConfigKey);
@@ -115,11 +117,14 @@ class PaymentAccountClient
         }
 
         $method = strtoupper((string) config('payment_account.method', 'GET'));
+        $token = $this->normalizeAccessToken($accessToken);
 
         try {
             $request = Http::baseUrl($baseUrl)
                 ->timeout((int) config('payment_account.timeout', 3))
-                ->acceptJson();
+                ->acceptJson()
+                // 付款账号接口已切换为 token 调用方式，所有真实请求都必须带 Authorization Header。
+                ->withHeaders(['Authorization' => 'bearer '.$token]);
 
             if (! config('payment_account.verify_ssl')) {
                 // 内网测试环境可能暂时没有完整证书链；生产环境应开启 SSL 校验。
@@ -213,5 +218,31 @@ class PaymentAccountClient
     private function isAbsoluteUrl(string $value): bool
     {
         return str_starts_with($value, 'http://') || str_starts_with($value, 'https://');
+    }
+
+    /**
+     * 读取定时刷新使用的付款账号接口 token。
+     *
+     * 页面请求会从当前登录 Session 传入 accessToken；定时命令没有 Session，只能使用服务端配置。
+     */
+    private function configuredAccessToken(): ?string
+    {
+        $token = config('payment_account.access_token');
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
+    /**
+     * 校验外部接口 token 是否可用。
+     *
+     * 不在这里自动调用 SSO 刷 token，避免把 SSO 协议、定时任务和付款账号接口耦合在一起。
+     */
+    private function normalizeAccessToken(?string $accessToken): string
+    {
+        if (is_string($accessToken) && $accessToken !== '') {
+            return $accessToken;
+        }
+
+        throw new PaymentAccountException('Payment account access token is not configured.');
     }
 }

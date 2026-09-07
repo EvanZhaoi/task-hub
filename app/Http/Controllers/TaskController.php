@@ -41,8 +41,11 @@ class TaskController extends Controller
      * 该方法读取筛选条件、查询任务分页数据、加载付款账号 Select 选项，
      * 最后通过 Inertia 返回 `resources/js/Pages/Tasks/Index.tsx` 页面。
      */
-    public function index(Request $request, PaymentAccountClient $paymentAccounts): Response
-    {
+    public function index(
+        Request $request,
+        CurrentUserService $currentUser,
+        PaymentAccountClient $paymentAccounts,
+    ): Response {
         // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
         $filters = $this->filters($request);
 
@@ -84,7 +87,7 @@ class TaskController extends Controller
 
         return Inertia::render('Tasks/Index', [
             'filters' => $filters,
-            'paymentAccountOptions' => $this->paymentAccountOptions($paymentAccounts),
+            'paymentAccountOptions' => $this->paymentAccountOptions($paymentAccounts, $currentUser->accessToken()),
             'statusOptions' => $this->statusOptions(),
             'complexityOptions' => $this->complexityOptions(),
             'tasks' => [
@@ -125,7 +128,7 @@ class TaskController extends Controller
         try {
             // 付款账号是外部主数据，前端只提交 ID；名称和部门快照必须由后端从外部账号列表中匹配。
             // 外部查询放在事务外，避免数据库事务等待网络请求。
-            $paymentAccount = $paymentAccounts->fetchById($validated['paymentAccountId']);
+            $paymentAccount = $paymentAccounts->fetchById($validated['paymentAccountId'], $currentUser->accessToken());
         } catch (PaymentAccountException $exception) {
             throw ValidationException::withMessages([
                 'paymentAccountId' => $exception->getMessage(),
@@ -343,7 +346,7 @@ class TaskController extends Controller
      *
      * 账号列表来自外部接口缓存；如果接口或缓存不可用，返回空数组，让页面显示“付款账号列表不可用”。
      */
-    private function paymentAccountOptions(PaymentAccountClient $paymentAccounts): array
+    private function paymentAccountOptions(PaymentAccountClient $paymentAccounts, string $accessToken): array
     {
         try {
             return array_map(
@@ -357,7 +360,7 @@ class TaskController extends Controller
                     'accountName' => $account->accountName(),
                     'departmentName' => $account->departmentName(),
                 ],
-                $paymentAccounts->fetchAll(),
+                $paymentAccounts->fetchAll($accessToken),
             );
         } catch (PaymentAccountException $exception) {
             // 账号列表用于页面选择；接口不可用时仍允许任务大厅打开，前端显示不可选择。

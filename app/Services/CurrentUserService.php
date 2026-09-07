@@ -94,4 +94,28 @@ class CurrentUserService
     {
         return in_array($role, $this->roles(), true);
     }
+
+    /**
+     * 获取当前请求可用于调用外部接口的 accessToken。
+     *
+     * Inertia 页面登录后，token 保存在 Laravel Session 的 sso_token 中。
+     * 如果未来有纯 API 请求，也允许从 Authorization Bearer Header 中兜底读取。
+     */
+    public function accessToken(): string
+    {
+        $sessionToken = $this->request->session()->get(self::TOKEN_SESSION_KEY);
+        $accessToken = is_array($sessionToken) ? ($sessionToken['accessToken'] ?? null) : null;
+
+        if (is_string($accessToken) && $accessToken !== '') {
+            return $accessToken;
+        }
+
+        $bearerToken = $this->request->bearerToken();
+
+        if (is_string($bearerToken) && $bearerToken !== '') {
+            return $bearerToken;
+        }
+
+        throw new SsoException('Missing SSO access token.');
+    }
 }

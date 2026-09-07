@@ -20,6 +20,7 @@ Artisan::command('taskhub:sync-external-directories', function (): int {
     $personnel = app(PersonnelClient::class);
 
     try {
+        // 定时任务没有浏览器 Session，因此 refreshCache() 会读取 .env 中配置的服务端 token。
         $paymentAccountCount = $paymentAccounts->refreshCache();
         $this->info("Payment account cache refreshed: {$paymentAccountCount} item(s).");
     } catch (PaymentAccountException $exception) {
@@ -28,6 +29,7 @@ Artisan::command('taskhub:sync-external-directories', function (): int {
     }
 
     try {
+        // 定时任务没有当前登录人，因此人员列表刷新同样依赖 .env 中配置的服务端 token。
         $personnelCount = $personnel->refreshCache();
         $this->info("Personnel cache refreshed: {$personnelCount} item(s).");
     } catch (PersonnelException $exception) {

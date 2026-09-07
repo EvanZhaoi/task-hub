@@ -23,13 +23,13 @@ class PersonnelClient
      *
      * @return list<PersonnelUser>
      */
-    public function fetchAll(): array
+    public function fetchAll(?string $accessToken = null): array
     {
         if ($users = $this->cachedUsers()) {
             return $users;
         }
 
-        $users = $this->fetchAllFromRemote();
+        $users = $this->fetchAllFromRemote($accessToken);
         $this->putCacheIfNotEmpty($users);
 
         return $users;
@@ -40,11 +40,11 @@ class PersonnelClient
      *
      * 该方法供定时任务调用；如果外部接口返回空列表，不覆盖旧缓存。
      */
-    public function refreshCache(): int
+    public function refreshCache(?string $accessToken = null): int
     {
         // 定时任务调用该方法刷新 Redis。
         // 如果外部接口失败或返回空列表，不覆盖旧缓存，避免登录和人员选择器突然失去数据。
-        $users = $this->fetchAllFromRemote();
+        $users = $this->fetchAllFromRemote($accessToken ?? $this->configuredAccessToken());
 
         if ($users === []) {
             return 0;
@@ -62,7 +62,7 @@ class PersonnelClient
      *
      * @return list<PersonnelUser>
      */
-    private function fetchAllFromRemote(): array
+    private function fetchAllFromRemote(?string $accessToken): array
     {
         $baseUrl = config('personnel.base_url');
         $path = config('personnel.list_path');
@@ -80,11 +80,14 @@ class PersonnelClient
         }
 
         $method = strtoupper((string) config('personnel.method', 'GET'));
+        $token = $this->normalizeAccessToken($accessToken);
 
         try {
             $request = Http::baseUrl($baseUrl)
                 ->timeout((int) config('personnel.timeout', 3))
-                ->acceptJson();
+                ->acceptJson()
+                // 本据点人员列表接口已切换为 token 调用方式，所有真实请求都必须带 Authorization Header。
+                ->withHeaders(['Authorization' => 'bearer '.$token]);
 
             if (! config('personnel.verify_ssl')) {
                 // 内网测试环境可能暂时没有完整证书链；生产环境应开启 SSL 校验。
@@ -121,7 +124,7 @@ class PersonnelClient
      *
      * 登录成功后用它判断当前人是否属于本据点，并补充更准确的 siteUser 信息。
      */
-    public function findByEmployeeNo(string $employeeNo): ?PersonnelUser
+    public function findByEmployeeNo(string $employeeNo, ?string $accessToken = null): ?PersonnelUser
     {
         $normalizedEmployeeNo = PersonnelUser::normalizeEmployeeNo($employeeNo);
 
@@ -129,7 +132,7 @@ class PersonnelClient
             return null;
         }
 
-        foreach ($this->fetchAll() as $user) {
+        foreach ($this->fetchAll($accessToken) as $user) {
             if ($user->employeeNo() === $normalizedEmployeeNo) {
                 return $user;
             }
@@ -214,5 +217,31 @@ class PersonnelClient
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 读取定时刷新使用的人员列表接口 token。
+     *
+     * 登录请求会把 SSO accessToken 传进来；定时命令没有当前用户，只能使用服务端配置。
+     */
+    private function configuredAccessToken(): ?string
+    {
+        $token = config('personnel.access_token');
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
+    /**
+     * 校验外部接口 token 是否可用。
+     *
+     * token 缺失时直接抛异常，避免发出无 Authorization Header 的无效请求。
+     */
+    private function normalizeAccessToken(?string $accessToken): string
+    {
+        if (is_string($accessToken) && $accessToken !== '') {
+            return $accessToken;
+        }
+
+        throw new PersonnelException('Personnel access token is not configured.');
     }
 }
