@@ -7,8 +7,6 @@ return [
     'list_path' => env('PERSONNEL_LIST_PATH'),
     // 当前支持 GET 和 POST；真实协议确认后按外部接口填写。
     'method' => env('PERSONNEL_METHOD', 'GET'),
-    // 定时刷新没有浏览器 Session；如果人员列表接口要求 token，可配置服务端刷新 token。
-    'access_token' => env('PERSONNEL_ACCESS_TOKEN', env('EXTERNAL_DIRECTORY_ACCESS_TOKEN')),
     // 外部接口超时时间，避免登录流程长时间等待人员列表接口。
     'timeout' => (int) env('PERSONNEL_TIMEOUT', 3),
     // 本地/测试环境可关闭证书校验；生产环境建议设置为 true。

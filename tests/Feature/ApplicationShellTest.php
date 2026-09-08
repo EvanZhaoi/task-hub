@@ -269,7 +269,6 @@ test('external directory cache refresh keeps previous payment accounts when resp
         'payment_account.cache_store' => 'array',
         'payment_account.cache_key' => 'test:payment_accounts',
         'payment_account.cache_ttl' => 86400,
-        'payment_account.access_token' => 'token-pay',
     ]);
 
     Cache::store('array')->forget('test:payment_accounts');
@@ -297,12 +296,12 @@ test('external directory cache refresh keeps previous payment accounts when resp
             ]),
     ]);
 
-    expect(app(PaymentAccountClient::class)->refreshCache())->toBe(1)
-        ->and(app(PaymentAccountClient::class)->fetchAll()[0]->accountId())->toBe('PAY001');
+    expect(app(PaymentAccountClient::class)->refreshCache('token-pay'))->toBe(1)
+        ->and(app(PaymentAccountClient::class)->fetchAll('token-pay')[0]->accountId())->toBe('PAY001');
 
     // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
-    expect(app(PaymentAccountClient::class)->refreshCache())->toBe(0)
-        ->and(app(PaymentAccountClient::class)->fetchAll()[0]->accountId())->toBe('PAY001');
+    expect(app(PaymentAccountClient::class)->refreshCache('token-pay'))->toBe(0)
+        ->and(app(PaymentAccountClient::class)->fetchAll('token-pay')[0]->accountId())->toBe('PAY001');
 
     Http::assertSent(fn ($request): bool => ($request->header('Authorization')[0] ?? '') === 'bearer token-pay');
 });
@@ -317,7 +316,6 @@ test('external directory cache refresh keeps previous personnel users when respo
         'personnel.cache_store' => 'array',
         'personnel.cache_key' => 'test:personnel_users',
         'personnel.cache_ttl' => 86400,
-        'personnel.access_token' => 'token-personnel',
     ]);
 
     Cache::store('array')->forget('test:personnel_users');
@@ -366,14 +364,14 @@ test('external directory cache refresh keeps previous personnel users when respo
             ]),
     ]);
 
-    expect(app(PersonnelClient::class)->refreshCache())->toBe(1)
+    expect(app(PersonnelClient::class)->refreshCache('token-personnel'))->toBe(1)
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三')
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->eibNumCn())->toBe('10001')
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->eibNameCn())->toBe('张三')
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->departmentId())->toBe('DEV01');
 
     // 外部接口返回空列表时，refreshCache 返回 0，并保留上一次成功同步的缓存。
-    expect(app(PersonnelClient::class)->refreshCache())->toBe(0)
+    expect(app(PersonnelClient::class)->refreshCache('token-personnel'))->toBe(0)
         ->and(app(PersonnelClient::class)->findByEmployeeNo('00010001')?->displayName())->toBe('张三');
 
     Http::assertSent(fn ($request): bool => ($request->header('Authorization')[0] ?? '') === 'bearer token-personnel');

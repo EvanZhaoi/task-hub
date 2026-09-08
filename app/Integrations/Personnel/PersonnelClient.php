@@ -42,9 +42,10 @@ class PersonnelClient
      */
     public function refreshCache(?string $accessToken = null): int
     {
-        // 定时任务调用该方法刷新 Redis。
+        // 该方法可以由已经拿到动态 SSO accessToken 的调用方刷新 Redis。
+        // 注意：accessToken 是登录后从 Session 中取得的动态值，不从 .env 固定配置读取。
         // 如果外部接口失败或返回空列表，不覆盖旧缓存，避免登录和人员选择器突然失去数据。
-        $users = $this->fetchAllFromRemote($accessToken ?? $this->configuredAccessToken());
+        $users = $this->fetchAllFromRemote($accessToken);
 
         if ($users === []) {
             return 0;
@@ -220,21 +221,10 @@ class PersonnelClient
     }
 
     /**
-     * 读取定时刷新使用的人员列表接口 token。
-     *
-     * 登录请求会把 SSO accessToken 传进来；定时命令没有当前用户，只能使用服务端配置。
-     */
-    private function configuredAccessToken(): ?string
-    {
-        $token = config('personnel.access_token');
-
-        return is_string($token) && $token !== '' ? $token : null;
-    }
-
-    /**
      * 校验外部接口 token 是否可用。
      *
      * token 缺失时直接抛异常，避免发出无 Authorization Header 的无效请求。
+     * accessToken 必须由当前登录 Session 或调用方显式传入，不从 .env 固定配置读取。
      */
     private function normalizeAccessToken(?string $accessToken): string
     {

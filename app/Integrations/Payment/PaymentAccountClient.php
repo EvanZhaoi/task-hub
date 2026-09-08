@@ -43,9 +43,10 @@ class PaymentAccountClient
      */
     public function refreshCache(?string $accessToken = null): int
     {
-        // 定时任务调用该方法刷新 Redis。
+        // 该方法可以由已经拿到动态 SSO accessToken 的调用方刷新 Redis。
+        // 注意：accessToken 是登录后从 Session 中取得的动态值，不从 .env 固定配置读取。
         // 如果外部接口失败或返回空列表，不覆盖旧缓存，避免页面突然没有可选账号。
-        $accounts = $this->fetchAllFromRemote($accessToken ?? $this->configuredAccessToken());
+        $accounts = $this->fetchAllFromRemote($accessToken);
 
         if ($accounts === []) {
             return 0;
@@ -221,21 +222,10 @@ class PaymentAccountClient
     }
 
     /**
-     * 读取定时刷新使用的付款账号接口 token。
-     *
-     * 页面请求会从当前登录 Session 传入 accessToken；定时命令没有 Session，只能使用服务端配置。
-     */
-    private function configuredAccessToken(): ?string
-    {
-        $token = config('payment_account.access_token');
-
-        return is_string($token) && $token !== '' ? $token : null;
-    }
-
-    /**
      * 校验外部接口 token 是否可用。
      *
-     * 不在这里自动调用 SSO 刷 token，避免把 SSO 协议、定时任务和付款账号接口耦合在一起。
+     * accessToken 必须由当前登录 Session 或调用方显式传入。
+     * 不在这里读取 .env 固定 token，避免把个人登录凭证写进配置文件。
      */
     private function normalizeAccessToken(?string $accessToken): string
     {

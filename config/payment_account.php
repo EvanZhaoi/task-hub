@@ -9,8 +9,6 @@ return [
     // 发布任务保存时仍只提交 accountId，后端从全量账号列表缓存中筛选出账号快照。
     // 当前支持 GET 和 POST；真实协议确认后按外部接口填写。
     'method' => env('PAYMENT_ACCOUNT_METHOD', 'GET'),
-    // 定时刷新没有浏览器 Session；如果账号接口要求 token，可配置服务端刷新 token。
-    'access_token' => env('PAYMENT_ACCOUNT_ACCESS_TOKEN', env('EXTERNAL_DIRECTORY_ACCESS_TOKEN')),
     // 外部接口超时时间，避免发布任务请求长时间挂起。
     'timeout' => (int) env('PAYMENT_ACCOUNT_TIMEOUT', 3),
     // 本地/测试环境可关闭证书校验；生产环境建议设置为 true。
