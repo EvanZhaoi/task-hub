@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -365,6 +366,10 @@ class TaskController extends Controller
         } catch (PaymentAccountException $exception) {
             // 账号列表用于页面选择；接口不可用时仍允许任务大厅打开，前端显示不可选择。
             // 真正发布时 store() 还会再次调用外部接口并返回 paymentAccountId 字段错误。
+            Log::warning('Payment account options are unavailable.', [
+                'message' => $exception->getMessage(),
+            ]);
+
             return [];
         }
     }

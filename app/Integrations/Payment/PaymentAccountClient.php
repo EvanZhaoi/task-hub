@@ -121,6 +121,16 @@ class PaymentAccountClient
         $token = $this->normalizeAccessToken($accessToken);
 
         try {
+            Log::info('Payment account request started.', [
+                // 只记录配置和请求方式，确认实际请求打到了哪里。
+                // accessToken 是登录凭证，不能写入日志。
+                'base_url' => $baseUrl,
+                'path' => $path,
+                'method' => $method,
+                'verify_ssl' => (bool) config('payment_account.verify_ssl'),
+                'token_present' => $token !== '',
+            ]);
+
             $request = Http::baseUrl($baseUrl)
                 ->timeout((int) config('payment_account.timeout', 3))
                 ->acceptJson()
@@ -138,10 +148,26 @@ class PaymentAccountClient
                 default => throw new PaymentAccountException('Unsupported payment account HTTP method.'),
             };
         } catch (ConnectionException $exception) {
+            Log::warning('Payment account request connection failed.', [
+                'base_url' => $baseUrl,
+                'path' => $path,
+                'method' => $method,
+                'message' => $exception->getMessage(),
+            ]);
+
             throw new PaymentAccountException('Unable to connect to payment account service.', previous: $exception);
         }
 
         if (! $response->successful()) {
+            Log::warning('Payment account request returned an unsuccessful status.', [
+                'base_url' => $baseUrl,
+                'path' => $path,
+                'method' => $method,
+                'status' => $response->status(),
+                // 只截取前 1000 个字符，便于排查错误码和错误消息，避免日志过大。
+                'body_preview' => mb_substr($response->body(), 0, 1000),
+            ]);
+
             throw new PaymentAccountException(sprintf(
                 'Payment account request failed with HTTP status %d.',
                 $response->status(),
@@ -151,8 +177,24 @@ class PaymentAccountClient
         $payload = $response->json();
 
         if (! is_array($payload)) {
+            Log::warning('Payment account response is not JSON.', [
+                'base_url' => $baseUrl,
+                'path' => $path,
+                'method' => $method,
+                'body_preview' => mb_substr($response->body(), 0, 1000),
+            ]);
+
             throw new PaymentAccountException('Payment account response is not a JSON object.');
         }
+
+        Log::info('Payment account request succeeded.', [
+            'base_url' => $baseUrl,
+            'path' => $path,
+            'method' => $method,
+            // 付款账号接口的真实结构是 {"data":[...],"total":0}，这里只记录数量，不打印完整账号数据。
+            'data_count' => is_array($payload['data'] ?? null) ? count($payload['data']) : null,
+            'total' => $payload['total'] ?? null,
+        ]);
 
         return $payload;
     }
