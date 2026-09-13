@@ -60,7 +60,7 @@ export function DatePicker({ disabled = false, name, onChange, placeholder = 'è¯
                     <span className="min-w-0 truncate">{value ? displayDate(value) : placeholder}</span>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto">
+            <PopoverContent className="z-[70] w-auto">
                 <Calendar
                     mode="single"
                     onSelect={(date) => {

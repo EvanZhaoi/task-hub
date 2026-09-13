@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { DatePicker } from '@/components/common/DatePicker';
 import { DateTimePicker } from '@/components/common/DateTimePicker';
+import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombobox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -201,23 +202,13 @@ export default function TaskIndex({
                             </div>
 
                             <Field label="付款账号" message={form.errors.paymentAccountId} required>
-                                <NativeSelect
-                                    className="w-full min-w-0 truncate"
+                                <PaymentAccountCombobox
                                     disabled={paymentAccountOptions.length === 0}
                                     name="paymentAccountId"
-                                    onChange={(event) => form.setData('paymentAccountId', event.target.value)}
+                                    onChange={(value) => form.setData('paymentAccountId', value)}
+                                    options={paymentAccountOptions}
                                     value={form.data.paymentAccountId}
-                                >
-                                    {/* 付款账号来自后端调用外部接口得到的列表，前端只提交选中的账号 ID。 */}
-                                    <option value="">
-                                        {paymentAccountOptions.length === 0 ? '付款账号列表不可用' : '请选择付款账号'}
-                                    </option>
-                                    {paymentAccountOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </NativeSelect>
+                                />
                                 {paymentAccountOptions.length === 0 ? (
                                     <span className="block text-xs leading-5 text-amber-700">
                                         付款账号接口未配置或暂时不可用，请确认外部接口后再发布任务。
@@ -263,6 +254,9 @@ export default function TaskIndex({
                 <CardContent>
                     {/* GET 表单适合列表筛选：URL 可复制、可刷新、可用于浏览器前进后退。 */}
                     <form action="/tasks" className="flex flex-col gap-3 lg:flex-row lg:items-center" method="GET">
+                        {/* 状态由下方 Tab 控制；提交搜索或复杂度筛选时用 hidden 保留当前状态。 */}
+                        {filters.status !== 'ALL' ? <input name="status" type="hidden" value={filters.status} /> : null}
+
                         <div className="relative min-w-0 flex-1">
                             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af]">
                                 搜索
@@ -276,21 +270,22 @@ export default function TaskIndex({
                             />
                         </div>
 
-                        <NativeSelect defaultValue={filters.status} name="status">
-                            {statusOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    状态：{option.label}
-                                </option>
-                            ))}
-                        </NativeSelect>
-
-                        <NativeSelect defaultValue={filters.complexity} name="complexity">
-                            {complexityOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    复杂度：{option.label}
-                                </option>
-                            ))}
-                        </NativeSelect>
+                        <div className="relative min-w-0 lg:w-44">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9ca3af]">
+                                复杂度：
+                            </span>
+                            <NativeSelect
+                                className="w-full pl-[4.5rem]"
+                                defaultValue={filters.complexity}
+                                name="complexity"
+                            >
+                                {complexityOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                        </div>
 
                         <Button type="submit">查询</Button>
                         <Button asChild variant="outline">

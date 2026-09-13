@@ -336,7 +336,7 @@ class TaskController extends Controller
         // 复杂度选项同样由后端下发，未来改文案无需改前端枚举。
         return [
             ['value' => 'ALL', 'label' => '全部'],
-            ['value' => 'LOW', 'label' => '简单'],
+            ['value' => 'LOW', 'label' => '低'],
             ['value' => 'MEDIUM', 'label' => '中等'],
             ['value' => 'HIGH', 'label' => '复杂'],
         ];

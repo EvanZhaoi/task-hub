@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { DayPicker } from 'react-day-picker';
 import type { ComponentProps } from 'react';
+import { DayPicker } from 'react-day-picker';
+import type { DayButtonProps, NextMonthButtonProps, PreviousMonthButtonProps } from 'react-day-picker';
 
 import { cn } from '@/lib/utils';
 
@@ -41,6 +42,19 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
                 // 使用 lucide 图标替代默认箭头，保持项目图标风格统一。
                 Chevron: ({ orientation }) =>
                     orientation === 'left' ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />,
+                DayButton: ({ day: _day, modifiers: _modifiers, ...buttonProps }: DayButtonProps) => (
+                    // 日历经常放在 form 里；button 默认 type 是 submit。
+                    // 如果不显式写 type="button"，点击日期可能会提交发布任务表单，导致“点了日期但没有选中”的错觉。
+                    <button {...buttonProps} type="button" />
+                ),
+                NextMonthButton: (buttonProps: NextMonthButtonProps) => (
+                    // 月份切换按钮也在 form 内部，必须避免默认 submit 行为。
+                    <button {...buttonProps} type="button" />
+                ),
+                PreviousMonthButton: (buttonProps: PreviousMonthButtonProps) => (
+                    // 月份切换只改变日历视图，不应该提交发布任务表单。
+                    <button {...buttonProps} type="button" />
+                ),
             }}
             showOutsideDays={showOutsideDays}
             {...props}

@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { DatePicker } from '@/components/common/DatePicker';
 import { Input } from '@/components/ui/input';
 
@@ -41,18 +43,51 @@ function joinDateTime(date: string, hour: string, minute: string): string {
 
 export function DateTimePicker({ disabled = false, name, onChange, value }: DateTimePickerProps) {
     const { date, hour, minute } = splitDateTime(value);
+    const [hourInput, setHourInput] = useState(hour);
+    const [minuteInput, setMinuteInput] = useState(minute);
+
+    useEffect(() => {
+        // 父组件重置表单或从后端回填数据时，同步刷新输入框里的显示值。
+        setHourInput(hour);
+        setMinuteInput(minute);
+    }, [hour, minute]);
 
     function updateDate(nextDate: string): void {
         // 选择日期时保留当前时间；默认时间是 23:59，适合作为招标截止时间。
-        onChange(joinDateTime(nextDate, hour, minute));
+        onChange(joinDateTime(nextDate, normalizeTimePart(hourInput, 23), normalizeTimePart(minuteInput, 59)));
     }
 
     function updateHour(nextHour: string): void {
-        onChange(joinDateTime(date, normalizeTimePart(nextHour, 23), minute));
+        // 输入过程中只允许 0-2 位数字，不立即补 0。
+        // 这样用户可以自然输入 2、23，而不会刚输入 2 就被强制变成 02。
+        if (!/^\d{0,2}$/.test(nextHour)) {
+            return;
+        }
+
+        setHourInput(nextHour);
+    }
+
+    function commitHour(nextHour: string): void {
+        const normalizedHour = normalizeTimePart(nextHour, 23);
+
+        setHourInput(normalizedHour);
+        onChange(joinDateTime(date, normalizedHour, normalizeTimePart(minuteInput, 59)));
     }
 
     function updateMinute(nextMinute: string): void {
-        onChange(joinDateTime(date, hour, normalizeTimePart(nextMinute, 59)));
+        // 分钟支持任意 0-59，不限制 5 分钟或 15 分钟间隔。
+        if (!/^\d{0,2}$/.test(nextMinute)) {
+            return;
+        }
+
+        setMinuteInput(nextMinute);
+    }
+
+    function commitMinute(nextMinute: string): void {
+        const normalizedMinute = normalizeTimePart(nextMinute, 59);
+
+        setMinuteInput(normalizedMinute);
+        onChange(joinDateTime(date, normalizeTimePart(hourInput, 23), normalizedMinute));
     }
 
     return (
@@ -62,23 +97,25 @@ export function DateTimePicker({ disabled = false, name, onChange, value }: Date
                 aria-label="小时"
                 className="px-2 text-center tabular-nums"
                 disabled={disabled}
-                max={23}
-                min={0}
-                onBlur={(event) => updateHour(event.target.value)}
+                inputMode="numeric"
+                maxLength={2}
+                onBlur={(event) => commitHour(event.target.value)}
                 onChange={(event) => updateHour(event.target.value)}
-                type="number"
-                value={hour}
+                placeholder="时"
+                type="text"
+                value={hourInput}
             />
             <Input
                 aria-label="分钟"
                 className="px-2 text-center tabular-nums"
                 disabled={disabled}
-                max={59}
-                min={0}
-                onBlur={(event) => updateMinute(event.target.value)}
+                inputMode="numeric"
+                maxLength={2}
+                onBlur={(event) => commitMinute(event.target.value)}
                 onChange={(event) => updateMinute(event.target.value)}
-                type="number"
-                value={minute}
+                placeholder="分"
+                type="text"
+                value={minuteInput}
             />
 
             {/* 隐藏字段保留 name 语义，提交格式保持 YYYY-MM-DDTHH:mm，兼容现有 Laravel 校验。 */}
