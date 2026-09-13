@@ -433,13 +433,13 @@ type FieldProps = {
 
 function Field({ children, label, message, required = false }: FieldProps) {
     return (
-        <label className="block min-w-0 space-y-1.5">
-            <span className="text-sm font-medium text-[#374151]">
+        <div className="block min-w-0 space-y-1.5">
+            <div className="text-sm font-medium text-[#374151]">
                 {label}
                 {required ? <span className="ml-1 text-red-500">*</span> : null}
-            </span>
+            </div>
             {children}
             {message ? <span className="block text-xs leading-5 text-red-600">{message}</span> : null}
-        </label>
+        </div>
     );
 }
