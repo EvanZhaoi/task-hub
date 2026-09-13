@@ -109,66 +109,64 @@ export function PaymentAccountCombobox({
                 </Button>
             </PopoverTrigger>
 
-            <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content
-                    align="start"
-                    className="z-[90] w-[var(--radix-popover-trigger-width)] rounded-md border border-[#e5e7eb] bg-white p-0 text-[#1a1a1a] shadow-lg outline-none"
-                    sideOffset={8}
-                >
-                    <div className="border-b border-[#e5e7eb] p-2">
-                        <div className="relative">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
-                            <Input
-                                // 搜索框只负责缩小候选范围，不直接修改表单提交值。
-                                autoFocus
-                                className="pl-9"
-                                onChange={(event) => setKeyword(event.target.value)}
-                                placeholder="搜索账号名称或 code"
-                                type="search"
-                                value={keyword}
-                            />
-                        </div>
+            <PopoverPrimitive.Content
+                align="start"
+                className="z-[70] w-[var(--radix-popover-trigger-width)] rounded-md border border-[#e5e7eb] bg-white p-0 text-[#1a1a1a] shadow-lg outline-none"
+                sideOffset={8}
+            >
+                <div className="border-b border-[#e5e7eb] p-2">
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
+                        <Input
+                            // 搜索框只负责缩小候选范围，不直接修改表单提交值。
+                            autoFocus
+                            className="pl-9"
+                            onChange={(event) => setKeyword(event.target.value)}
+                            placeholder="搜索账号名称或 code"
+                            type="search"
+                            value={keyword}
+                        />
                     </div>
+                </div>
 
-                    <div className="max-h-72 overflow-y-auto p-1">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-6 text-center text-sm text-[#9ca3af]">没有匹配的付款账号</div>
-                        ) : (
-                            filteredOptions.map((option) => {
-                                const isSelected = option.value === value;
+                <div className="max-h-72 overflow-y-auto p-1">
+                    {filteredOptions.length === 0 ? (
+                        <div className="px-3 py-6 text-center text-sm text-[#9ca3af]">没有匹配的付款账号</div>
+                    ) : (
+                        filteredOptions.map((option) => {
+                            const isSelected = option.value === value;
 
-                                return (
-                                    <button
+                            return (
+                                <button
+                                    className={cn(
+                                        'flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f3ff]',
+                                        isSelected && 'bg-[#f5f3ff] text-[#5e6ad2]',
+                                    )}
+                                    key={option.value}
+                                    onClick={() => selectOption(option.value)}
+                                    type="button"
+                                >
+                                    <Check
                                         className={cn(
-                                            'flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f3ff]',
-                                            isSelected && 'bg-[#f5f3ff] text-[#5e6ad2]',
+                                            'mt-0.5 size-4 shrink-0',
+                                            isSelected ? 'opacity-100' : 'opacity-0',
                                         )}
-                                        key={option.value}
-                                        onClick={() => selectOption(option.value)}
-                                        type="button"
-                                    >
-                                        <Check
-                                            className={cn(
-                                                'mt-0.5 size-4 shrink-0',
-                                                isSelected ? 'opacity-100' : 'opacity-0',
-                                            )}
-                                        />
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate font-medium">
-                                                {option.accountName ?? option.label}
-                                            </span>
-                                            <span className="block truncate text-xs text-[#6e6e80]">
-                                                {option.value}
-                                                {option.departmentName ? ` · ${option.departmentName}` : ''}
-                                            </span>
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate font-medium">
+                                            {option.accountName ?? option.label}
                                         </span>
-                                    </button>
-                                );
-                            })
-                        )}
-                    </div>
-                </PopoverPrimitive.Content>
-            </PopoverPrimitive.Portal>
+                                        <span className="block truncate text-xs text-[#6e6e80]">
+                                            {option.value}
+                                            {option.departmentName ? ` · ${option.departmentName}` : ''}
+                                        </span>
+                                    </span>
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
+            </PopoverPrimitive.Content>
 
             {/* 隐藏字段保留表单字段名；最终提交给 Laravel 的仍然是 paymentAccountId。 */}
             {name ? <input name={name} type="hidden" value={value} /> : null}

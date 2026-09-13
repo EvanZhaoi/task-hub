@@ -123,7 +123,7 @@ export default function TaskIndex({
                     <DialogTrigger asChild>
                         <Button type="button">发布任务</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="overflow-visible">
                         <DialogHeader>
                             <DialogTitle>发布任务</DialogTitle>
                             <DialogDescription>
