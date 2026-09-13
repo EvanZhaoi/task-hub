@@ -1,5 +1,3 @@
-import { Clock } from 'lucide-react';
-
 import { DatePicker } from '@/components/common/DatePicker';
 import { Input } from '@/components/ui/input';
 
@@ -58,23 +56,22 @@ export function DateTimePicker({ disabled = false, name, onChange, value }: Date
     }
 
     return (
-        <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-2">
+        <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_4.25rem_4.25rem] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_5rem_5rem]">
             <DatePicker disabled={disabled} onChange={updateDate} placeholder="请选择日期" value={date} />
-            <label className="relative block min-w-0">
-                <Clock className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-[#9ca3af]" />
-                <Input
-                    className="pl-7 text-center"
-                    disabled={disabled}
-                    max={23}
-                    min={0}
-                    onBlur={(event) => updateHour(event.target.value)}
-                    onChange={(event) => updateHour(event.target.value)}
-                    type="number"
-                    value={hour}
-                />
-            </label>
             <Input
-                className="text-center"
+                aria-label="小时"
+                className="px-2 text-center tabular-nums"
+                disabled={disabled}
+                max={23}
+                min={0}
+                onBlur={(event) => updateHour(event.target.value)}
+                onChange={(event) => updateHour(event.target.value)}
+                type="number"
+                value={hour}
+            />
+            <Input
+                aria-label="分钟"
+                className="px-2 text-center tabular-nums"
                 disabled={disabled}
                 max={59}
                 min={0}

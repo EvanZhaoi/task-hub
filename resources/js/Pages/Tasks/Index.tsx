@@ -168,7 +168,7 @@ export default function TaskIndex({
 
                                 <Field label="复杂度" message={form.errors.complexity} required>
                                     <NativeSelect
-                                        className="w-full"
+                                        className="w-full min-w-0"
                                         name="complexity"
                                         onChange={(event) =>
                                             form.setData('complexity', event.target.value as TaskComplexity)
@@ -202,7 +202,7 @@ export default function TaskIndex({
 
                             <Field label="付款账号" message={form.errors.paymentAccountId} required>
                                 <NativeSelect
-                                    className="w-full"
+                                    className="w-full min-w-0 truncate"
                                     disabled={paymentAccountOptions.length === 0}
                                     name="paymentAccountId"
                                     onChange={(event) => form.setData('paymentAccountId', event.target.value)}
