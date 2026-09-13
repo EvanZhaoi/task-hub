@@ -2,14 +2,10 @@ import type { ComponentProps } from 'react';
 
 import { cn } from '@/lib/utils';
 
-type CardProps = ComponentProps<'div'> & {
-    // 根据语义选择外层标签：列表项可用 article，普通容器用 div，独立区域用 section。
-    as?: 'article' | 'div' | 'section';
-};
-
-export function Card({ as: Comp = 'div', className, ...props }: CardProps) {
+export function Card({ className, ...props }: ComponentProps<'div'>) {
     // Card 只负责基础边框、圆角、背景；内边距交给 CardContent 或页面控制。
-    return <Comp className={cn('rounded-lg border border-[#e5e7eb] bg-white', className)} {...props} />;
+    // 保持标准 shadcn 写法：Card 自身是 div；需要 article/section 语义时在外层包语义标签。
+    return <div className={cn('rounded-lg border border-[#e5e7eb] bg-white', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: ComponentProps<'div'>) {

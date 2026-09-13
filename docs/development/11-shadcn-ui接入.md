@@ -286,7 +286,9 @@ import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-    'inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50',
+    // cursor-pointer 放在 Button 基础组件中，业务页面不需要为每个按钮重复写。
+    // disabled 时使用 cursor-not-allowed，用户能明确知道按钮当前不可操作。
+    'inline-flex h-10 cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:cursor-not-allowed disabled:opacity-50',
     {
         variants: {
             variant: {
@@ -361,7 +363,8 @@ CLI 生成组件只是第一步。shadcn 的默认样式是通用后台风格，
 ```tsx
 const buttonVariants = cva(
     // 基础按钮结构仍沿用 shadcn/cva 思路。
-    'inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50',
+    // cursor-pointer 和 disabled:cursor-not-allowed 统一放在基础 Button 中，业务页面不重复写。
+    'inline-flex h-10 cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:cursor-not-allowed disabled:opacity-50',
     {
         variants: {
             variant: {
@@ -537,28 +540,30 @@ SSO 授权码模式下，登录成功会由 Laravel 后端直接重定向到业�
 
 ```tsx
 <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6 text-[#1a1a1a]">
-    <Card as="section" className="w-full max-w-md border-[#ebebeb] shadow-sm">
-        <CardContent className="p-6">
-            {/* 这里不是完整登录页，只是 SSO 回调过程中的中间状态提示。 */}
-            <div className="mb-4 flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
-                    T
+    <section className="w-full max-w-md">
+        <Card className="border-[#ebebeb] shadow-sm">
+            <CardContent className="p-6">
+                {/* 这里不是完整登录页，只是 SSO 回调过程中的中间状态提示。 */}
+                <div className="mb-4 flex items-center gap-3">
+                    <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
+                        T
+                    </div>
+                    <div>
+                        <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
+                        <p className="mt-1 text-sm text-[#6e6e80]">
+                            {status === 'failed' ? '登录未完成' : '正在完成单点登录'}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
-                    <p className="mt-1 text-sm text-[#6e6e80]">
-                        {status === 'failed' ? '登录未完成' : '正在完成单点登录'}
-                    </p>
-                </div>
-            </div>
 
-            <p className="text-sm leading-6 text-[#6e6e80]">{message ?? 'SSO 授权码登录失败。'}</p>
+                <p className="text-sm leading-6 text-[#6e6e80]">{message ?? 'SSO 授权码登录失败。'}</p>
 
-            <Button asChild className="mt-5">
-                <a href="/login">重新登录</a>
-            </Button>
-        </CardContent>
-    </Card>
+                <Button asChild className="mt-5">
+                    <a href="/login">重新登录</a>
+                </Button>
+            </CardContent>
+        </Card>
+    </section>
 </main>
 ```
 
@@ -671,18 +676,16 @@ resources/js/Pages/Tasks/Index.tsx
 
 #### 8.5 任务卡片外层使用 Card，内部信息布局保持不变
 
-第 10 章任务卡片外层重复写了边框、白底和 hover。第 11 章改为 `Card` 组件承载外层结构。
+第 10 章任务卡片外层重复写了边框、白底和 hover。第 11 章改为外层 `article` 保留语义，内部 `Card` 组件承载视觉结构。
 
 这里先看替换后的外层写法，完整 `Index.tsx` 在 8.9 给出：
 
 ```tsx
-<Card
-    as="article"
-    className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
-    key={task.id}
->
-    {/* 任务标题、状态、金额、交付日期等内部结构保持第 10 章的列表布局。 */}
-</Card>
+<article key={task.id}>
+    <Card className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm">
+        {/* 任务标题、状态、金额、交付日期等内部结构保持第 10 章的列表布局。 */}
+    </Card>
+</article>
 ```
 
 保留不变：
@@ -771,7 +774,7 @@ const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['vari
 4. 筛选表单外层改为 `Card` / `CardContent`。
 5. 搜索框改为 `Input`，状态和复杂度下拉改为 `NativeSelect`。
 6. 查询、重置、分页按钮改为 `Button`。
-7. 任务列表项外层改为 `Card as="article"`。
+7. 任务列表项外层改为 `article` + `Card`，不要给标准 Card 增加 `as` 属性。
 8. 状态和复杂度标签改为 `Badge`。
 9. 任务卡片内部业务字段布局保持第 10 章结构，不重新设计。
 
@@ -929,11 +932,8 @@ export default function TaskIndex({ complexityOptions, filters, statusOptions, t
                 ) : (
                     tasks.data.map((task) => (
                         // 单个任务卡片只做列表摘要；后续详情和操作会在卡片或模态框中继续扩展。
-                        <Card
-                            as="article"
-                            className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
-                            key={task.id}
-                        >
+                        <article key={task.id}>
+                            <Card className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">

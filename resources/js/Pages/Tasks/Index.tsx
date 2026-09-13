@@ -1,6 +1,8 @@
 import { useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { DatePicker } from '@/components/common/DatePicker';
+import { DateTimePicker } from '@/components/common/DateTimePicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -132,6 +134,7 @@ export default function TaskIndex({
                             <Field label="任务标题" message={form.errors.title} required>
                                 <Input
                                     autoFocus
+                                    className="w-full"
                                     name="title"
                                     onChange={(event) => form.setData('title', event.target.value)}
                                     placeholder="例如：用户登录页 UI 重构"
@@ -141,6 +144,7 @@ export default function TaskIndex({
 
                             <Field label="任务描述" message={form.errors.description}>
                                 <Textarea
+                                    className="w-full"
                                     name="description"
                                     onChange={(event) => form.setData('description', event.target.value)}
                                     placeholder="说明背景、目标、验收标准和注意事项"
@@ -148,9 +152,10 @@ export default function TaskIndex({
                                 />
                             </Field>
 
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <Field label="预算金额" message={form.errors.budget} required>
                                     <Input
+                                        className="w-full"
                                         min="0"
                                         name="budget"
                                         onChange={(event) => form.setData('budget', event.target.value)}
@@ -163,6 +168,7 @@ export default function TaskIndex({
 
                                 <Field label="复杂度" message={form.errors.complexity} required>
                                     <NativeSelect
+                                        className="w-full"
                                         name="complexity"
                                         onChange={(event) =>
                                             form.setData('complexity', event.target.value as TaskComplexity)
@@ -176,21 +182,19 @@ export default function TaskIndex({
                                 </Field>
                             </div>
 
-                            <div className="grid gap-4 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <Field label="期望交付日期" message={form.errors.expectedDelivery} required>
-                                    <Input
+                                    <DatePicker
                                         name="expectedDelivery"
-                                        onChange={(event) => form.setData('expectedDelivery', event.target.value)}
-                                        type="date"
+                                        onChange={(value) => form.setData('expectedDelivery', value)}
                                         value={form.data.expectedDelivery}
                                     />
                                 </Field>
 
                                 <Field label="招标截止时间" message={form.errors.biddingDeadline} required>
-                                    <Input
+                                    <DateTimePicker
                                         name="biddingDeadline"
-                                        onChange={(event) => form.setData('biddingDeadline', event.target.value)}
-                                        type="datetime-local"
+                                        onChange={(value) => form.setData('biddingDeadline', value)}
                                         value={form.data.biddingDeadline}
                                     />
                                 </Field>
@@ -198,6 +202,7 @@ export default function TaskIndex({
 
                             <Field label="付款账号" message={form.errors.paymentAccountId} required>
                                 <NativeSelect
+                                    className="w-full"
                                     disabled={paymentAccountOptions.length === 0}
                                     name="paymentAccountId"
                                     onChange={(event) => form.setData('paymentAccountId', event.target.value)}
@@ -222,6 +227,7 @@ export default function TaskIndex({
 
                             <Field label="附件 ID" message={form.errors.attachmentIds}>
                                 <Textarea
+                                    className="w-full"
                                     name="attachmentIds"
                                     onChange={(event) => form.setData('attachmentIds', event.target.value)}
                                     placeholder="多个附件 ID 可用换行、逗号或空格分隔"
@@ -340,60 +346,58 @@ export default function TaskIndex({
                 ) : (
                     tasks.data.map((task) => (
                         // 单个任务卡片只做列表摘要；后续详情和操作会在卡片或模态框中继续扩展。
-                        <Card
-                            as="article"
-                            className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm"
-                            key={task.id}
-                        >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <h2 className="m-0 text-base font-semibold">{task.title}</h2>
-                                        <Badge variant={statusBadgeVariants[task.displayStatus]}>
-                                            {statusLabels[task.displayStatus]}
-                                        </Badge>
-                                        <Badge variant={complexityBadgeVariants[task.complexity]}>
-                                            {complexityLabels[task.complexity]}
-                                        </Badge>
+                        <article key={task.id}>
+                            <Card className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h2 className="m-0 text-base font-semibold">{task.title}</h2>
+                                            <Badge variant={statusBadgeVariants[task.displayStatus]}>
+                                                {statusLabels[task.displayStatus]}
+                                            </Badge>
+                                            <Badge variant={complexityBadgeVariants[task.complexity]}>
+                                                {complexityLabels[task.complexity]}
+                                            </Badge>
+                                        </div>
+                                        <p className="mt-2 max-w-5xl text-sm leading-6 text-[#6e6e80]">
+                                            {task.description || '暂无描述'}
+                                        </p>
                                     </div>
-                                    <p className="mt-2 max-w-5xl text-sm leading-6 text-[#6e6e80]">
-                                        {task.description || '暂无描述'}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-base font-semibold">{task.amountLabel}</div>
-                                    <div className="text-xs text-[#6e6e80]">
-                                        {task.assignmentType === 'BIDDING' ? '招标选标' : '直接指派'}
+                                    <div className="text-right">
+                                        <div className="text-base font-semibold">{task.amountLabel}</div>
+                                        <div className="text-xs text-[#6e6e80]">
+                                            {task.assignmentType === 'BIDDING' ? '招标选标' : '直接指派'}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-4 grid gap-3 text-sm text-[#6e6e80] md:grid-cols-2 xl:grid-cols-4">
-                                {/* 关键业务字段用网格排列，方便用户快速扫描交期、截止、发布者和投标数。 */}
-                                <div>
-                                    <span className="block text-xs text-[#9ca3af]">交付日期</span>
-                                    <strong className="font-semibold text-[#1a1a1a]">
-                                        {task.finalDelivery ?? task.expectedDelivery ?? '-'}
-                                    </strong>
+                                <div className="mt-4 grid gap-3 text-sm text-[#6e6e80] md:grid-cols-2 xl:grid-cols-4">
+                                    {/* 关键业务字段用网格排列，方便用户快速扫描交期、截止、发布者和投标数。 */}
+                                    <div>
+                                        <span className="block text-xs text-[#9ca3af]">交付日期</span>
+                                        <strong className="font-semibold text-[#1a1a1a]">
+                                            {task.finalDelivery ?? task.expectedDelivery ?? '-'}
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        <span className="block text-xs text-[#9ca3af]">招标截止</span>
+                                        <strong className="font-semibold text-[#1a1a1a]">
+                                            {task.biddingDeadline ?? '-'}
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        <span className="block text-xs text-[#9ca3af]">发布者</span>
+                                        <strong className="font-semibold text-[#1a1a1a]">{task.createdByName}</strong>
+                                        {task.departmentName ? ` · ${task.departmentName}` : ''}
+                                    </div>
+                                    <div>
+                                        <span className="block text-xs text-[#9ca3af]">投标 / 预算</span>
+                                        <strong className="font-semibold text-[#1a1a1a]">{task.activeBidCount}</strong>
+                                        {task.paymentAccountName ? ` · ${task.paymentAccountName}` : ''}
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="block text-xs text-[#9ca3af]">招标截止</span>
-                                    <strong className="font-semibold text-[#1a1a1a]">
-                                        {task.biddingDeadline ?? '-'}
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span className="block text-xs text-[#9ca3af]">发布者</span>
-                                    <strong className="font-semibold text-[#1a1a1a]">{task.createdByName}</strong>
-                                    {task.departmentName ? ` · ${task.departmentName}` : ''}
-                                </div>
-                                <div>
-                                    <span className="block text-xs text-[#9ca3af]">投标 / 预算</span>
-                                    <strong className="font-semibold text-[#1a1a1a]">{task.activeBidCount}</strong>
-                                    {task.paymentAccountName ? ` · ${task.paymentAccountName}` : ''}
-                                </div>
-                            </div>
-                        </Card>
+                            </Card>
+                        </article>
                     ))
                 )}
             </div>
@@ -434,7 +438,7 @@ type FieldProps = {
 
 function Field({ children, label, message, required = false }: FieldProps) {
     return (
-        <label className="block space-y-1.5">
+        <label className="block min-w-0 space-y-1.5">
             <span className="text-sm font-medium text-[#374151]">
                 {label}
                 {required ? <span className="ml-1 text-red-500">*</span> : null}

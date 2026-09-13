@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // Button 是 TaskHub 后续所有按钮的基础组件。
 // 业务页面应该优先表达语义：primary、outline、ghost，而不是重复写完整 Tailwind。
 const buttonVariants = cva(
-    'inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50',
+    'inline-flex h-10 cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:cursor-not-allowed disabled:opacity-50',
     {
         variants: {
             variant: {

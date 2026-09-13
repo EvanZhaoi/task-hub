@@ -12,28 +12,30 @@ type SsoCallbackProps = {
 export default function SsoCallback({ message, status = 'failed' }: SsoCallbackProps) {
     return (
         <main className="flex min-h-screen items-center justify-center bg-[#fafafa] px-6 text-[#1a1a1a]">
-            <Card as="section" className="w-full max-w-md border-[#ebebeb] shadow-sm">
-                <CardContent className="p-6">
-                    {/* 这里不是完整登录页，只是 SSO 授权码回调失败时的提示页。 */}
-                    <div className="mb-4 flex items-center gap-3">
-                        <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
-                            T
+            <section className="w-full max-w-md">
+                <Card className="border-[#ebebeb] shadow-sm">
+                    <CardContent className="p-6">
+                        {/* 这里不是完整登录页，只是 SSO 授权码回调失败时的提示页。 */}
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="flex size-8 items-center justify-center rounded-md bg-[#5e6ad2] text-sm font-bold text-white">
+                                T
+                            </div>
+                            <div>
+                                <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
+                                <p className="mt-1 text-sm text-[#6e6e80]">
+                                    {status === 'failed' ? '登录未完成' : '正在完成单点登录'}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="m-0 text-lg font-semibold">TaskHub SSO</h1>
-                            <p className="mt-1 text-sm text-[#6e6e80]">
-                                {status === 'failed' ? '登录未完成' : '正在完成单点登录'}
-                            </p>
-                        </div>
-                    </div>
 
-                    <p className="text-sm leading-6 text-[#6e6e80]">{message ?? 'SSO 授权码登录失败。'}</p>
+                        <p className="text-sm leading-6 text-[#6e6e80]">{message ?? 'SSO 授权码登录失败。'}</p>
 
-                    <Button asChild className="mt-5">
-                        <a href="/login">重新登录</a>
-                    </Button>
-                </CardContent>
-            </Card>
+                        <Button asChild className="mt-5">
+                            <a href="/login">重新登录</a>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </section>
         </main>
     );
 }
