@@ -12,17 +12,17 @@ export const PopoverTrigger = PopoverPrimitive.Trigger;
 
 export function PopoverContent({ align = 'start', className, sideOffset = 8, ...props }: ComponentProps<typeof PopoverPrimitive.Content>) {
     return (
-        <PopoverPrimitive.Portal>
-            <PopoverPrimitive.Content
-                align={align}
-                className={cn(
-                    // z-50 保证日期浮层显示在 Dialog 上方；宽度由调用方按业务控件决定。
-                    'z-50 rounded-md border border-[#e5e7eb] bg-white p-3 text-[#1a1a1a] shadow-lg outline-none',
-                    className,
-                )}
-                sideOffset={sideOffset}
-                {...props}
-            />
-        </PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+            align={align}
+            className={cn(
+                // Dialog 是 modal 时会用 DismissableLayer 管理弹窗外部点击。
+                // Popover 放在 Dialog 内使用时，如果再 Portal 到 body，可能被 Dialog 当成外部内容拦截 pointer event。
+                // 因此这里先让 PopoverContent 留在当前 DOM 层级，保证日期选择器和搜索选择器在 Dialog 内可交互。
+                'z-50 rounded-md border border-[#e5e7eb] bg-white p-3 text-[#1a1a1a] shadow-lg outline-none',
+                className,
+            )}
+            sideOffset={sideOffset}
+            {...props}
+        />
     );
 }
