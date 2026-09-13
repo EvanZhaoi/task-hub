@@ -1,11 +1,15 @@
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { PaymentAccountOption } from '@/types/task';
+
+const MAX_VISIBLE_OPTIONS = 20;
+const SEARCH_DEBOUNCE_MS = 300;
 
 type PaymentAccountComboboxProps = {
     disabled?: boolean;
@@ -31,6 +35,20 @@ function optionMatches(option: PaymentAccountOption, keyword: string): boolean {
     return searchableText.includes(keyword);
 }
 
+function useDebouncedValue(value: string, delayMs: number): string {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        // 账号列表数据量可能很大，不能每按一个键就立即过滤完整列表。
+        // 这里延迟约 300ms，等用户暂停输入后再更新搜索关键字。
+        const timer = window.setTimeout(() => setDebouncedValue(value), delayMs);
+
+        return () => window.clearTimeout(timer);
+    }, [delayMs, value]);
+
+    return debouncedValue;
+}
+
 export function PaymentAccountCombobox({
     disabled = false,
     name,
@@ -41,12 +59,19 @@ export function PaymentAccountCombobox({
     const [open, setOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const selectedOption = options.find((option) => option.value === value);
-    const normalizedKeyword = normalizeKeyword(keyword);
+    const debouncedKeyword = useDebouncedValue(keyword, SEARCH_DEBOUNCE_MS);
+    const normalizedKeyword = normalizeKeyword(debouncedKeyword);
     const filteredOptions = useMemo(
-        () =>
-            normalizedKeyword.length === 0
-                ? options
-                : options.filter((option) => optionMatches(option, normalizedKeyword)),
+        () => {
+            // 默认只展示前 20 条，避免弹窗打开时一次性渲染几百/几千个账号节点。
+            if (normalizedKeyword.length === 0) {
+                return options.slice(0, MAX_VISIBLE_OPTIONS);
+            }
+
+            // 搜索时仍然只取前 20 个匹配项；数据源当前来自后端/Redis 一次性下发列表。
+            // 如果未来外部接口支持 name/code 后端查询，再把这里替换成远程搜索。
+            return options.filter((option) => optionMatches(option, normalizedKeyword)).slice(0, MAX_VISIBLE_OPTIONS);
+        },
         [normalizedKeyword, options],
     );
 
@@ -84,60 +109,66 @@ export function PaymentAccountCombobox({
                 </Button>
             </PopoverTrigger>
 
-            <PopoverContent className="z-[70] w-[var(--radix-popover-trigger-width)] p-0">
-                <div className="border-b border-[#e5e7eb] p-2">
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
-                        <Input
-                            // 搜索框只负责缩小候选范围，不直接修改表单提交值。
-                            autoFocus
-                            className="pl-9"
-                            onChange={(event) => setKeyword(event.target.value)}
-                            placeholder="搜索账号名称或 code"
-                            type="search"
-                            value={keyword}
-                        />
+            <PopoverPrimitive.Portal>
+                <PopoverPrimitive.Content
+                    align="start"
+                    className="z-[90] w-[var(--radix-popover-trigger-width)] rounded-md border border-[#e5e7eb] bg-white p-0 text-[#1a1a1a] shadow-lg outline-none"
+                    sideOffset={8}
+                >
+                    <div className="border-b border-[#e5e7eb] p-2">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
+                            <Input
+                                // 搜索框只负责缩小候选范围，不直接修改表单提交值。
+                                autoFocus
+                                className="pl-9"
+                                onChange={(event) => setKeyword(event.target.value)}
+                                placeholder="搜索账号名称或 code"
+                                type="search"
+                                value={keyword}
+                            />
+                        </div>
                     </div>
-                </div>
 
-                <div className="max-h-64 overflow-y-auto p-1">
-                    {filteredOptions.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-sm text-[#9ca3af]">没有匹配的付款账号</div>
-                    ) : (
-                        filteredOptions.map((option) => {
-                            const isSelected = option.value === value;
+                    <div className="max-h-72 overflow-y-auto p-1">
+                        {filteredOptions.length === 0 ? (
+                            <div className="px-3 py-6 text-center text-sm text-[#9ca3af]">没有匹配的付款账号</div>
+                        ) : (
+                            filteredOptions.map((option) => {
+                                const isSelected = option.value === value;
 
-                            return (
-                                <button
-                                    className={cn(
-                                        'flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f3ff]',
-                                        isSelected && 'bg-[#f5f3ff] text-[#5e6ad2]',
-                                    )}
-                                    key={option.value}
-                                    onClick={() => selectOption(option.value)}
-                                    type="button"
-                                >
-                                    <Check
+                                return (
+                                    <button
                                         className={cn(
-                                            'mt-0.5 size-4 shrink-0',
-                                            isSelected ? 'opacity-100' : 'opacity-0',
+                                            'flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f3ff]',
+                                            isSelected && 'bg-[#f5f3ff] text-[#5e6ad2]',
                                         )}
-                                    />
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate font-medium">
-                                            {option.accountName ?? option.label}
+                                        key={option.value}
+                                        onClick={() => selectOption(option.value)}
+                                        type="button"
+                                    >
+                                        <Check
+                                            className={cn(
+                                                'mt-0.5 size-4 shrink-0',
+                                                isSelected ? 'opacity-100' : 'opacity-0',
+                                            )}
+                                        />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate font-medium">
+                                                {option.accountName ?? option.label}
+                                            </span>
+                                            <span className="block truncate text-xs text-[#6e6e80]">
+                                                {option.value}
+                                                {option.departmentName ? ` · ${option.departmentName}` : ''}
+                                            </span>
                                         </span>
-                                        <span className="block truncate text-xs text-[#6e6e80]">
-                                            {option.value}
-                                            {option.departmentName ? ` · ${option.departmentName}` : ''}
-                                        </span>
-                                    </span>
-                                </button>
-                            );
-                        })
-                    )}
-                </div>
-            </PopoverContent>
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                </PopoverPrimitive.Content>
+            </PopoverPrimitive.Portal>
 
             {/* 隐藏字段保留表单字段名；最终提交给 Laravel 的仍然是 paymentAccountId。 */}
             {name ? <input name={name} type="hidden" value={value} /> : null}
