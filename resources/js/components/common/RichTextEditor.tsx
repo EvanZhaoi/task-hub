@@ -2,7 +2,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Bold, Italic, LinkIcon, List, ListOrdered } from 'lucide-react';
+import { LinkIcon, List, ListOrdered } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ function ToolbarButton({ active = false, disabled = false, label, onClick, child
         <Button
             aria-label={label}
             className={cn(
-                'size-8 border border-transparent bg-transparent px-0 text-[#6e6e80] shadow-none hover:bg-[#f4f4f5] hover:text-[#1f1f2e]',
+                'size-8 border border-transparent bg-transparent px-0 text-[#374151] shadow-none hover:bg-[#f3f4f6] hover:text-[#111827]',
                 active && 'bg-[#f5f3ff] text-[#5e6ad2] hover:bg-[#f5f3ff] hover:text-[#5e6ad2]',
             )}
             disabled={disabled}
@@ -131,7 +131,7 @@ export function RichTextEditor({
                     label="粗体"
                     onClick={() => editor?.chain().focus().toggleBold().run()}
                 >
-                    <Bold className="size-5" />
+                    <span className="text-[15px] font-bold leading-none">B</span>
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('italic')}
@@ -139,7 +139,7 @@ export function RichTextEditor({
                     label="斜体"
                     onClick={() => editor?.chain().focus().toggleItalic().run()}
                 >
-                    <Italic className="size-5" />
+                    <span className="text-[15px] font-medium italic leading-none">I</span>
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('bulletList')}
@@ -147,7 +147,7 @@ export function RichTextEditor({
                     label="无序列表"
                     onClick={() => editor?.chain().focus().toggleBulletList().run()}
                 >
-                    <List className="size-5" />
+                    <List className="size-5" strokeWidth={2.2} />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('orderedList')}
@@ -155,7 +155,7 @@ export function RichTextEditor({
                     label="有序列表"
                     onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                 >
-                    <ListOrdered className="size-5" />
+                    <ListOrdered className="size-5" strokeWidth={2.2} />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('link')}
@@ -163,7 +163,7 @@ export function RichTextEditor({
                     label="链接"
                     onClick={setLink}
                 >
-                    <LinkIcon className="size-5" />
+                    <LinkIcon className="size-5" strokeWidth={2.2} />
                 </ToolbarButton>
             </div>
 
