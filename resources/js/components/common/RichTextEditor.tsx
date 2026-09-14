@@ -131,7 +131,7 @@ export function RichTextEditor({
                     label="粗体"
                     onClick={() => editor?.chain().focus().toggleBold().run()}
                 >
-                    <Bold className="size-5" strokeWidth={2} />
+                    <Bold className="size-[22px]" strokeWidth={2.25} />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('italic')}
@@ -139,7 +139,7 @@ export function RichTextEditor({
                     label="斜体"
                     onClick={() => editor?.chain().focus().toggleItalic().run()}
                 >
-                    <Italic className="size-5" strokeWidth={2} />
+                    <Italic className="size-[22px]" strokeWidth={2.25} />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('bulletList')}
@@ -147,7 +147,7 @@ export function RichTextEditor({
                     label="无序列表"
                     onClick={() => editor?.chain().focus().toggleBulletList().run()}
                 >
-                    <List className="size-5" strokeWidth={2} />
+                    <List className="size-[22px]" strokeWidth={2.25} />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('orderedList')}
@@ -155,7 +155,7 @@ export function RichTextEditor({
                     label="有序列表"
                     onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                 >
-                    <ListOrdered className="size-5" strokeWidth={2} />
+                    <ListOrdered className="size-[22px]" strokeWidth={2.25} />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('link')}
@@ -163,7 +163,7 @@ export function RichTextEditor({
                     label="链接"
                     onClick={setLink}
                 >
-                    <Link2 className="size-5" strokeWidth={2} />
+                    <Link2 className="size-[22px]" strokeWidth={2.25} />
                 </ToolbarButton>
             </div>
 
