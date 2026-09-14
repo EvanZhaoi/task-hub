@@ -125,7 +125,7 @@ export default function TaskIndex({
                     <DialogTrigger asChild>
                         <Button type="button">发布任务</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl overflow-visible p-0">
+                    <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden p-0">
                         <DialogHeader className="mb-0 rounded-t-lg border-b border-[#e5e7eb] bg-[#fbfbfc] px-6 py-4">
                             <DialogTitle>发布任务</DialogTitle>
                             <DialogDescription>
@@ -133,8 +133,8 @@ export default function TaskIndex({
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form method="POST" onSubmit={submitCreateTask}>
-                            <div className="space-y-4 px-6 py-5">
+                        <form className="flex min-h-0 flex-1 flex-col" method="POST" onSubmit={submitCreateTask}>
+                            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
                                 <Field label="任务标题" message={form.errors.title} required>
                                     <Input
                                         autoFocus
