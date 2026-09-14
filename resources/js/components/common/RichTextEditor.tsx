@@ -2,7 +2,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { LinkIcon, List, ListOrdered } from 'lucide-react';
+import { LinkIcon } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -147,7 +147,7 @@ export function RichTextEditor({
                     label="无序列表"
                     onClick={() => editor?.chain().focus().toggleBulletList().run()}
                 >
-                    <List className="size-5" strokeWidth={2.2} />
+                    <span className="text-[15px] font-semibold leading-none tracking-tight">•≡</span>
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('orderedList')}
@@ -155,7 +155,7 @@ export function RichTextEditor({
                     label="有序列表"
                     onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                 >
-                    <ListOrdered className="size-5" strokeWidth={2.2} />
+                    <span className="text-[14px] font-semibold leading-none tracking-tight">1≡</span>
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('link')}
@@ -163,7 +163,7 @@ export function RichTextEditor({
                     label="链接"
                     onClick={setLink}
                 >
-                    <LinkIcon className="size-5" strokeWidth={2.2} />
+                    <LinkIcon className="size-[21px]" strokeWidth={2.35} />
                 </ToolbarButton>
             </div>
 
