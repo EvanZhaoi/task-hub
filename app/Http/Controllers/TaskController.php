@@ -6,17 +6,13 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Integrations\Payment\PaymentAccount;
 use App\Integrations\Payment\PaymentAccountClient;
 use App\Integrations\Payment\PaymentAccountException;
-use App\Integrations\Sso\SsoUser;
-use App\Models\AttachmentRef;
 use App\Models\Task;
-use App\Models\TaskEvent;
+use App\Services\CreateTaskService;
 use App\Services\CurrentUserService;
 use App\Services\RichTextSanitizer;
-use App\Services\SnowflakeId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -119,96 +115,21 @@ class TaskController extends Controller
     public function store(
         StoreTaskRequest $request,
         CurrentUserService $currentUser,
-        PaymentAccountClient $paymentAccounts,
-        RichTextSanitizer $richTextSanitizer,
-        SnowflakeId $ids,
+        CreateTaskService $createTask,
     ): RedirectResponse {
-        $validated = $request->validated();
-        $validated['description'] = $richTextSanitizer->clean($validated['description'] ?? null);
-        $user = $currentUser->user();
-        $employeeNo = $user->employeeNo();
-        $attachmentIds = $request->attachmentIds();
-
         try {
-            // 付款账号是外部主数据，前端只提交 ID；名称和部门快照必须由后端从外部账号列表中匹配。
-            // 外部查询放在事务外，避免数据库事务等待网络请求。
-            $paymentAccount = $paymentAccounts->fetchById($validated['paymentAccountId'], $currentUser->accessToken());
+            // Controller 只组织 HTTP 层输入，把完整发布流程交给 CreateTaskService。
+            $createTask->execute(
+                validated: $request->validated(),
+                attachmentIds: $request->attachmentIds(),
+                user: $currentUser->user(),
+                accessToken: $currentUser->accessToken(),
+            );
         } catch (PaymentAccountException $exception) {
             throw ValidationException::withMessages([
                 'paymentAccountId' => $exception->getMessage(),
             ]);
         }
-
-        DB::transaction(function () use ($attachmentIds, $employeeNo, $ids, $paymentAccount, $user, $validated): void {
-            $taskId = $ids->next();
-
-            // 当前发布入口只创建招标任务：发布后直接进入 OPEN，后续 DIRECT 指派单独做。
-            $task = Task::query()->create([
-                'id' => $taskId,
-                'title' => $validated['title'],
-                'description' => $validated['description'] ?? null,
-                'payment_account_id' => $paymentAccount->accountId(),
-                'payment_account_snapshot' => $this->paymentAccountSnapshot($paymentAccount),
-                'budget' => $validated['budget'],
-                'expected_delivery' => $validated['expectedDelivery'],
-                'bidding_deadline' => $validated['biddingDeadline'],
-                'status' => 'OPEN',
-                'assignment_type' => 'BIDDING',
-                'complexity' => $validated['complexity'],
-                'created_by' => $employeeNo,
-                'created_by_snapshot' => $this->createdBySnapshot($user),
-                'version' => 0,
-                'updated_by' => $employeeNo,
-            ]);
-
-            // TASK_CREATED 记录任务第一次进入系统时的快照。
-            TaskEvent::query()->create([
-                'id' => $ids->next(),
-                'task_id' => $task->id,
-                'event_type' => 'TASK_CREATED',
-                'operator_id' => $employeeNo,
-                'from_status' => null,
-                'to_status' => 'OPEN',
-                'event_data' => [
-                    'title' => $task->title,
-                    'budget' => $task->budget,
-                    'complexity' => $task->complexity,
-                    'assignmentType' => $task->assignment_type,
-                ],
-                'remark' => '发布者创建并发布任务',
-            ]);
-
-            // TASK_PUBLISHED 单独记录发布动作，后续如果支持草稿发布，可以复用同一事件类型。
-            TaskEvent::query()->create([
-                'id' => $ids->next(),
-                'task_id' => $task->id,
-                'event_type' => 'TASK_PUBLISHED',
-                'operator_id' => $employeeNo,
-                'from_status' => 'DRAFT',
-                'to_status' => 'OPEN',
-                'event_data' => [
-                    'biddingDeadline' => $task->bidding_deadline?->toISOString(),
-                    'attachmentCount' => count($attachmentIds),
-                ],
-                'remark' => '任务进入招标中',
-            ]);
-
-            if ($attachmentIds !== []) {
-                $now = now();
-
-                AttachmentRef::query()->insert(array_map(
-                    fn (string $attachmentId): array => [
-                        'id' => $ids->next(),
-                        'owner_type' => 'TASK',
-                        'owner_id' => $task->id,
-                        'attachment_id' => $attachmentId,
-                        'uploaded_by' => $employeeNo,
-                        'created_at' => $now,
-                    ],
-                    $attachmentIds,
-                ));
-            }
-        });
 
         return redirect()
             ->route('tasks.index')
@@ -411,35 +332,4 @@ class TaskController extends Controller
         return '¥'.number_format((float) $amount, 2);
     }
 
-    /**
-     * 生成任务发布者历史快照。
-     *
-     * 快照只用于历史展示和审计，不能用于权限判断。
-     * 权限判断仍应基于实时当前用户和后端角色规则。
-     */
-    private function createdBySnapshot(SsoUser $user): array
-    {
-        // 快照用于历史展示和审计；权限判断仍使用实时外部人员接口。
-        return array_filter([
-            'userId' => $user->employeeNo(),
-            'employeeNo' => $user->employeeNo(),
-            'displayName' => $user->displayName(),
-            'departmentId' => $user->departmentId(),
-            'departmentName' => $user->departmentName(),
-            // avatarId 只保存头像 ID，不拼头像 URL；未来头像服务规则确认后再统一生成完整地址。
-            'avatarId' => $user->avatarId(),
-        ], fn (mixed $value): bool => $value !== null && $value !== '');
-    }
-
-    /**
-     * 生成付款账号历史快照。
-     *
-     * 任务保存的是发布当时选择的付款账号展示信息，
-     * 后续外部账号名称变化不会影响已有任务的历史展示。
-     */
-    private function paymentAccountSnapshot(PaymentAccount $paymentAccount): array
-    {
-        // 保留该方法用于表达业务语义：Task 保存的是付款账号历史快照，不是实时主数据。
-        return $paymentAccount->toSnapshot();
-    }
 }
