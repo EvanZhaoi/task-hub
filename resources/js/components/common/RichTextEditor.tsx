@@ -147,7 +147,7 @@ export function RichTextEditor({
                     label="无序列表"
                     onClick={() => editor?.chain().focus().toggleBulletList().run()}
                 >
-                    <span className="text-[15px] font-semibold leading-none tracking-tight">•≡</span>
+                    <span className="text-[18px] font-bold leading-none tracking-tight">•≡</span>
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('orderedList')}
@@ -155,7 +155,7 @@ export function RichTextEditor({
                     label="有序列表"
                     onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                 >
-                    <span className="text-[14px] font-semibold leading-none tracking-tight">1≡</span>
+                    <span className="text-[18px] font-bold leading-none tracking-tight">1≡</span>
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('link')}
@@ -163,7 +163,7 @@ export function RichTextEditor({
                     label="链接"
                     onClick={setLink}
                 >
-                    <LinkIcon className="size-[21px]" strokeWidth={2.35} />
+                    <LinkIcon className="size-[24px]" strokeWidth={2.6} />
                 </ToolbarButton>
             </div>
 
