@@ -2,22 +2,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import {
-    Bold,
-    Code,
-    Code2,
-    Heading2,
-    Heading3,
-    Italic,
-    LinkIcon,
-    List,
-    ListOrdered,
-    Quote,
-    Redo2,
-    Strikethrough,
-    Undo2,
-    Unlink,
-} from 'lucide-react';
+import { Bold, Italic, LinkIcon, List, ListOrdered } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -43,12 +28,15 @@ function ToolbarButton({ active = false, disabled = false, label, onClick, child
     return (
         <Button
             aria-label={label}
-            className={cn('size-8 px-0', active && 'border-[#c7d2fe] bg-[#f5f3ff] text-[#5e6ad2]')}
+            className={cn(
+                'size-8 border border-transparent bg-transparent px-0 text-[#6e6e80] shadow-none hover:bg-[#f4f4f5] hover:text-[#1f1f2e]',
+                active && 'bg-[#f5f3ff] text-[#5e6ad2] hover:bg-[#f5f3ff] hover:text-[#5e6ad2]',
+            )}
             disabled={disabled}
             onClick={onClick}
             title={label}
             type="button"
-            variant="outline"
+            variant="ghost"
         >
             {children}
         </Button>
@@ -67,7 +55,8 @@ export function RichTextEditor({
         editable: !disabled,
         extensions: [
             StarterKit.configure({
-                // 第一版只开放 H2/H3，避免任务描述里出现过大的 H1。
+                // 继续保留 StarterKit 的默认能力，后续需要恢复标题、引用、代码块时无需重做编辑器结构。
+                // 第一版发布表单只在工具栏暴露最常用的 5 个按钮，降低填写任务时的视觉负担。
                 heading: {
                     levels: [2, 3],
                 },
@@ -88,7 +77,7 @@ export function RichTextEditor({
         ],
         editorProps: {
             attributes: {
-                class: cn('min-h-36 rounded-b-md px-3 py-2 text-sm leading-6 outline-none', 'prose-taskhub max-w-none'),
+                class: cn('min-h-28 rounded-b-md px-3 py-2 text-sm leading-6 outline-none', 'prose-taskhub max-w-none'),
             },
         },
         immediatelyRender: false,
@@ -133,12 +122,9 @@ export function RichTextEditor({
         editor.chain().focus().extendMarkRange('link').setLink({ href: nextUrl.trim() }).run();
     }
 
-    const canUndo = editor?.can().undo() ?? false;
-    const canRedo = editor?.can().redo() ?? false;
-
     return (
         <div className="rounded-md border border-[#d1d5db] bg-white focus-within:border-[#5e6ad2] focus-within:ring-2 focus-within:ring-[#5e6ad2]/15">
-            <div className="flex flex-wrap gap-1 border-b border-[#e5e7eb] bg-[#fafafa] p-2">
+            <div className="flex flex-wrap gap-0.5 border-b border-[#eef0f3] bg-[#fbfbfc] px-2 py-1">
                 <ToolbarButton
                     active={editor?.isActive('bold')}
                     disabled={disabled || !editor}
@@ -154,30 +140,6 @@ export function RichTextEditor({
                     onClick={() => editor?.chain().focus().toggleItalic().run()}
                 >
                     <Italic className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    active={editor?.isActive('strike')}
-                    disabled={disabled || !editor}
-                    label="删除线"
-                    onClick={() => editor?.chain().focus().toggleStrike().run()}
-                >
-                    <Strikethrough className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    active={editor?.isActive('heading', { level: 2 })}
-                    disabled={disabled || !editor}
-                    label="H2 标题"
-                    onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                >
-                    <Heading2 className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    active={editor?.isActive('heading', { level: 3 })}
-                    disabled={disabled || !editor}
-                    label="H3 标题"
-                    onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-                >
-                    <Heading3 className="size-4" />
                 </ToolbarButton>
                 <ToolbarButton
                     active={editor?.isActive('bulletList')}
@@ -196,57 +158,12 @@ export function RichTextEditor({
                     <ListOrdered className="size-4" />
                 </ToolbarButton>
                 <ToolbarButton
-                    active={editor?.isActive('blockquote')}
-                    disabled={disabled || !editor}
-                    label="引用"
-                    onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-                >
-                    <Quote className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    active={editor?.isActive('code')}
-                    disabled={disabled || !editor}
-                    label="行内代码"
-                    onClick={() => editor?.chain().focus().toggleCode().run()}
-                >
-                    <Code className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    active={editor?.isActive('codeBlock')}
-                    disabled={disabled || !editor}
-                    label="代码块"
-                    onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-                >
-                    <Code2 className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
                     active={editor?.isActive('link')}
                     disabled={disabled || !editor}
                     label="链接"
                     onClick={setLink}
                 >
                     <LinkIcon className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    disabled={disabled || !editor?.isActive('link')}
-                    label="取消链接"
-                    onClick={() => editor?.chain().focus().extendMarkRange('link').unsetLink().run()}
-                >
-                    <Unlink className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    disabled={disabled || !canUndo}
-                    label="撤销"
-                    onClick={() => editor?.chain().focus().undo().run()}
-                >
-                    <Undo2 className="size-4" />
-                </ToolbarButton>
-                <ToolbarButton
-                    disabled={disabled || !canRedo}
-                    label="重做"
-                    onClick={() => editor?.chain().focus().redo().run()}
-                >
-                    <Redo2 className="size-4" />
                 </ToolbarButton>
             </div>
 
