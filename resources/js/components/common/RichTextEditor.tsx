@@ -77,7 +77,10 @@ export function RichTextEditor({
         ],
         editorProps: {
             attributes: {
-                class: cn('min-h-28 rounded-b-md px-3 py-2 text-sm leading-6 outline-none', 'prose-taskhub max-w-none'),
+                class: cn(
+                    'min-h-40 resize-y overflow-y-auto rounded-b-md px-3 py-2 text-sm leading-6 outline-none',
+                    'prose-taskhub max-w-none',
+                ),
             },
         },
         immediatelyRender: false,
@@ -123,8 +126,8 @@ export function RichTextEditor({
     }
 
     return (
-        <div className="rounded-md border border-[#d1d5db] bg-white focus-within:border-[#5e6ad2] focus-within:ring-2 focus-within:ring-[#5e6ad2]/15">
-            <div className="flex flex-wrap items-center gap-1 border-b border-[#eef0f3] bg-[#fbfbfc] px-2 py-1.5">
+        <div className="rounded-md border border-[#cbd5e1] bg-white shadow-sm focus-within:border-[#5e6ad2] focus-within:ring-2 focus-within:ring-[#5e6ad2]/15">
+            <div className="flex flex-wrap items-center gap-1 rounded-t-md border-b border-[#e5e7eb] bg-[#f8fafc] px-2 py-1.5">
                 <ToolbarButton
                     active={editor?.isActive('bold')}
                     disabled={disabled || !editor}

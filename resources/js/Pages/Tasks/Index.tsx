@@ -125,110 +125,112 @@ export default function TaskIndex({
                     <DialogTrigger asChild>
                         <Button type="button">发布任务</Button>
                     </DialogTrigger>
-                    <DialogContent className="overflow-visible">
-                        <DialogHeader>
+                    <DialogContent className="max-w-3xl overflow-visible p-0">
+                        <DialogHeader className="mb-0 rounded-t-lg border-b border-[#e5e7eb] bg-[#fbfbfc] px-6 py-4">
                             <DialogTitle>发布任务</DialogTitle>
                             <DialogDescription>
                                 当前阶段发布的是招标任务，发布后进入招标中。附件只填写外部上传接口返回的附件 ID。
                             </DialogDescription>
                         </DialogHeader>
 
-                        <form className="space-y-4" method="POST" onSubmit={submitCreateTask}>
-                            <Field label="任务标题" message={form.errors.title} required>
-                                <Input
-                                    autoFocus
-                                    className="w-full"
-                                    name="title"
-                                    onChange={(event) => form.setData('title', event.target.value)}
-                                    placeholder="例如：用户登录页 UI 重构"
-                                    value={form.data.title}
-                                />
-                            </Field>
-
-                            <Field label="任务描述" message={form.errors.description}>
-                                <RichTextEditor
-                                    disabled={form.processing}
-                                    name="description"
-                                    onChange={(value) => form.setData('description', value)}
-                                    placeholder="说明背景、目标、验收标准和注意事项"
-                                    value={form.data.description}
-                                />
-                            </Field>
-
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <Field label="预算金额" message={form.errors.budget} required>
+                        <form method="POST" onSubmit={submitCreateTask}>
+                            <div className="space-y-4 px-6 py-5">
+                                <Field label="任务标题" message={form.errors.title} required>
                                     <Input
+                                        autoFocus
                                         className="w-full"
-                                        min="0"
-                                        name="budget"
-                                        onChange={(event) => form.setData('budget', event.target.value)}
-                                        placeholder="3000.00"
-                                        step="0.01"
-                                        type="number"
-                                        value={form.data.budget}
+                                        name="title"
+                                        onChange={(event) => form.setData('title', event.target.value)}
+                                        placeholder="例如：用户登录页 UI 重构"
+                                        value={form.data.title}
                                     />
                                 </Field>
 
-                                <Field label="复杂度" message={form.errors.complexity} required>
-                                    <NativeSelect
-                                        className="w-full min-w-0"
-                                        name="complexity"
-                                        onChange={(event) =>
-                                            form.setData('complexity', event.target.value as TaskComplexity)
-                                        }
-                                        value={form.data.complexity}
-                                    >
-                                        <option value="LOW">简单</option>
-                                        <option value="MEDIUM">中等</option>
-                                        <option value="HIGH">复杂</option>
-                                    </NativeSelect>
+                                <Field label="任务描述" message={form.errors.description}>
+                                    <RichTextEditor
+                                        disabled={form.processing}
+                                        name="description"
+                                        onChange={(value) => form.setData('description', value)}
+                                        placeholder="说明背景、目标、验收标准和注意事项"
+                                        value={form.data.description}
+                                    />
+                                </Field>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="预算金额" message={form.errors.budget} required>
+                                        <Input
+                                            className="w-full"
+                                            min="0"
+                                            name="budget"
+                                            onChange={(event) => form.setData('budget', event.target.value)}
+                                            placeholder="3000.00"
+                                            step="0.01"
+                                            type="number"
+                                            value={form.data.budget}
+                                        />
+                                    </Field>
+
+                                    <Field label="复杂度" message={form.errors.complexity} required>
+                                        <NativeSelect
+                                            className="w-full min-w-0"
+                                            name="complexity"
+                                            onChange={(event) =>
+                                                form.setData('complexity', event.target.value as TaskComplexity)
+                                            }
+                                            value={form.data.complexity}
+                                        >
+                                            <option value="LOW">简单</option>
+                                            <option value="MEDIUM">中等</option>
+                                            <option value="HIGH">复杂</option>
+                                        </NativeSelect>
+                                    </Field>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="期望交付日期" message={form.errors.expectedDelivery} required>
+                                        <DatePicker
+                                            name="expectedDelivery"
+                                            onChange={(value) => form.setData('expectedDelivery', value)}
+                                            value={form.data.expectedDelivery}
+                                        />
+                                    </Field>
+
+                                    <Field label="招标截止时间" message={form.errors.biddingDeadline} required>
+                                        <DateTimePicker
+                                            name="biddingDeadline"
+                                            onChange={(value) => form.setData('biddingDeadline', value)}
+                                            value={form.data.biddingDeadline}
+                                        />
+                                    </Field>
+                                </div>
+
+                                <Field label="付款账号" message={form.errors.paymentAccountId} required>
+                                    <PaymentAccountCombobox
+                                        disabled={paymentAccountOptions.length === 0}
+                                        name="paymentAccountId"
+                                        onChange={(value) => form.setData('paymentAccountId', value)}
+                                        options={paymentAccountOptions}
+                                        value={form.data.paymentAccountId}
+                                    />
+                                    {paymentAccountOptions.length === 0 ? (
+                                        <span className="block text-xs leading-5 text-amber-700">
+                                            付款账号接口未配置或暂时不可用，请确认外部接口后再发布任务。
+                                        </span>
+                                    ) : null}
+                                </Field>
+
+                                <Field label="附件 ID" message={form.errors.attachmentIds}>
+                                    <Textarea
+                                        className="w-full"
+                                        name="attachmentIds"
+                                        onChange={(event) => form.setData('attachmentIds', event.target.value)}
+                                        placeholder="多个附件 ID 可用换行、逗号或空格分隔"
+                                        value={form.data.attachmentIds}
+                                    />
                                 </Field>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <Field label="期望交付日期" message={form.errors.expectedDelivery} required>
-                                    <DatePicker
-                                        name="expectedDelivery"
-                                        onChange={(value) => form.setData('expectedDelivery', value)}
-                                        value={form.data.expectedDelivery}
-                                    />
-                                </Field>
-
-                                <Field label="招标截止时间" message={form.errors.biddingDeadline} required>
-                                    <DateTimePicker
-                                        name="biddingDeadline"
-                                        onChange={(value) => form.setData('biddingDeadline', value)}
-                                        value={form.data.biddingDeadline}
-                                    />
-                                </Field>
-                            </div>
-
-                            <Field label="付款账号" message={form.errors.paymentAccountId} required>
-                                <PaymentAccountCombobox
-                                    disabled={paymentAccountOptions.length === 0}
-                                    name="paymentAccountId"
-                                    onChange={(value) => form.setData('paymentAccountId', value)}
-                                    options={paymentAccountOptions}
-                                    value={form.data.paymentAccountId}
-                                />
-                                {paymentAccountOptions.length === 0 ? (
-                                    <span className="block text-xs leading-5 text-amber-700">
-                                        付款账号接口未配置或暂时不可用，请确认外部接口后再发布任务。
-                                    </span>
-                                ) : null}
-                            </Field>
-
-                            <Field label="附件 ID" message={form.errors.attachmentIds}>
-                                <Textarea
-                                    className="w-full"
-                                    name="attachmentIds"
-                                    onChange={(event) => form.setData('attachmentIds', event.target.value)}
-                                    placeholder="多个附件 ID 可用换行、逗号或空格分隔"
-                                    value={form.data.attachmentIds}
-                                />
-                            </Field>
-
-                            <DialogFooter>
+                            <DialogFooter className="mt-0 rounded-b-lg border-t border-[#e5e7eb] bg-[#fbfbfc] px-6 py-4">
                                 <DialogClose asChild>
                                     <Button disabled={form.processing} type="button" variant="outline">
                                         取消
