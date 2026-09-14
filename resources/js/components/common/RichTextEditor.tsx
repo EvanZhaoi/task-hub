@@ -2,7 +2,6 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { LinkIcon } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -163,7 +162,7 @@ export function RichTextEditor({
                     label="链接"
                     onClick={setLink}
                 >
-                    <LinkIcon className="size-[24px]" strokeWidth={2.6} />
+                    <span className="text-[18px] font-bold leading-none tracking-tight">🔗</span>
                 </ToolbarButton>
             </div>
 
