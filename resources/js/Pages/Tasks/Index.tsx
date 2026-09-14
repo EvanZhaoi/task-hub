@@ -4,6 +4,8 @@ import AppLayout from '@/Layouts/AppLayout';
 import { DatePicker } from '@/components/common/DatePicker';
 import { DateTimePicker } from '@/components/common/DateTimePicker';
 import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombobox';
+import { RichTextEditor } from '@/components/common/RichTextEditor';
+import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -144,10 +146,10 @@ export default function TaskIndex({
                             </Field>
 
                             <Field label="任务描述" message={form.errors.description}>
-                                <Textarea
-                                    className="w-full"
+                                <RichTextEditor
+                                    disabled={form.processing}
                                     name="description"
-                                    onChange={(event) => form.setData('description', event.target.value)}
+                                    onChange={(value) => form.setData('description', value)}
                                     placeholder="说明背景、目标、验收标准和注意事项"
                                     value={form.data.description}
                                 />
@@ -354,9 +356,7 @@ export default function TaskIndex({
                                                 {complexityLabels[task.complexity]}
                                             </Badge>
                                         </div>
-                                        <p className="mt-2 max-w-5xl text-sm leading-6 text-[#6e6e80]">
-                                            {task.description || '暂无描述'}
-                                        </p>
+                                        <RichTextViewer className="mt-2 max-h-24 max-w-5xl overflow-hidden" html={task.description} />
                                     </div>
                                     <div className="text-right">
                                         <div className="text-base font-semibold">{task.amountLabel}</div>

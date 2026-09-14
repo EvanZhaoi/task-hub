@@ -11,13 +11,13 @@ use App\Models\AttachmentRef;
 use App\Models\Task;
 use App\Models\TaskEvent;
 use App\Services\CurrentUserService;
+use App\Services\RichTextSanitizer;
 use App\Services\SnowflakeId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -46,6 +46,7 @@ class TaskController extends Controller
         Request $request,
         CurrentUserService $currentUser,
         PaymentAccountClient $paymentAccounts,
+        RichTextSanitizer $richTextSanitizer,
     ): Response {
         // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
         $filters = $this->filters($request);
@@ -84,7 +85,7 @@ class TaskController extends Controller
             ->withQueryString();
 
         // through() 只转换当前页数据，不改变分页结构。
-        $tasks = $paginator->through(fn (Task $task): array => $this->taskItem($task));
+        $tasks = $paginator->through(fn (Task $task): array => $this->taskItem($task, $richTextSanitizer));
 
         return Inertia::render('Tasks/Index', [
             'filters' => $filters,
@@ -119,9 +120,11 @@ class TaskController extends Controller
         StoreTaskRequest $request,
         CurrentUserService $currentUser,
         PaymentAccountClient $paymentAccounts,
+        RichTextSanitizer $richTextSanitizer,
         SnowflakeId $ids,
     ): RedirectResponse {
         $validated = $request->validated();
+        $validated['description'] = $richTextSanitizer->clean($validated['description'] ?? null);
         $user = $currentUser->user();
         $employeeNo = $user->employeeNo();
         $attachmentIds = $request->attachmentIds();
@@ -278,7 +281,7 @@ class TaskController extends Controller
      * 前端不直接消费 Eloquent Model，而是接收已经格式化好的展示字段，
      * 这样可以避免前端重复处理 BIGINT、日期、金额和 JSON 快照。
      */
-    private function taskItem(Task $task): array
+    private function taskItem(Task $task, RichTextSanitizer $richTextSanitizer): array
     {
         // 快照字段可能为空，统一转成数组，避免前端展示时反复判断 null。
         $createdBySnapshot = $task->created_by_snapshot ?? [];
@@ -288,8 +291,8 @@ class TaskController extends Controller
             // JS number 对大整数不安全，前端统一把业务 ID 当字符串展示和传递。
             'id' => (string) $task->id,
             'title' => $task->title,
-            // 列表页只展示短描述，详情页再展示完整描述。
-            'description' => Str::limit(strip_tags((string) $task->description), 120),
+            // 新数据会在保存前清洗；这里再清洗一次是为了兼容历史数据，避免旧脏数据进入 Viewer。
+            'description' => $richTextSanitizer->clean($task->description),
             'amountLabel' => $this->amountLabel($task),
             'expectedDelivery' => $task->expected_delivery?->toDateString(),
             'finalDelivery' => $task->final_delivery?->toDateString(),

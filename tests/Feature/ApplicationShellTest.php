@@ -168,7 +168,7 @@ test('authenticated users can publish a bidding task with attachment ids', funct
     ])
         ->post('/tasks', [
             'title' => '报表导出优化',
-            'description' => '优化现有报表导出速度，并补充异常提示。',
+            'description' => '<h2>优化目标</h2><p onclick="alert(1)">保留<strong>重点</strong>说明</p><script>alert(1)</script><a href="javascript:alert(1)">危险链接</a><a href="https://example.com">安全链接</a>',
             'budget' => '3000.00',
             'expectedDelivery' => now()->addDays(7)->toDateString(),
             'biddingDeadline' => now()->addDay()->format('Y-m-d\TH:i'),
@@ -185,6 +185,16 @@ test('authenticated users can publish a bidding task with attachment ids', funct
         ->and($task->status)->toBe('OPEN')
         ->and($task->assignment_type)->toBe('BIDDING')
         ->and($task->created_by)->toBe('E10002');
+
+    expect($task->description)
+        // 富文本允许的标签会保留，用于前端 RichTextViewer 展示。
+        ->toContain('<h2>优化目标</h2>')
+        ->toContain('<strong>重点</strong>')
+        ->toContain('href="https://example.com"')
+        // 危险标签、事件属性和 javascript: URL 必须在后端入库前被清理。
+        ->not->toContain('<script')
+        ->not->toContain('onclick')
+        ->not->toContain('javascript:');
 
     expect(json_decode($task->payment_account_snapshot, true, flags: JSON_THROW_ON_ERROR))
         ->toMatchArray([
