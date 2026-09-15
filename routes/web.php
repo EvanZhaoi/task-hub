@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\TaskController;
 use App\Http\Middleware\EnsureSsoAuthenticated;
@@ -27,4 +28,6 @@ Route::middleware(EnsureSsoAuthenticated::class)->group(function (): void {
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
     // 发布任务在任务大厅模态框内提交，不单独创建 /tasks/create 页面。
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    // 附件先上传到 TaskHub 后端，再由后端携带当前登录 accessToken 转传到总部文件服务。
+    Route::post('/attachments/upload', [AttachmentController::class, 'upload'])->name('attachments.upload');
 });

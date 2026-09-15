@@ -1,5 +1,7 @@
 <?php
 
+use App\Integrations\FileOperation\FileUploadClient;
+use App\Integrations\FileOperation\UploadedFileRef;
 use App\Integrations\Payment\PaymentAccount;
 use App\Integrations\Payment\PaymentAccountClient;
 use App\Integrations\Personnel\PersonnelClient;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Http\UploadedFile;
 
 test('the inertia application shell responds successfully', function (): void {
     // Feature Test 不需要真实加载 Vite 资源；withoutVite 可以避免测试依赖前端构建产物。
@@ -216,6 +219,81 @@ test('authenticated users can publish a bidding task with attachment ids', funct
 
     expect(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
         ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
+});
+
+test('authenticated users can upload task attachment through taskhub backend', function (): void {
+    $this->app->instance(FileUploadClient::class, new class extends FileUploadClient
+    {
+        /**
+         * 模拟总部文件上传接口。
+         *
+         * 该测试只验证 TaskHub 后端会用当前 Session 中的动态 accessToken 调用上传 Client。
+         */
+        public function upload(UploadedFile $file, string $accessToken): UploadedFileRef
+        {
+            expect($file->getClientOriginalName())->toBe('需求说明.pdf')
+                ->and($accessToken)->toBe('token-upload');
+
+            return new UploadedFileRef(
+                id: 'ATT-UPLOAD-001',
+                name: $file->getClientOriginalName(),
+            );
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10002',
+            'displayName' => '李雷',
+        ],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-upload',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->postJson('/attachments/upload', [
+            'file' => UploadedFile::fake()->create('需求说明.pdf', 128, 'application/pdf'),
+        ])
+        ->assertOk()
+        ->assertJsonPath('file.id', 'ATT-UPLOAD-001')
+        ->assertJsonPath('file.name', '需求说明.pdf');
+});
+
+test('file upload client sends multipart request and reads data id', function (): void {
+    config([
+        'file_operation.base_url' => 'https://files.example.test',
+        'file_operation.upload_path' => '/file-operation/file/upload',
+        'file_operation.service_key' => 'TASKHUB',
+        'file_operation.timeout' => 10,
+        'file_operation.verify_ssl' => false,
+    ]);
+
+    Http::fake([
+        'https://files.example.test/file-operation/file/upload' => Http::response([
+            'code' => '',
+            'data' => [
+                // 总部上传接口确认使用 data.id，不能读取 fileId。
+                'id' => 'ATT-REMOTE-001',
+            ],
+            'msg' => '',
+            'timestamp' => 0,
+        ]),
+    ]);
+
+    $uploadedFile = app(FileUploadClient::class)->upload(
+        UploadedFile::fake()->create('原型图.png', 64, 'image/png'),
+        'token-file',
+    );
+
+    expect($uploadedFile->id())->toBe('ATT-REMOTE-001')
+        ->and($uploadedFile->name())->toBe('原型图.png');
+
+    Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+        && $request->url() === 'https://files.example.test/file-operation/file/upload'
+        && ($request->header('Authorization')[0] ?? '') === 'bearer token-file'
+        && collect($request->data())->contains(fn (array $part): bool => ($part['name'] ?? null) === 'serviceKey'
+            && ($part['contents'] ?? null) === 'TASKHUB')
+        && $request->hasFile('file', filename: '原型图.png'));
 });
 
 test('payment account client finds account snapshot from external account list', function (): void {

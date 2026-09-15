@@ -19,6 +19,13 @@ export type PaymentAccountOption = SelectOption & {
     departmentName?: string | null;
 };
 
+export type UploadedTaskAttachment = {
+    // id 是总部上传接口返回的 data.id，发布任务时写入 attachmentIds。
+    id: string;
+    // name 是浏览器选择文件时的原始文件名，只用于发布任务弹窗内展示。
+    name: string;
+};
+
 export type TaskListItem = {
     // 后端把 BIGINT ID 转成 string，避免 JavaScript number 精度风险。
     id: string;

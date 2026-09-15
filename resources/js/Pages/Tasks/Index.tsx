@@ -6,6 +6,7 @@ import { DateTimePicker } from '@/components/common/DateTimePicker';
 import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombobox';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
+import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,10 +22,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { SharedPageProps } from '@/types/page';
-import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus } from '@/types/task';
+import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus, UploadedTaskAttachment } from '@/types/task';
 import { urlWithQuery } from '@/utils/url';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 
@@ -94,6 +94,7 @@ export default function TaskIndex({
 }: TaskIndexProps) {
     const { flash } = usePage<SharedPageProps>().props;
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [uploadedAttachments, setUploadedAttachments] = useState<UploadedTaskAttachment[]>([]);
     const form = useForm<TaskCreateForm>({
         title: '',
         description: '',
@@ -105,6 +106,22 @@ export default function TaskIndex({
         attachmentIds: '',
     });
 
+    function changeCreateOpen(nextOpen: boolean): void {
+        setIsCreateOpen(nextOpen);
+
+        if (!nextOpen && !form.processing) {
+            // 用户主动关闭弹窗时清空本次表单状态；已经上传到总部的文件不做远程删除。
+            form.reset();
+            setUploadedAttachments([]);
+        }
+    }
+
+    function changeUploadedAttachments(files: UploadedTaskAttachment[]): void {
+        setUploadedAttachments(files);
+        // 后端 StoreTaskRequest 继续接收现有 attachmentIds 字段，避免改发布任务接口结构。
+        form.setData('attachmentIds', files.map((file) => file.id).join('\n'));
+    }
+
     function submitCreateTask(event: FormEvent<HTMLFormElement>): void {
         event.preventDefault();
 
@@ -113,6 +130,7 @@ export default function TaskIndex({
             onSuccess: () => {
                 // 发布成功后关闭弹窗并清空表单，任务列表由 Inertia 自动刷新。
                 form.reset();
+                setUploadedAttachments([]);
                 setIsCreateOpen(false);
             },
         });
@@ -121,7 +139,7 @@ export default function TaskIndex({
     return (
         <AppLayout
             actions={
-                <Dialog onOpenChange={setIsCreateOpen} open={isCreateOpen}>
+                <Dialog onOpenChange={changeCreateOpen} open={isCreateOpen}>
                     <DialogTrigger asChild>
                         <Button type="button">发布任务</Button>
                     </DialogTrigger>
@@ -129,7 +147,7 @@ export default function TaskIndex({
                         <DialogHeader className="mb-0 rounded-t-lg border-b border-[#e5e7eb] bg-[#fbfbfc] px-6 py-4">
                             <DialogTitle>发布任务</DialogTitle>
                             <DialogDescription>
-                                当前阶段发布的是招标任务，发布后进入招标中。附件只填写外部上传接口返回的附件 ID。
+                                当前阶段发布的是招标任务，发布后进入招标中。附件选择文件后会立即上传到总部文件服务。
                             </DialogDescription>
                         </DialogHeader>
 
@@ -219,13 +237,11 @@ export default function TaskIndex({
                                     ) : null}
                                 </Field>
 
-                                <Field label="附件 ID" message={form.errors.attachmentIds}>
-                                    <Textarea
-                                        className="w-full"
-                                        name="attachmentIds"
-                                        onChange={(event) => form.setData('attachmentIds', event.target.value)}
-                                        placeholder="多个附件 ID 可用换行、逗号或空格分隔"
-                                        value={form.data.attachmentIds}
+                                <Field label="附件" message={form.errors.attachmentIds}>
+                                    <TaskAttachmentUploader
+                                        disabled={form.processing}
+                                        onChange={changeUploadedAttachments}
+                                        value={uploadedAttachments}
                                     />
                                 </Field>
                             </div>
