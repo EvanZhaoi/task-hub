@@ -45,30 +45,50 @@ class StoreTaskRequest extends FormRequest
             'complexity' => ['required', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
             // 付款账号来自外部系统；前端只提交 ID，名称和部门由后端调用外部接口获取。
             'paymentAccountId' => ['required', 'string', 'max:64'],
-            // 附件已经由外部上传接口生成 ID，这里只允许输入多个外部附件 ID。
-            // 前端用换行或逗号分隔；Controller 会解析成数组后写 attachment_ref。
-            'attachmentIds' => ['nullable', 'string', 'max:4000'],
+            // 附件已经由外部上传接口生成 ID 和名称。
+            // 前端提交结构为 attachments: [{ id, name }]，后端只保存必要字段，不保存总部完整响应。
+            'attachments' => ['nullable', 'array', 'max:20'],
+            'attachments.*.id' => ['required', 'string', 'max:128'],
+            'attachments.*.name' => ['required', 'string', 'max:255'],
         ];
     }
 
     /**
-     * 解析表单中输入的多个外部附件 ID。
+     * 解析发布任务表单中的附件引用。
      *
-     * 用户可以用换行、空格、英文逗号或中文逗号分隔附件 ID。
-     * 方法会去掉空值并去重，避免同一附件重复写入 attachment_ref。
+     * 前端选择文件后会先上传总部文件服务，再把总部返回的 id/name 放到 attachments。
+     * 方法按 id 去重，避免同一附件重复写入 attachment_ref，同时保留第一次出现的文件名。
      *
-     * @return list<string>
+     * @return list<array{id: string, name: string}>
      */
-    public function attachmentIds(): array
+    public function attachments(): array
     {
-        // 允许用户粘贴逗号、中文逗号、空格或换行分隔的多个附件 ID。
-        // array_unique 防止同一个附件 ID 重复关联到同一个任务。
-        $raw = (string) $this->validated('attachmentIds', '');
-        $items = preg_split('/[\s,，]+/u', $raw) ?: [];
+        $attachments = $this->validated('attachments', []);
 
-        return array_values(array_unique(array_filter(
-            array_map('trim', $items),
-            fn (string $value): bool => $value !== '',
-        )));
+        if (! is_array($attachments)) {
+            return [];
+        }
+
+        $uniqueAttachments = [];
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+
+            $id = trim((string) ($attachment['id'] ?? ''));
+            $name = trim((string) ($attachment['name'] ?? ''));
+
+            if ($id === '' || $name === '' || array_key_exists($id, $uniqueAttachments)) {
+                continue;
+            }
+
+            $uniqueAttachments[$id] = [
+                'id' => $id,
+                'name' => $name,
+            ];
+        }
+
+        return array_values($uniqueAttachments);
     }
 }

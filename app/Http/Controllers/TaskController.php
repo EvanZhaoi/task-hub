@@ -121,7 +121,7 @@ class TaskController extends Controller
             // Controller 只组织 HTTP 层输入，把完整发布流程交给 CreateTaskService。
             $createTask->execute(
                 validated: $request->validated(),
-                attachmentIds: $request->attachmentIds(),
+                attachments: $request->attachments(),
                 user: $currentUser->user(),
                 accessToken: $currentUser->accessToken(),
             );

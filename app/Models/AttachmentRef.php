@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * 附件引用模型。
  *
  * TaskHub 不保存真实文件内容，真实上传/下载由外部文件服务负责。
- * 本表只保存 attachment_id，并通过 owner_type + owner_id 挂到任务、投标、交付、变更申请等业务对象上。
+ * 本表只保存 attachment_id 和 attachment_name，并通过 owner_type + owner_id 挂到任务、投标、交付、变更申请等业务对象上。
  */
 class AttachmentRef extends Model
 {
@@ -31,6 +31,7 @@ class AttachmentRef extends Model
         'owner_type',
         'owner_id',
         'attachment_id',
+        'attachment_name',
         'uploaded_by',
     ];
 

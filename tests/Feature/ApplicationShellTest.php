@@ -131,7 +131,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1);
 });
 
-test('authenticated users can publish a bidding task with attachment ids', function (): void {
+test('authenticated users can publish a bidding task with attachment id and name', function (): void {
     $this->withoutVite();
     createTaskHallTables();
 
@@ -177,7 +177,12 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             'biddingDeadline' => now()->addDay()->format('Y-m-d\TH:i'),
             'complexity' => 'MEDIUM',
             'paymentAccountId' => 'PAY001',
-            'attachmentIds' => "ATT001\nATT002,ATT001",
+            'attachments' => [
+                ['id' => 'ATT001', 'name' => '需求说明.pdf'],
+                ['id' => 'ATT002', 'name' => '设计图.png'],
+                // 故意重复一个附件 ID，验证后端按 ID 去重并保留第一次出现的文件名。
+                ['id' => 'ATT001', 'name' => '重复附件名.pdf'],
+            ],
         ])
         ->assertRedirect(route('tasks.index'))
         ->assertSessionHas('success', '任务已发布。');
@@ -214,8 +219,18 @@ test('authenticated users can publish a bidding task with attachment ids', funct
             'avatarId' => 'avatar-002',
         ]);
 
-    expect(DB::table('attachment_ref')->where('owner_id', $task->id)->pluck('attachment_id')->sort()->values()->all())
-        ->toBe(['ATT001', 'ATT002']);
+    expect(DB::table('attachment_ref')
+        ->where('owner_id', $task->id)
+        ->orderBy('attachment_id')
+        ->get(['attachment_id', 'attachment_name'])
+        ->map(fn (object $row): array => [
+            'id' => $row->attachment_id,
+            'name' => $row->attachment_name,
+        ])
+        ->all())->toBe([
+            ['id' => 'ATT001', 'name' => '需求说明.pdf'],
+            ['id' => 'ATT002', 'name' => '设计图.png'],
+        ]);
 
     expect(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
         ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
@@ -255,11 +270,11 @@ test('authenticated users can upload task attachment through taskhub backend', f
             'file' => UploadedFile::fake()->create('需求说明.pdf', 128, 'application/pdf'),
         ])
         ->assertOk()
-        ->assertJsonPath('file.id', 'ATT-UPLOAD-001')
-        ->assertJsonPath('file.name', '需求说明.pdf');
+        ->assertJsonPath('id', 'ATT-UPLOAD-001')
+        ->assertJsonPath('name', '需求说明.pdf');
 });
 
-test('file upload client sends multipart request and reads data id', function (): void {
+test('file upload client sends multipart request and reads data id and name', function (): void {
     config([
         'file_operation.base_url' => 'https://files.example.test',
         'file_operation.upload_path' => '/file-operation/file/upload',
@@ -272,8 +287,9 @@ test('file upload client sends multipart request and reads data id', function ()
         'https://files.example.test/file-operation/file/upload' => Http::response([
             'code' => '',
             'data' => [
-                // 总部上传接口确认使用 data.id，不能读取 fileId。
+                // 总部上传接口确认使用 data.id / data.name，不能读取 fileId。
                 'id' => 'ATT-REMOTE-001',
+                'name' => '总部原型图.png',
             ],
             'msg' => '',
             'timestamp' => 0,
@@ -286,7 +302,7 @@ test('file upload client sends multipart request and reads data id', function ()
     );
 
     expect($uploadedFile->id())->toBe('ATT-REMOTE-001')
-        ->and($uploadedFile->name())->toBe('原型图.png');
+        ->and($uploadedFile->name())->toBe('总部原型图.png');
 
     Http::assertSent(fn ($request): bool => $request->method() === 'POST'
         && $request->url() === 'https://files.example.test/file-operation/file/upload'
@@ -928,6 +944,7 @@ function createTaskHallTables(): void
         $table->string('owner_type', 30);
         $table->unsignedBigInteger('owner_id');
         $table->string('attachment_id', 128);
+        $table->string('attachment_name', 255);
         $table->string('uploaded_by', 32);
         $table->timestamp('created_at')->nullable();
     });

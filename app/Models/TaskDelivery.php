@@ -62,7 +62,7 @@ class TaskDelivery extends Model
     /**
      * 获取交付内容关联的附件引用。
      *
-     * 交付文件由外部文件服务保存，TaskHub 通过 attachment_ref 记录 ID。
+     * 交付文件由外部文件服务保存，TaskHub 通过 attachment_ref 记录 ID 和名称。
      */
     public function attachments(): MorphMany
     {

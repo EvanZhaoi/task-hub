@@ -13,7 +13,8 @@ type TaskAttachmentUploaderProps = {
 };
 
 type UploadResponse = {
-    file?: UploadedTaskAttachment;
+    id?: string;
+    name?: string;
 };
 
 function errorMessageFromPayload(payload: unknown): string | null {
@@ -87,13 +88,16 @@ export function TaskAttachmentUploader({ disabled = false, onChange, value }: Ta
             throw new Error(errorMessageFromPayload(payload) ?? `文件上传失败：HTTP ${response.status}`);
         }
 
-        const uploadedFile = (payload as UploadResponse | null)?.file;
+        const uploadedFile = payload as UploadResponse | null;
 
         if (!uploadedFile?.id || !uploadedFile.name) {
-            throw new Error('文件上传成功响应缺少附件 ID。');
+            throw new Error('文件上传成功响应缺少附件 ID 或名称。');
         }
 
-        return uploadedFile;
+        return {
+            id: uploadedFile.id,
+            name: uploadedFile.name,
+        };
     }
 
     async function uploadSelectedFiles(event: ChangeEvent<HTMLInputElement>): Promise<void> {
@@ -117,7 +121,7 @@ export function TaskAttachmentUploader({ disabled = false, onChange, value }: Ta
                 uploadedFiles.push(await uploadOne(file));
             }
 
-            // 只有成功上传的文件才加入附件列表；失败文件不会进入 attachmentIds。
+            // 只有成功上传的文件才加入附件列表；失败文件不会进入发布任务 attachments。
             onChange([...value, ...uploadedFiles]);
         } catch (exception) {
             setError(exception instanceof Error ? exception.message : '文件上传失败，请稍后重试。');
@@ -142,7 +146,9 @@ export function TaskAttachmentUploader({ disabled = false, onChange, value }: Ta
                     <Upload className="mr-2 size-4" />
                     {isUploading ? '上传中...' : '选择文件'}
                 </Button>
-                <span className="text-xs leading-5 text-[#6e6e80]">选择后立即上传，发布任务时只保存附件 ID。</span>
+                <span className="text-xs leading-5 text-[#6e6e80]">
+                    选择后立即上传，发布任务时保存附件 ID 和名称。
+                </span>
             </div>
 
             {value.length > 0 ? (

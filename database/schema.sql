@@ -170,7 +170,7 @@ CREATE TABLE `task_delivery` (
 
 -- ============================================================
 -- 6. attachment_ref（附件引用表）
---    文件上传 / 下载由外部文件服务负责，本表只记录外部 attachment_id。
+--    文件上传 / 下载由外部文件服务负责，本表只记录外部 attachment_id 和 attachment_name。
 --    owner_type + owner_id 为多态关联，不建立数据库外键，由业务层校验对象存在。
 -- ============================================================
 CREATE TABLE `attachment_ref` (
@@ -178,6 +178,7 @@ CREATE TABLE `attachment_ref` (
   `owner_type`    VARCHAR(30)     NOT NULL COMMENT '所属对象类型：TASK/BID/DELIVERY/CHANGE_REQUEST',
   `owner_id`      BIGINT UNSIGNED NOT NULL COMMENT '所属对象 ID',
   `attachment_id` VARCHAR(128)    NOT NULL COMMENT '外部附件 ID',
+  `attachment_name` VARCHAR(255)  NOT NULL COMMENT '外部附件名称',
   `uploaded_by`   VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `created_at`    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),

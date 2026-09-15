@@ -37,10 +37,10 @@ class CreateTaskService
      * 执行发布招标任务流程。
      *
      * @param  array<string, mixed>  $validated  StoreTaskRequest 已校验通过的表单数据。
-     * @param  list<string>  $attachmentIds  已解析并去重后的外部附件 ID。
+     * @param  list<array{id: string, name: string}>  $attachments  已解析并去重后的外部附件 ID 和名称。
      * @throws PaymentAccountException 当付款账号接口不可用或账号不存在时抛出，由 Controller 转成表单错误。
      */
-    public function execute(array $validated, array $attachmentIds, SsoUser $user, string $accessToken): void
+    public function execute(array $validated, array $attachments, SsoUser $user, string $accessToken): void
     {
         // 富文本必须在入库前清洗；前端 Tiptap 只负责编辑体验，不是可信安全边界。
         $validated['description'] = $this->richTextSanitizer->clean($validated['description'] ?? null);
@@ -52,12 +52,12 @@ class CreateTaskService
             $accessToken,
         );
 
-        DB::transaction(function () use ($attachmentIds, $paymentAccount, $user, $validated): void {
+        DB::transaction(function () use ($attachments, $paymentAccount, $user, $validated): void {
             $task = $this->createTask($validated, $paymentAccount, $user);
 
             $this->createTaskCreatedEvent($task, $user);
-            $this->createTaskPublishedEvent($task, $user, count($attachmentIds));
-            $this->saveAttachments($task, $attachmentIds, $user);
+            $this->createTaskPublishedEvent($task, $user, count($attachments));
+            $this->saveAttachments($task, $attachments, $user);
         });
     }
 
@@ -141,28 +141,30 @@ class CreateTaskService
     /**
      * 保存任务附件引用。
      *
-     * TaskHub 不保存真实文件，只保存外部上传接口返回的附件 ID。
+     * TaskHub 不保存真实文件，只保存外部上传接口返回的附件 ID 和名称。
+     * 名称用于任务详情直接展示，后续下载/预览仍使用附件 ID 调总部接口。
      *
-     * @param  list<string>  $attachmentIds
+     * @param  list<array{id: string, name: string}>  $attachments
      */
-    private function saveAttachments(Task $task, array $attachmentIds, SsoUser $user): void
+    private function saveAttachments(Task $task, array $attachments, SsoUser $user): void
     {
-        if ($attachmentIds === []) {
+        if ($attachments === []) {
             return;
         }
 
         $now = now();
 
         AttachmentRef::query()->insert(array_map(
-            fn (string $attachmentId): array => [
+            fn (array $attachment): array => [
                 'id' => $this->ids->next(),
                 'owner_type' => 'TASK',
                 'owner_id' => $task->id,
-                'attachment_id' => $attachmentId,
+                'attachment_id' => $attachment['id'],
+                'attachment_name' => $attachment['name'],
                 'uploaded_by' => $user->employeeNo(),
                 'created_at' => $now,
             ],
-            $attachmentIds,
+            $attachments,
         ));
     }
 

@@ -76,7 +76,7 @@ class TaskChangeRequest extends Model
      */
     public function attachments(): MorphMany
     {
-        // 变更申请附件同样只保存外部附件 ID。
+        // 变更申请附件同样只保存外部附件 ID 和名称。
         return $this->morphMany(AttachmentRef::class, 'owner', 'owner_type', 'owner_id');
     }
 }

@@ -91,7 +91,7 @@ Phase 1 只完成基础环境、认证骨架、数据库映射和开发文档。
 - 发布任务描述 Tiptap 富文本编辑器
 - 任务描述 HTML 白名单清洗和统一 Viewer 展示
 - 发布任务事务已从 Controller 移入 `CreateTaskService`
-- 发布任务附件选择后立即上传，总部返回 `data.id` 后写入现有 `attachmentIds`
+- 发布任务附件选择后立即上传，总部返回 `data.id` / `data.name` 后写入附件引用
 
 尚未开发：
 

@@ -82,7 +82,7 @@ class Bid extends Model
      */
     public function attachments(): MorphMany
     {
-        // 投标附件通过 AttachmentRef 多态关联，只保存外部附件 ID。
+        // 投标附件通过 AttachmentRef 多态关联，只保存外部附件 ID 和名称。
         return $this->morphMany(AttachmentRef::class, 'owner', 'owner_type', 'owner_id');
     }
 }

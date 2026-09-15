@@ -20,9 +20,9 @@ export type PaymentAccountOption = SelectOption & {
 };
 
 export type UploadedTaskAttachment = {
-    // id 是总部上传接口返回的 data.id，发布任务时写入 attachmentIds。
+    // id 是总部上传接口返回的 data.id，后续下载/预览时使用。
     id: string;
-    // name 是浏览器选择文件时的原始文件名，只用于发布任务弹窗内展示。
+    // name 是总部上传接口返回的 data.name，发布任务时写入 attachment_ref.attachment_name。
     name: string;
 };
 

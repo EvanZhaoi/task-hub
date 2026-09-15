@@ -95,12 +95,12 @@ class FileUploadClient
             throw new FileUploadException('File upload response is not a JSON object.');
         }
 
-        $uploadedFile = UploadedFileRef::fromPayload($payload, $file->getClientOriginalName());
+        $uploadedFile = UploadedFileRef::fromPayload($payload);
 
         Log::info('File upload request succeeded.', [
             'base_url' => $baseUrl,
             'path' => $uploadPath,
-            // 只记录总部返回的附件 ID 和原始文件名，便于排查发布任务附件关联问题。
+            // 只记录总部返回的附件 ID 和文件名，便于排查发布任务附件关联问题。
             'attachment_id' => $uploadedFile->id(),
             'file_name' => $uploadedFile->name(),
         ]);

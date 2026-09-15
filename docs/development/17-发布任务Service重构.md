@@ -10,7 +10,9 @@
 - 调用外部付款账号接口获取账号快照。
 - 创建 `task` 主记录。
 - 写入 `TASK_CREATED` 和 `TASK_PUBLISHED` 两条事件。
-- 保存多个外部附件 ID 到 `attachment_ref`。
+- 保存多个外部附件 ID 和名称到 `attachment_ref`。
+
+> 最新说明：第 18 章已经把发布任务附件从 `attachmentIds` 字符串升级为 `attachments: [{ id, name }]` 结构，并在 `attachment_ref` 中保存 `attachment_name`。本章早期代码片段用于理解 Service 重构思路，附件字段以当前代码和第 18 章为准。
 - 使用数据库事务保证这些写入要么全部成功，要么全部失败。
 
 这些已经属于完整业务动作，不应该继续堆在 Controller 中。

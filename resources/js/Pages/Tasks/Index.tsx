@@ -71,7 +71,7 @@ type TaskCreateForm = {
     biddingDeadline: string;
     complexity: TaskComplexity;
     paymentAccountId: string;
-    attachmentIds: string;
+    attachments: UploadedTaskAttachment[];
 };
 
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
@@ -103,7 +103,7 @@ export default function TaskIndex({
         biddingDeadline: '',
         complexity: 'MEDIUM',
         paymentAccountId: '',
-        attachmentIds: '',
+        attachments: [],
     });
 
     function changeCreateOpen(nextOpen: boolean): void {
@@ -118,8 +118,9 @@ export default function TaskIndex({
 
     function changeUploadedAttachments(files: UploadedTaskAttachment[]): void {
         setUploadedAttachments(files);
-        // 后端 StoreTaskRequest 继续接收现有 attachmentIds 字段，避免改发布任务接口结构。
-        form.setData('attachmentIds', files.map((file) => file.id).join('\n'));
+        // 上传接口已经返回总部文件 ID 和名称，发布任务时直接提交结构化数组。
+        // 后端只保存 attachment_id / attachment_name，不保存总部完整响应。
+        form.setData('attachments', files);
     }
 
     function submitCreateTask(event: FormEvent<HTMLFormElement>): void {
@@ -237,7 +238,7 @@ export default function TaskIndex({
                                     ) : null}
                                 </Field>
 
-                                <Field label="附件" message={form.errors.attachmentIds}>
+                                <Field label="附件" message={form.errors.attachments}>
                                     <TaskAttachmentUploader
                                         disabled={form.processing}
                                         onChange={changeUploadedAttachments}

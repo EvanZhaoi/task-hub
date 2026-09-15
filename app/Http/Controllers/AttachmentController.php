@@ -38,8 +38,8 @@ class AttachmentController extends Controller
             ]);
         }
 
-        return response()->json([
-            'file' => $uploadedFile->toResponsePayload(),
-        ]);
+        // 返回给 React 的结构保持扁平：{ id, name }。
+        // 前端不需要知道总部接口的 code/msg/timestamp，也不再读取 file.id 这种二次包装。
+        return response()->json($uploadedFile->toResponsePayload());
     }
 }

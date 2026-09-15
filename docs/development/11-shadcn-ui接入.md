@@ -1098,7 +1098,7 @@ http://127.0.0.1:8000/tasks
 - 发布任务模态框。
 - Laravel 表单请求校验。
 - Task 创建事务。
-- 附件只保存外部附件 ID。
+- 附件只保存外部附件 ID 和名称。
 - 创建后写入 TaskEvent。
 
 发布任务会同时覆盖 React 表单、Inertia 提交、Laravel Request、Eloquent 创建和数据库事务，是第一个完整写入业务闭环。
