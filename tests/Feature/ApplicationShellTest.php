@@ -309,6 +309,10 @@ test('file upload client sends multipart request and reads data id and name', fu
         && ($request->header('Authorization')[0] ?? '') === 'bearer token-file'
         && collect($request->data())->contains(fn (array $part): bool => ($part['name'] ?? null) === 'serviceKey'
             && ($part['contents'] ?? null) === 'TASKHUB')
+        && collect($request->data())->contains(fn (array $part): bool => ($part['name'] ?? null) === 'businessKey'
+            && ($part['contents'] ?? null) === '')
+        && collect($request->data())->contains(fn (array $part): bool => ($part['name'] ?? null) === 'modelKey'
+            && ($part['contents'] ?? null) === '')
         && $request->hasFile('file', filename: '原型图.png'));
 });
 

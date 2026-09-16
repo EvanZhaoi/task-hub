@@ -56,7 +56,9 @@ class FileUploadClient
             $response = $request->post($uploadPath, [
                 // serviceKey 必填，但必须来自后端配置，不能写死在 React 或 Controller。
                 'serviceKey' => $serviceKey,
-                // businessKey/modelKey 当前没有业务需求，按要求不传。
+                // 总部上传接口 4 个 RequestParam 都要求提交；当前业务还没有关联规则，先传空字符串。
+                'businessKey' => '',
+                'modelKey' => '',
             ]);
         } catch (ConnectionException $exception) {
             Log::warning('File upload request connection failed.', [
