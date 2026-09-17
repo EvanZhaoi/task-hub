@@ -1,6 +1,7 @@
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
+import { Branch as DismissableLayerBranch } from '@radix-ui/react-dismissable-layer';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +59,7 @@ export function PaymentAccountCombobox({
 }: PaymentAccountComboboxProps) {
     const [open, setOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const selectedOption = options.find((option) => option.value === value);
     const debouncedKeyword = useDebouncedValue(keyword, SEARCH_DEBOUNCE_MS);
     const normalizedKeyword = normalizeKeyword(debouncedKeyword);
@@ -90,6 +92,16 @@ export function PaymentAccountCombobox({
         changeOpen(false);
     }
 
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        // 下拉内容通过 Portal 渲染到 Dialog 外层后，需要主动把焦点放回搜索框。
+        // 这样用户打开付款账号选择器后可以直接输入关键字筛选。
+        window.requestAnimationFrame(() => searchInputRef.current?.focus());
+    }, [open]);
+
     return (
         <Popover onOpenChange={changeOpen} open={open}>
             <PopoverTrigger asChild>
@@ -110,64 +122,68 @@ export function PaymentAccountCombobox({
             </PopoverTrigger>
 
             <PopoverPrimitive.Portal>
-                <PopoverPrimitive.Content
-                    align="start"
-                    className="pointer-events-auto z-[80] w-[var(--radix-popover-trigger-width)] rounded-md border border-[#e5e7eb] bg-white p-0 text-[#1a1a1a] shadow-lg outline-none"
-                    sideOffset={8}
-                >
-                    <div className="border-b border-[#e5e7eb] p-2">
-                        <div className="relative">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
-                            <Input
-                                // 搜索框只负责缩小候选范围，不直接修改表单提交值。
-                                autoFocus
-                                className="pl-9"
-                                onChange={(event) => setKeyword(event.target.value)}
-                                placeholder="搜索账号名称或 code"
-                                type="search"
-                                value={keyword}
-                            />
+                <DismissableLayerBranch>
+                    <PopoverPrimitive.Content
+                        align="start"
+                        className="pointer-events-auto z-[80] w-[var(--radix-popover-trigger-width)] rounded-md border border-[#e5e7eb] bg-white p-0 text-[#1a1a1a] shadow-lg outline-none"
+                        sideOffset={8}
+                    >
+                        <div className="border-b border-[#e5e7eb] p-2">
+                            <div className="relative">
+                                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
+                                <Input
+                                    // 搜索框只负责缩小候选范围，不直接修改表单提交值。
+                                    className="pl-9"
+                                    onChange={(event) => setKeyword(event.target.value)}
+                                    placeholder="搜索账号名称或 code"
+                                    ref={searchInputRef}
+                                    type="search"
+                                    value={keyword}
+                                />
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="max-h-72 overflow-y-auto p-1">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-6 text-center text-sm text-[#9ca3af]">没有匹配的付款账号</div>
-                        ) : (
-                            filteredOptions.map((option) => {
-                                const isSelected = option.value === value;
+                        <div className="max-h-72 overflow-y-auto p-1">
+                            {filteredOptions.length === 0 ? (
+                                <div className="px-3 py-6 text-center text-sm text-[#9ca3af]">
+                                    没有匹配的付款账号
+                                </div>
+                            ) : (
+                                filteredOptions.map((option) => {
+                                    const isSelected = option.value === value;
 
-                                return (
-                                    <button
-                                        className={cn(
-                                            'flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f3ff]',
-                                            isSelected && 'bg-[#f5f3ff] text-[#5e6ad2]',
-                                        )}
-                                        key={option.value}
-                                        onClick={() => selectOption(option.value)}
-                                        type="button"
-                                    >
-                                        <Check
+                                    return (
+                                        <button
                                             className={cn(
-                                                'mt-0.5 size-4 shrink-0',
-                                                isSelected ? 'opacity-100' : 'opacity-0',
+                                                'flex w-full cursor-pointer items-start gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f3ff]',
+                                                isSelected && 'bg-[#f5f3ff] text-[#5e6ad2]',
                                             )}
-                                        />
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate font-medium">
-                                                {option.accountName ?? option.label}
+                                            key={option.value}
+                                            onClick={() => selectOption(option.value)}
+                                            type="button"
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    'mt-0.5 size-4 shrink-0',
+                                                    isSelected ? 'opacity-100' : 'opacity-0',
+                                                )}
+                                            />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate font-medium">
+                                                    {option.accountName ?? option.label}
+                                                </span>
+                                                <span className="block truncate text-xs text-[#6e6e80]">
+                                                    {option.value}
+                                                    {option.departmentName ? ` · ${option.departmentName}` : ''}
+                                                </span>
                                             </span>
-                                            <span className="block truncate text-xs text-[#6e6e80]">
-                                                {option.value}
-                                                {option.departmentName ? ` · ${option.departmentName}` : ''}
-                                            </span>
-                                        </span>
-                                    </button>
-                                );
-                            })
-                        )}
-                    </div>
-                </PopoverPrimitive.Content>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </PopoverPrimitive.Content>
+                </DismissableLayerBranch>
             </PopoverPrimitive.Portal>
 
             {/* 隐藏字段保留表单字段名；最终提交给 Laravel 的仍然是 paymentAccountId。 */}
