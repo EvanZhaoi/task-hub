@@ -1,4 +1,5 @@
 import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { Branch as DismissableLayerBranch } from '@radix-ui/react-dismissable-layer';
 import type { ComponentProps } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -12,17 +13,22 @@ export const PopoverTrigger = PopoverPrimitive.Trigger;
 
 export function PopoverContent({ align = 'start', className, sideOffset = 8, ...props }: ComponentProps<typeof PopoverPrimitive.Content>) {
     return (
-        <PopoverPrimitive.Content
-            align={align}
-            className={cn(
-                // Dialog 是 modal 时会用 DismissableLayer 管理弹窗外部点击。
-                // Popover 放在 Dialog 内使用时，如果再 Portal 到 body，可能被 Dialog 当成外部内容拦截 pointer event。
-                // 因此这里先让 PopoverContent 留在当前 DOM 层级，保证日期选择器和搜索选择器在 Dialog 内可交互。
-                'z-50 rounded-md border border-[#e5e7eb] bg-white p-3 text-[#1a1a1a] shadow-lg outline-none',
-                className,
-            )}
-            sideOffset={sideOffset}
-            {...props}
-        />
+        <PopoverPrimitive.Portal>
+            <DismissableLayerBranch>
+                <PopoverPrimitive.Content
+                    align={align}
+                    className={cn(
+                        // Popover 放在 Dialog 的滚动区域里时，如果留在原 DOM 层级，会被 Dialog 的
+                        // overflow-hidden / overflow-y-auto 裁剪；因此需要 Portal 到 body。
+                        // 但 Dialog 是 modal，会通过 DismissableLayer 拦截“弹窗外”的点击和聚焦。
+                        // DismissableLayerBranch 用来告诉 Radix：这个 Portal 出去的浮层仍属于当前弹窗的可交互区域。
+                        'z-[80] rounded-md border border-[#e5e7eb] bg-white p-3 text-[#1a1a1a] shadow-lg outline-none',
+                        className,
+                    )}
+                    sideOffset={sideOffset}
+                    {...props}
+                />
+            </DismissableLayerBranch>
+        </PopoverPrimitive.Portal>
     );
 }
