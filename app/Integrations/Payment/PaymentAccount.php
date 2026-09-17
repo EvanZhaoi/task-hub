@@ -72,7 +72,7 @@ final readonly class PaymentAccount
             ?? null;
 
         if (! is_string($accountId) || $accountId === '') {
-            throw new PaymentAccountException('Payment account response does not contain account id.');
+            throw new PaymentAccountException('付款账号接口返回数据缺少账号编码。');
         }
 
         return new self(

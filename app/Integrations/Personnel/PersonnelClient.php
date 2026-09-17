@@ -69,15 +69,15 @@ class PersonnelClient
         $path = config('personnel.list_path');
 
         if (! is_string($baseUrl) || $baseUrl === '') {
-            throw new PersonnelException('Personnel base URL is not configured.');
+            throw new PersonnelException('人员列表接口基础地址未配置。');
         }
 
         if (! is_string($path) || $path === '') {
-            throw new PersonnelException('Personnel list path is not configured.');
+            throw new PersonnelException('人员列表接口路径未配置。');
         }
 
         if ($this->isAbsoluteUrl($path)) {
-            throw new PersonnelException('Personnel list path must be a path, not a full URL.');
+            throw new PersonnelException('人员列表接口路径只能填写 path，不能填写完整 URL。');
         }
 
         $method = strtoupper((string) config('personnel.method', 'GET'));
@@ -98,15 +98,15 @@ class PersonnelClient
             $response = match ($method) {
                 'POST' => $request->asJson()->post($path),
                 'GET' => $request->get($path),
-                default => throw new PersonnelException('Unsupported personnel HTTP method.'),
+                default => throw new PersonnelException('人员列表接口请求方法不支持。'),
             };
         } catch (ConnectionException $exception) {
-            throw new PersonnelException('Unable to connect to personnel service.', previous: $exception);
+            throw new PersonnelException('无法连接人员列表接口。', previous: $exception);
         }
 
         if (! $response->successful()) {
             throw new PersonnelException(sprintf(
-                'Personnel request failed with HTTP status %d.',
+                '人员列表接口请求失败，HTTP 状态码：%d。',
                 $response->status(),
             ));
         }
@@ -114,7 +114,7 @@ class PersonnelClient
         $payload = $response->json();
 
         if (! is_array($payload)) {
-            throw new PersonnelException('Personnel response is not a JSON object.');
+            throw new PersonnelException('人员列表接口返回的不是有效 JSON 对象。');
         }
 
         return $this->usersFromPayload($payload);
@@ -232,6 +232,6 @@ class PersonnelClient
             return $accessToken;
         }
 
-        throw new PersonnelException('Personnel access token is not configured.');
+        throw new PersonnelException('人员列表接口缺少当前登录人的 accessToken。');
     }
 }

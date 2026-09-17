@@ -67,7 +67,7 @@ class FileUploadClient
                 'message' => $exception->getMessage(),
             ]);
 
-            throw new FileUploadException('Unable to connect to file upload service.', previous: $exception);
+            throw new FileUploadException('无法连接文件上传接口。', previous: $exception);
         }
 
         if (! $response->successful()) {
@@ -80,7 +80,7 @@ class FileUploadClient
             ]);
 
             throw new FileUploadException(sprintf(
-                'File upload request failed with HTTP status %d.',
+                '文件上传接口请求失败，HTTP 状态码：%d。',
                 $response->status(),
             ));
         }
@@ -94,7 +94,7 @@ class FileUploadClient
                 'body_preview' => mb_substr($response->body(), 0, 1000),
             ]);
 
-            throw new FileUploadException('File upload response is not a JSON object.');
+            throw new FileUploadException('文件上传接口返回的不是有效 JSON 对象。');
         }
 
         $uploadedFile = UploadedFileRef::fromPayload($payload);
@@ -118,7 +118,7 @@ class FileUploadClient
         $baseUrl = config('file_operation.base_url');
 
         if (! is_string($baseUrl) || $baseUrl === '') {
-            throw new FileUploadException('File operation base URL is not configured.');
+            throw new FileUploadException('文件服务基础地址未配置。');
         }
 
         return $baseUrl;
@@ -132,11 +132,11 @@ class FileUploadClient
         $uploadPath = config('file_operation.upload_path');
 
         if (! is_string($uploadPath) || $uploadPath === '') {
-            throw new FileUploadException('File upload path is not configured.');
+            throw new FileUploadException('文件上传接口路径未配置。');
         }
 
         if ($this->isAbsoluteUrl($uploadPath)) {
-            throw new FileUploadException('File upload path must be a path, not a full URL.');
+            throw new FileUploadException('文件上传接口路径只能填写 path，不能填写完整 URL。');
         }
 
         return $uploadPath;
@@ -150,7 +150,7 @@ class FileUploadClient
         $serviceKey = config('file_operation.service_key');
 
         if (! is_string($serviceKey) || $serviceKey === '') {
-            throw new FileUploadException('File operation service key is not configured.');
+            throw new FileUploadException('文件服务 serviceKey 未配置。');
         }
 
         return $serviceKey;

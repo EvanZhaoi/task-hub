@@ -43,7 +43,7 @@ final readonly class SsoToken
         $code = $payload['code'] ?? null;
 
         if (is_string($code) && $code !== '' && $code !== '00000') {
-            throw new SsoException('SSO token response code is not successful.');
+            throw new SsoException('SSO token 接口返回状态码表示失败。');
         }
 
         // 标准结构下 token 字段在 data 里；如果接口直接返回 token 字段，也允许直接解析。
@@ -52,7 +52,7 @@ final readonly class SsoToken
         $accessToken = $data['access_token'] ?? $data['accessToken'] ?? null;
 
         if (! is_string($accessToken) || $accessToken === '') {
-            throw new SsoException('SSO token response does not contain access token.');
+            throw new SsoException('SSO token 接口返回数据缺少 access_token。');
         }
 
         $expiresIn = self::nullableInt($data['expires_in'] ?? $data['expiresIn'] ?? null);

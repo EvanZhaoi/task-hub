@@ -728,7 +728,7 @@ test('sso user info path must not be a full url', function (): void {
     ]);
 
     expect(fn () => app(SsoClient::class)->fetchCurrentUser('token-123'))
-        ->toThrow(SsoException::class, 'SSO user info path must be a path, not a full URL.');
+        ->toThrow(SsoException::class, 'SSO 当前人员接口路径只能填写 path，不能填写完整 URL。');
 });
 
 test('sso client exchanges authorization code with form request', function (): void {

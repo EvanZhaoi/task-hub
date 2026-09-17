@@ -43,11 +43,11 @@ final readonly class UploadedFileRef
         $name = $payload['data']['name'] ?? null;
 
         if (! is_string($id) || $id === '') {
-            throw new FileUploadException('File upload response does not contain data.id.');
+            throw new FileUploadException('文件上传接口返回数据缺少 data.id。');
         }
 
         if (! is_string($name) || $name === '') {
-            throw new FileUploadException('File upload response does not contain data.name.');
+            throw new FileUploadException('文件上传接口返回数据缺少 data.name。');
         }
 
         return new self(

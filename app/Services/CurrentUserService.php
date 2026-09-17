@@ -53,7 +53,7 @@ class CurrentUserService
         $token = $this->request->bearerToken();
 
         if (! is_string($token) || $token === '') {
-            throw new SsoException('Missing SSO bearer token.');
+            throw new SsoException('缺少 SSO Bearer Token。');
         }
 
         return $this->resolvedUser = $this->ssoClient->validateToken($token);
@@ -116,6 +116,6 @@ class CurrentUserService
             return $bearerToken;
         }
 
-        throw new SsoException('Missing SSO access token.');
+        throw new SsoException('缺少 SSO accessToken。');
     }
 }

@@ -38,11 +38,11 @@ class SsoController extends Controller
         $clientId = config('sso.client_id');
 
         if (! is_string($loginUrl) || $loginUrl === '') {
-            abort(503, 'SSO login URL is not configured.');
+            abort(503, 'SSO 登录地址未配置。');
         }
 
         if (! is_string($clientId) || $clientId === '') {
-            abort(503, 'SSO client ID is not configured.');
+            abort(503, 'SSO client_id 未配置。');
         }
 
         // 记录用户原本想访问的页面，SSO 完成后再跳回去。

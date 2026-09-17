@@ -27,11 +27,11 @@ class SsoClient
         $tokenPath = config('sso.token_path');
 
         if (! is_string($tokenPath) || $tokenPath === '') {
-            throw new SsoException('SSO token path is not configured.');
+            throw new SsoException('SSO token 接口路径未配置。');
         }
 
         if ($this->isAbsoluteUrl($tokenPath)) {
-            throw new SsoException('SSO token path must be a path, not a full URL.');
+            throw new SsoException('SSO token 接口路径只能填写 path，不能填写完整 URL。');
         }
 
         try {
@@ -60,17 +60,17 @@ class SsoClient
                 'grant_type' => 'authorization_code',
             ]);
         } catch (ConnectionException $exception) {
-            throw new SsoException('Unable to connect to SSO token service.', previous: $exception);
+            throw new SsoException('无法连接 SSO token 接口。', previous: $exception);
         }
 
         if (! $response->successful()) {
-            throw new SsoException(sprintf('SSO token request failed with HTTP status %d.', $response->status()));
+            throw new SsoException(sprintf('SSO token 接口请求失败，HTTP 状态码：%d。', $response->status()));
         }
 
         $payload = $response->json();
 
         if (! is_array($payload)) {
-            throw new SsoException('SSO token response is not a JSON object.');
+            throw new SsoException('SSO token 接口返回的不是有效 JSON 对象。');
         }
 
         return SsoToken::fromPayload($payload);
@@ -92,11 +92,11 @@ class SsoClient
         $userInfoPath = config('sso.userinfo_path') ?: config('sso.validate_path');
 
         if (! is_string($userInfoPath) || $userInfoPath === '') {
-            throw new SsoException('SSO user info path is not configured.');
+            throw new SsoException('SSO 当前人员接口路径未配置。');
         }
 
         if ($this->isAbsoluteUrl($userInfoPath)) {
-            throw new SsoException('SSO user info path must be a path, not a full URL.');
+            throw new SsoException('SSO 当前人员接口路径只能填写 path，不能填写完整 URL。');
         }
 
         $method = strtoupper((string) config('sso.userinfo_method', 'GET'));
@@ -120,21 +120,21 @@ class SsoClient
             $response = match ($method) {
                 'POST' => $request->asJson()->post($userInfoPath),
                 'GET' => $request->get($userInfoPath),
-                default => throw new SsoException('Unsupported SSO user info HTTP method.'),
+                default => throw new SsoException('SSO 当前人员接口请求方法不支持。'),
             };
         } catch (ConnectionException $exception) {
-            throw new SsoException('Unable to connect to SSO user info service.', previous: $exception);
+            throw new SsoException('无法连接 SSO 当前人员接口。', previous: $exception);
         }
 
         if (! $response->successful()) {
-            throw new SsoException(sprintf('SSO user info request failed with HTTP status %d.', $response->status()));
+            throw new SsoException(sprintf('SSO 当前人员接口请求失败，HTTP 状态码：%d。', $response->status()));
         }
 
         $payload = $response->json();
 
         // 当前登录人接口必须返回 JSON 对象，后续由 SsoUser 统一解析 employeeNo 等字段。
         if (! is_array($payload)) {
-            throw new SsoException('SSO user info response is not a JSON object.');
+            throw new SsoException('SSO 当前人员接口返回的不是有效 JSON 对象。');
         }
 
         return SsoUser::fromPayload($payload);
@@ -172,7 +172,7 @@ class SsoClient
         $baseUrl = config('sso.base_url');
 
         if (! is_string($baseUrl) || $baseUrl === '') {
-            throw new SsoException('SSO base URL is not configured.');
+            throw new SsoException('SSO 基础地址未配置。');
         }
 
         return $baseUrl;
@@ -188,7 +188,7 @@ class SsoClient
         $clientId = config('sso.client_id');
 
         if (! is_string($clientId) || $clientId === '') {
-            throw new SsoException('SSO client ID is not configured.');
+            throw new SsoException('SSO client_id 未配置。');
         }
 
         return $clientId;
@@ -204,7 +204,7 @@ class SsoClient
         $clientSecret = config('sso.client_secret');
 
         if (! is_string($clientSecret) || $clientSecret === '') {
-            throw new SsoException('SSO client secret is not configured.');
+            throw new SsoException('SSO client_secret 未配置。');
         }
 
         return $clientSecret;

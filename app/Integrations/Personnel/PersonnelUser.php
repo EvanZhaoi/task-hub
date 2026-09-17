@@ -103,7 +103,7 @@ final readonly class PersonnelUser
         );
 
         if ($employeeNo === null) {
-            throw new PersonnelException('Personnel response does not contain employee number.');
+            throw new PersonnelException('人员列表接口返回数据缺少工号。');
         }
 
         return new self(

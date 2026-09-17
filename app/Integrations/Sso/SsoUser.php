@@ -51,7 +51,7 @@ final readonly class SsoUser
             ?? null;
 
         if (! is_string($employeeNo) || $employeeNo === '') {
-            throw new SsoException('SSO response does not contain employee number.');
+            throw new SsoException('SSO 当前人员接口返回数据缺少工号。');
         }
 
         $primaryDepartment = self::primaryDepartment($user['deptInfoList'] ?? []);

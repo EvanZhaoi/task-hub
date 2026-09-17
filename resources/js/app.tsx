@@ -22,7 +22,7 @@ createInertiaApp({
 
         if (!page) {
             // 页面名大小写必须和文件路径一致，Linux 部署环境对大小写敏感。
-            throw new Error(`Page not found: ${name}`);
+            throw new Error(`找不到 Inertia 页面：${name}`);
         }
 
         return (await page()).default;
@@ -30,7 +30,7 @@ createInertiaApp({
     setup({ el, App, props }) {
         if (!el) {
             // app.blade.php 中的 @inertia 会生成根节点；缺失说明 Blade 容器配置错误。
-            throw new Error('Inertia root element was not found.');
+            throw new Error('未找到 Inertia 根节点。');
         }
 
         // React 从 Blade 容器接管页面，之后页面切换由 Inertia 协调 Laravel 和 React。

@@ -36,4 +36,18 @@ class UploadAttachmentRequest extends FormRequest
             'file' => ['required', 'file', 'max:20480'],
         ];
     }
+
+    /**
+     * 返回附件上传的中文校验提示。
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'file.required' => '请选择要上传的附件。',
+            'file.file' => '上传内容必须是有效文件。',
+            'file.max' => '单个附件不能超过 20MB。',
+        ];
+    }
 }

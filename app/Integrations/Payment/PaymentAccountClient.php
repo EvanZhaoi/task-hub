@@ -68,7 +68,7 @@ class PaymentAccountClient
     {
         $payload = $this->requestConfiguredPath(
             pathConfigKey: 'payment_account.list_path',
-            emptyPathMessage: 'Payment account list path is not configured.',
+            emptyPathMessage: '付款账号列表接口路径未配置。',
             accessToken: $accessToken,
         );
 
@@ -89,7 +89,7 @@ class PaymentAccountClient
             }
         }
 
-        throw new PaymentAccountException('Selected payment account does not exist.');
+        throw new PaymentAccountException('选择的付款账号不存在。');
     }
 
     /**
@@ -106,7 +106,7 @@ class PaymentAccountClient
         $path = config($pathConfigKey);
 
         if (! is_string($baseUrl) || $baseUrl === '') {
-            throw new PaymentAccountException('Payment account base URL is not configured.');
+            throw new PaymentAccountException('付款账号接口基础地址未配置。');
         }
 
         if (! is_string($path) || $path === '') {
@@ -114,7 +114,7 @@ class PaymentAccountClient
         }
 
         if ($this->isAbsoluteUrl($path)) {
-            throw new PaymentAccountException('Payment account path must be a path, not a full URL.');
+            throw new PaymentAccountException('付款账号接口路径只能填写 path，不能填写完整 URL。');
         }
 
         $method = strtoupper((string) config('payment_account.method', 'GET'));
@@ -145,7 +145,7 @@ class PaymentAccountClient
             $response = match ($method) {
                 'POST' => $request->asJson()->post($path),
                 'GET' => $request->get($path),
-                default => throw new PaymentAccountException('Unsupported payment account HTTP method.'),
+                default => throw new PaymentAccountException('付款账号接口请求方法不支持。'),
             };
         } catch (ConnectionException $exception) {
             Log::warning('Payment account request connection failed.', [
@@ -155,7 +155,7 @@ class PaymentAccountClient
                 'message' => $exception->getMessage(),
             ]);
 
-            throw new PaymentAccountException('Unable to connect to payment account service.', previous: $exception);
+            throw new PaymentAccountException('无法连接付款账号接口。', previous: $exception);
         }
 
         if (! $response->successful()) {
@@ -169,7 +169,7 @@ class PaymentAccountClient
             ]);
 
             throw new PaymentAccountException(sprintf(
-                'Payment account request failed with HTTP status %d.',
+                '付款账号接口请求失败，HTTP 状态码：%d。',
                 $response->status(),
             ));
         }
@@ -184,7 +184,7 @@ class PaymentAccountClient
                 'body_preview' => mb_substr($response->body(), 0, 1000),
             ]);
 
-            throw new PaymentAccountException('Payment account response is not a JSON object.');
+            throw new PaymentAccountException('付款账号接口返回的不是有效 JSON 对象。');
         }
 
         Log::info('Payment account request succeeded.', [
@@ -275,6 +275,6 @@ class PaymentAccountClient
             return $accessToken;
         }
 
-        throw new PaymentAccountException('Payment account access token is not configured.');
+        throw new PaymentAccountException('付款账号接口缺少当前登录人的 accessToken。');
     }
 }
