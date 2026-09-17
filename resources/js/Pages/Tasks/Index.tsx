@@ -140,7 +140,7 @@ export default function TaskIndex({
     return (
         <AppLayout
             actions={
-                <Dialog onOpenChange={changeCreateOpen} open={isCreateOpen}>
+                <Dialog modal={false} onOpenChange={changeCreateOpen} open={isCreateOpen}>
                     <DialogTrigger asChild>
                         <Button type="button">发布任务</Button>
                     </DialogTrigger>
