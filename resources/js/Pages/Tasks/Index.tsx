@@ -1,4 +1,4 @@
-import { useForm, usePage } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { DatePicker } from '@/components/common/DatePicker';
@@ -367,7 +367,14 @@ export default function TaskIndex({
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div className="min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <h2 className="m-0 text-base font-semibold">{task.title}</h2>
+                                            <h2 className="m-0 text-base font-semibold">
+                                                <Link
+                                                    className="hover:text-[#5e6ad2] hover:underline"
+                                                    href={`/tasks/${task.id}`}
+                                                >
+                                                    {task.title}
+                                                </Link>
+                                            </h2>
                                             <Badge variant={statusBadgeVariants[task.displayStatus]}>
                                                 {statusLabels[task.displayStatus]}
                                             </Badge>
@@ -409,6 +416,12 @@ export default function TaskIndex({
                                         <strong className="font-semibold text-[#1a1a1a]">{task.activeBidCount}</strong>
                                         {task.paymentAccountName ? ` · ${task.paymentAccountName}` : ''}
                                     </div>
+                                </div>
+
+                                <div className="mt-4 flex justify-end">
+                                    <Button asChild size="sm" variant="outline">
+                                        <Link href={`/tasks/${task.id}`}>查看详情</Link>
+                                    </Button>
                                 </div>
                             </Card>
                         </article>

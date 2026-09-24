@@ -16,11 +16,11 @@ use App\Services\CurrentUserService;
 use App\Services\SnowflakeId;
 use App\Services\TaskhubRoleService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Http\UploadedFile;
 
 test('the inertia application shell responds successfully', function (): void {
     // Feature Test 不需要真实加载 Vite 资源；withoutVite 可以避免测试依赖前端构建产物。
@@ -668,6 +668,145 @@ test('sso session prefers local personnel list when user belongs to current site
     ]);
 });
 
+test('authenticated users can view task detail page', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10002,
+        'title' => '任务详情页开发',
+        'description' => '<p>展示完整任务信息。</p>',
+        'payment_account_id' => 'PAY001',
+        'payment_account_snapshot' => json_encode([
+            'accountName' => '开发预算',
+            'departmentName' => '开发部',
+        ], JSON_THROW_ON_ERROR),
+        'budget' => 1200,
+        'expected_delivery' => now()->addDays(5)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        'created_by_snapshot' => json_encode([
+            'displayName' => '陈PM',
+            'departmentName' => '产品部',
+        ], JSON_THROW_ON_ERROR),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('attachment_ref')->insert([
+        'id' => 30001,
+        'owner_type' => 'TASK',
+        'owner_id' => 10002,
+        'attachment_id' => 'ATT-TASK-001',
+        'attachment_name' => '需求说明.pdf',
+        'uploaded_by' => 'E10001',
+        'created_at' => now(),
+    ]);
+
+    DB::table('task_event')->insert([
+        'id' => 40001,
+        'task_id' => 10002,
+        'event_type' => 'TASK_PUBLISHED',
+        'operator_id' => 'E10001',
+        'from_status' => 'DRAFT',
+        'to_status' => 'OPEN',
+        'remark' => '任务进入招标中',
+        'created_at' => now(),
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10002',
+            'displayName' => '李雷',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10002')
+        ->assertOk()
+        ->assertJsonPath('component', 'Tasks/Show')
+        ->assertJsonPath('props.task.id', '10002')
+        ->assertJsonPath('props.task.title', '任务详情页开发')
+        ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
+        ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
+        ->assertJsonPath('props.canPlaceBid', true);
+});
+
+test('authenticated users can place a bid for an open task', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10003,
+        'title' => '投标功能开发',
+        'description' => '实现提交投标。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 2000,
+        'expected_delivery' => now()->addDays(8)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'HIGH',
+        'created_by' => 'E10001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E20001',
+            'displayName' => '王开发',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->post('/tasks/10003/bids', [
+            'amount' => '1800.00',
+            'deliveryDate' => now()->addDays(6)->toDateString(),
+            'proposal' => '我会先完成接口，再补充页面联调。',
+            'attachments' => [
+                ['id' => 'ATT-BID-001', 'name' => '投标方案.pdf'],
+            ],
+        ])
+        ->assertRedirect(route('tasks.show', 10003))
+        ->assertSessionHas('success', '投标已提交。');
+
+    $bid = DB::table('bid')->where('task_id', 10003)->first();
+
+    expect($bid)->not->toBeNull()
+        // SQLite 测试库会把 decimal 读成数字，MySQL 中 DECIMAL 通常读成字符串；这里按数值语义断言。
+        ->and((float) $bid->amount)->toBe(1800.0)
+        ->and($bid->status)->toBe('ACTIVE')
+        ->and($bid->active_key)->toBe('10003:E20001')
+        ->and($bid->revision_no)->toBe(1);
+
+    expect(DB::table('bid_member')->where('bid_id', $bid->id)->first())
+        ->toMatchObject([
+            'user_id' => 'E20001',
+            'role' => 'OWNER',
+        ]);
+
+    expect(DB::table('attachment_ref')->where('owner_type', 'BID')->where('owner_id', $bid->id)->first())
+        ->toMatchObject([
+            'attachment_id' => 'ATT-BID-001',
+            'attachment_name' => '投标方案.pdf',
+        ]);
+
+    expect(DB::table('task_event')->where('task_id', 10003)->where('event_type', 'BID_SUBMITTED')->exists())
+        ->toBeTrue();
+});
+
 test('logout clears sso session and redirects home', function (): void {
     // 未配置总部退出地址时，只退出 TaskHub 本地 Session，然后回到首页。
     config(['sso.logout_url' => null]);
@@ -900,6 +1039,7 @@ function createTaskHallTables(): void
     // SQLite 内存库在同一测试进程内可能复用连接；创建前先清理，保证测试互不影响。
     Schema::dropIfExists('task_event');
     Schema::dropIfExists('attachment_ref');
+    Schema::dropIfExists('bid_member');
     Schema::dropIfExists('bid');
     Schema::dropIfExists('task');
 
@@ -941,6 +1081,14 @@ function createTaskHallTables(): void
         $table->string('active_key', 160)->nullable();
         $table->timestamp('withdrawn_at')->nullable();
         $table->timestamps();
+    });
+
+    Schema::create('bid_member', function (Blueprint $table): void {
+        $table->unsignedBigInteger('id')->primary();
+        $table->unsignedBigInteger('bid_id');
+        $table->string('user_id', 32);
+        $table->string('role', 20);
+        $table->timestamp('created_at')->nullable();
     });
 
     Schema::create('attachment_ref', function (Blueprint $table): void {

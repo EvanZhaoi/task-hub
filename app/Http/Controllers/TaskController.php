@@ -6,7 +6,9 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Integrations\Payment\PaymentAccount;
 use App\Integrations\Payment\PaymentAccountClient;
 use App\Integrations\Payment\PaymentAccountException;
+use App\Models\Bid;
 use App\Models\Task;
+use App\Models\TaskEvent;
 use App\Services\CreateTaskService;
 use App\Services\CurrentUserService;
 use App\Services\RichTextSanitizer;
@@ -137,6 +139,36 @@ class TaskController extends Controller
     }
 
     /**
+     * 展示任务详情页。
+     *
+     * 详情页是投标、选标、交付、变更等后续业务动作的承载页面。
+     * 当前阶段先返回任务完整信息、任务附件、可见投标和事件时间线。
+     */
+    public function show(
+        Task $task,
+        CurrentUserService $currentUser,
+        RichTextSanitizer $richTextSanitizer,
+    ): Response {
+        $employeeNo = $currentUser->employeeNo();
+
+        $task->load([
+            // 任务发布附件用于详情页直接展示 attachment_name。
+            'attachments' => fn ($query) => $query->latest('created_at'),
+            // 任务事件按时间倒序展示，方便用户优先看到最新动作。
+            'events' => fn ($query) => $query->latest('created_at'),
+        ])->loadCount([
+            'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
+        ]);
+
+        return Inertia::render('Tasks/Show', [
+            'task' => $this->taskDetail($task, $employeeNo, $richTextSanitizer),
+            'visibleBids' => $this->visibleBids($task, $employeeNo),
+            'events' => $task->events->map(fn (TaskEvent $event): array => $this->eventItem($event))->values(),
+            'canPlaceBid' => $this->canPlaceBid($task, $employeeNo),
+        ]);
+    }
+
+    /**
      * 从请求 query string 中解析并规整任务大厅筛选条件。
      *
      * 非法状态和复杂度会回退到 ALL，避免用户手动改 URL 导致异常查询。
@@ -229,6 +261,140 @@ class TaskController extends Controller
             'createdAt' => $task->created_at?->format('Y-m-d H:i'),
             'activeBidCount' => (int) ($task->active_bid_count ?? 0),
         ];
+    }
+
+    /**
+     * 把 Task Model 转换为任务详情页需要的结构。
+     *
+     * 详情页展示完整富文本描述、附件、付款账号快照和当前用户相关权限提示。
+     */
+    private function taskDetail(Task $task, string $employeeNo, RichTextSanitizer $richTextSanitizer): array
+    {
+        $createdBySnapshot = $task->created_by_snapshot ?? [];
+        $paymentAccountSnapshot = $task->payment_account_snapshot ?? [];
+
+        return [
+            'id' => (string) $task->id,
+            'title' => $task->title,
+            'description' => $richTextSanitizer->clean($task->description),
+            'amountLabel' => $this->amountLabel($task),
+            'budget' => (string) $task->budget,
+            'finalAmount' => $task->final_amount === null ? null : (string) $task->final_amount,
+            'expectedDelivery' => $task->expected_delivery?->toDateString(),
+            'finalDelivery' => $task->final_delivery?->toDateString(),
+            'biddingDeadline' => $task->bidding_deadline?->format('Y-m-d H:i'),
+            'displayStatus' => $this->displayStatus($task),
+            'status' => $task->status,
+            'assignmentType' => $task->assignment_type,
+            'complexity' => $task->complexity,
+            'createdBy' => $task->created_by,
+            'createdByName' => $createdBySnapshot['displayName'] ?? $task->created_by,
+            'departmentName' => $createdBySnapshot['departmentName'] ?? null,
+            'paymentAccountId' => $task->payment_account_id,
+            'paymentAccountName' => $paymentAccountSnapshot['accountName'] ?? null,
+            'paymentDepartmentName' => $paymentAccountSnapshot['departmentName'] ?? null,
+            'createdAt' => $task->created_at?->format('Y-m-d H:i'),
+            'updatedAt' => $task->updated_at?->format('Y-m-d H:i'),
+            'activeBidCount' => (int) ($task->active_bid_count ?? 0),
+            'isCreatedByCurrentUser' => $task->created_by === $employeeNo,
+            'attachments' => $task->attachments->map(fn ($attachment): array => [
+                'id' => $attachment->attachment_id,
+                'name' => $attachment->attachment_name,
+            ])->values(),
+        ];
+    }
+
+    /**
+     * 查询当前用户在详情页允许看到的投标。
+     *
+     * 发布者可以看到该任务全部投标记录；普通用户只能看到自己参与的投标记录。
+     */
+    private function visibleBids(Task $task, string $employeeNo): array
+    {
+        $query = Bid::query()
+            ->where('task_id', $task->id)
+            ->with([
+                'members' => fn ($query) => $query->orderByRaw("role = 'OWNER' DESC")->oldest('created_at'),
+                'attachments' => fn ($query) => $query->latest('created_at'),
+            ])
+            ->latest('created_at');
+
+        if ($task->created_by !== $employeeNo) {
+            $query->whereHas('members', fn ($query) => $query->where('user_id', $employeeNo));
+        }
+
+        return $query
+            ->get()
+            ->map(fn (Bid $bid): array => $this->bidItem($bid))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * 把 Bid Model 转换成前端投标卡片需要的结构。
+     */
+    private function bidItem(Bid $bid): array
+    {
+        return [
+            'id' => (string) $bid->id,
+            'amount' => (string) $bid->amount,
+            'amountLabel' => '¥'.number_format((float) $bid->amount, 2),
+            'deliveryDate' => $bid->delivery_date?->toDateString(),
+            'proposal' => $bid->proposal,
+            'status' => $bid->status,
+            'revisionNo' => $bid->revision_no,
+            'createdAt' => $bid->created_at?->format('Y-m-d H:i'),
+            'members' => $bid->members->map(fn ($member): array => [
+                'userId' => $member->user_id,
+                'role' => $member->role,
+            ])->values(),
+            'attachments' => $bid->attachments->map(fn ($attachment): array => [
+                'id' => $attachment->attachment_id,
+                'name' => $attachment->attachment_name,
+            ])->values(),
+        ];
+    }
+
+    /**
+     * 把 TaskEvent Model 转换成时间线展示结构。
+     */
+    private function eventItem(TaskEvent $event): array
+    {
+        return [
+            'id' => (string) $event->id,
+            'eventType' => $event->event_type,
+            'operatorId' => $event->operator_id,
+            'fromStatus' => $event->from_status,
+            'toStatus' => $event->to_status,
+            'relatedType' => $event->related_type,
+            'relatedId' => $event->related_id === null ? null : (string) $event->related_id,
+            'remark' => $event->remark,
+            'createdAt' => $event->created_at?->format('Y-m-d H:i'),
+        ];
+    }
+
+    /**
+     * 判断当前用户是否可以提交投标。
+     *
+     * 前端据此显示按钮；真正的业务校验仍在 PlaceBidService 中执行。
+     */
+    private function canPlaceBid(Task $task, string $employeeNo): bool
+    {
+        if ($task->status !== 'OPEN' || $task->created_by === $employeeNo) {
+            return false;
+        }
+
+        if ($task->bidding_deadline === null || ! $task->bidding_deadline->isFuture()) {
+            return false;
+        }
+
+        return ! Bid::query()
+            ->where('task_id', $task->id)
+            ->where('status', 'ACTIVE')
+            ->whereHas('members', fn ($query) => $query
+                ->where('role', 'OWNER')
+                ->where('user_id', $employeeNo))
+            ->exists();
     }
 
     /**
@@ -331,5 +497,4 @@ class TaskController extends Controller
 
         return '¥'.number_format((float) $amount, 2);
     }
-
 }

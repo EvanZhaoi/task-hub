@@ -26,6 +26,13 @@ export type UploadedTaskAttachment = {
     name: string;
 };
 
+export type TaskAttachment = {
+    // attachment_ref.attachment_id，真实文件仍在总部文件服务中。
+    id: string;
+    // attachment_ref.attachment_name，详情页直接展示文件名。
+    name: string;
+};
+
 export type TaskListItem = {
     // 后端把 BIGINT ID 转成 string，避免 JavaScript number 精度风险。
     id: string;
@@ -86,4 +93,74 @@ export type TaskIndexProps = {
     paymentAccountOptions: PaymentAccountOption[];
     statusOptions: SelectOption[];
     tasks: PaginatedTasks;
+};
+
+export type BidStatus = 'ACTIVE' | 'WITHDRAWN' | 'ACCEPTED' | 'LOST';
+
+export type BidMemberRole = 'OWNER' | 'COLLABORATOR';
+
+export type BidMemberItem = {
+    // userId 保存人员工号，不是本地 users 表 ID。
+    userId: string;
+    role: BidMemberRole;
+};
+
+export type BidItem = {
+    // 后端把 BIGINT 转成 string，避免 JavaScript 精度风险。
+    id: string;
+    amount: string;
+    amountLabel: string;
+    deliveryDate: string | null;
+    proposal: string | null;
+    status: BidStatus;
+    revisionNo: number;
+    createdAt: string | null;
+    members: BidMemberItem[];
+    attachments: TaskAttachment[];
+};
+
+export type TaskEventItem = {
+    id: string;
+    eventType: string;
+    operatorId: string | null;
+    fromStatus: TaskDatabaseStatus | null;
+    toStatus: TaskDatabaseStatus | null;
+    relatedType: string | null;
+    relatedId: string | null;
+    remark: string | null;
+    createdAt: string | null;
+};
+
+export type TaskDetail = {
+    id: string;
+    title: string;
+    description: string;
+    amountLabel: string;
+    budget: string;
+    finalAmount: string | null;
+    expectedDelivery: string | null;
+    finalDelivery: string | null;
+    biddingDeadline: string | null;
+    displayStatus: TaskStatus;
+    status: TaskDatabaseStatus;
+    assignmentType: 'BIDDING' | 'DIRECT';
+    complexity: TaskComplexity;
+    createdBy: string;
+    createdByName: string;
+    departmentName: string | null;
+    paymentAccountId: string;
+    paymentAccountName: string | null;
+    paymentDepartmentName: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    activeBidCount: number;
+    isCreatedByCurrentUser: boolean;
+    attachments: TaskAttachment[];
+};
+
+export type TaskShowProps = {
+    canPlaceBid: boolean;
+    events: TaskEventItem[];
+    task: TaskDetail;
+    visibleBids: BidItem[];
 };

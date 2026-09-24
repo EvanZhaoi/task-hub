@@ -147,7 +147,7 @@ export function TaskAttachmentUploader({ disabled = false, onChange, value }: Ta
                     {isUploading ? '上传中...' : '选择文件'}
                 </Button>
                 <span className="text-xs leading-5 text-[#6e6e80]">
-                    选择后立即上传，发布任务时保存附件 ID 和名称。
+                    选择后立即上传，提交表单时保存附件 ID 和名称。
                 </span>
             </div>
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\BidController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\TaskController;
 use App\Http\Middleware\EnsureSsoAuthenticated;
@@ -28,6 +29,10 @@ Route::middleware(EnsureSsoAuthenticated::class)->group(function (): void {
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
     // 发布任务在任务大厅模态框内提交，不单独创建 /tasks/create 页面。
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    // 任务详情页承载投标、选标、交付、事件时间线等后续业务动作。
+    Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+    // 投标在任务详情页模态框内提交，完整事务由 PlaceBidService 控制。
+    Route::post('/tasks/{task}/bids', [BidController::class, 'store'])->name('tasks.bids.store');
     // 附件先上传到 TaskHub 后端，再由后端携带当前登录 accessToken 转传到总部文件服务。
     Route::post('/attachments/upload', [AttachmentController::class, 'upload'])->name('attachments.upload');
 });
