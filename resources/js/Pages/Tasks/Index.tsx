@@ -45,6 +45,14 @@ const complexityLabels: Record<TaskComplexity, string> = {
     HIGH: '复杂',
 };
 
+// 当前数据库没有独立的紧急程度字段，列表沿用 complexity 的三级值做紧凑展示。
+// 这里只改变列表文案，不改变筛选条件、提交值或后端业务含义。
+const urgencyLabels: Record<TaskComplexity, string> = {
+    LOW: '低',
+    MEDIUM: '中',
+    HIGH: '高',
+};
+
 // 后端只传状态值，前端在这里把状态值映射为 Badge 的视觉类型。
 const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['variant']> = {
     DRAFT: 'default',
@@ -83,6 +91,32 @@ function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): str
         status: merged.status === 'ALL' ? null : merged.status,
         complexity: merged.complexity === 'ALL' ? null : merged.complexity,
     });
+}
+
+/**
+ * 根据后端返回的本地时间计算招标剩余天数提示。
+ * 后端格式为 YYYY-MM-DD HH:mm，替换空格后按浏览器本地时区解析即可。
+ */
+function biddingRemainingLabel(deadline: string | null): string | null {
+    if (!deadline) {
+        return null;
+    }
+
+    const deadlineTime = new Date(deadline.replace(' ', 'T')).getTime();
+
+    if (Number.isNaN(deadlineTime)) {
+        return null;
+    }
+
+    const remainingMilliseconds = deadlineTime - Date.now();
+
+    if (remainingMilliseconds <= 0) {
+        return '已截止';
+    }
+
+    const remainingDays = Math.ceil(remainingMilliseconds / (24 * 60 * 60 * 1000));
+
+    return remainingDays === 1 ? '1 天内截止' : `剩余 ${remainingDays} 天`;
 }
 
 export default function TaskIndex({
@@ -360,72 +394,95 @@ export default function TaskIndex({
                         </CardContent>
                     </Card>
                 ) : (
-                    tasks.data.map((task) => (
-                        // 单个任务卡片只做列表摘要；后续详情和操作会在卡片或模态框中继续扩展。
-                        <article key={task.id}>
-                            <Card className="p-5 transition hover:border-[#c7d2fe] hover:shadow-sm">
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h2 className="m-0 text-base font-semibold">
-                                                <Link
-                                                    className="hover:text-[#5e6ad2] hover:underline"
-                                                    href={`/tasks/${task.id}`}
+                    tasks.data.map((task) => {
+                        const remainingLabel = biddingRemainingLabel(task.biddingDeadline);
+
+                        return (
+                            // 三块式卡片把任务、时间和预算信息固定在各自区域，便于纵向扫描比较。
+                            <article key={task.id}>
+                                <Card className="p-4 transition hover:border-[#c7d2fe] hover:shadow-sm sm:p-5">
+                                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem_10rem] lg:items-stretch lg:gap-0">
+                                        {/* 左侧：标题、状态、紧急程度、描述摘要和交付日期。 */}
+                                        <section className="min-w-0 lg:pr-6">
+                                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                                <h2 className="m-0 min-w-0 text-base font-semibold">
+                                                    <Link
+                                                        className="block truncate hover:text-[#5e6ad2] hover:underline"
+                                                        href={`/tasks/${task.id}`}
+                                                    >
+                                                        {task.title}
+                                                    </Link>
+                                                </h2>
+                                                <Badge variant={statusBadgeVariants[task.displayStatus]}>
+                                                    {statusLabels[task.displayStatus]}
+                                                </Badge>
+                                                <Badge
+                                                    title={`紧急程度：${urgencyLabels[task.complexity]}`}
+                                                    variant={complexityBadgeVariants[task.complexity]}
                                                 >
-                                                    {task.title}
-                                                </Link>
-                                            </h2>
-                                            <Badge variant={statusBadgeVariants[task.displayStatus]}>
-                                                {statusLabels[task.displayStatus]}
-                                            </Badge>
-                                            <Badge variant={complexityBadgeVariants[task.complexity]}>
-                                                {complexityLabels[task.complexity]}
-                                            </Badge>
-                                        </div>
-                                        <RichTextViewer className="mt-2 max-h-24 max-w-5xl overflow-hidden" html={task.description} />
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-base font-semibold">{task.amountLabel}</div>
-                                        <div className="text-xs text-[#6e6e80]">
-                                            {task.assignmentType === 'BIDDING' ? '招标选标' : '直接指派'}
-                                        </div>
-                                    </div>
-                                </div>
+                                                    紧急程度：{urgencyLabels[task.complexity]}
+                                                </Badge>
+                                            </div>
 
-                                <div className="mt-4 grid gap-3 text-sm text-[#6e6e80] md:grid-cols-2 xl:grid-cols-4">
-                                    {/* 关键业务字段用网格排列，方便用户快速扫描交期、截止、发布者和投标数。 */}
-                                    <div>
-                                        <span className="block text-xs text-[#9ca3af]">交付日期</span>
-                                        <strong className="font-semibold text-[#1a1a1a]">
-                                            {task.finalDelivery ?? task.expectedDelivery ?? '-'}
-                                        </strong>
-                                    </div>
-                                    <div>
-                                        <span className="block text-xs text-[#9ca3af]">招标截止</span>
-                                        <strong className="font-semibold text-[#1a1a1a]">
-                                            {task.biddingDeadline ?? '-'}
-                                        </strong>
-                                    </div>
-                                    <div>
-                                        <span className="block text-xs text-[#9ca3af]">发布者</span>
-                                        <strong className="font-semibold text-[#1a1a1a]">{task.createdByName}</strong>
-                                        {task.departmentName ? ` · ${task.departmentName}` : ''}
-                                    </div>
-                                    <div>
-                                        <span className="block text-xs text-[#9ca3af]">投标 / 预算</span>
-                                        <strong className="font-semibold text-[#1a1a1a]">{task.activeBidCount}</strong>
-                                        {task.paymentAccountName ? ` · ${task.paymentAccountName}` : ''}
-                                    </div>
-                                </div>
+                                            <RichTextViewer
+                                                className="mt-2 line-clamp-2 max-w-none text-sm leading-5 [&_*]:m-0"
+                                                html={task.description}
+                                            />
 
-                                <div className="mt-4 flex justify-end">
-                                    <Button asChild size="sm" variant="outline">
-                                        <Link href={`/tasks/${task.id}`}>查看详情</Link>
-                                    </Button>
-                                </div>
-                            </Card>
-                        </article>
-                    ))
+                                            <div className="mt-3 flex items-center gap-2 text-xs text-[#6e6e80]">
+                                                <span className="text-[#9ca3af]">预计交付</span>
+                                                <span className="font-medium text-[#374151]">
+                                                    {task.finalDelivery ?? task.expectedDelivery ?? '-'}
+                                                </span>
+                                            </div>
+                                        </section>
+
+                                        {/* 中间：只展示人员和招标时间，避免与左右两侧信息重复。 */}
+                                        <section className="min-w-0 border-t border-[#eef0f3] pt-4 text-sm lg:border-l lg:border-t-0 lg:px-6 lg:pt-0">
+                                            <div>
+                                                <span className="block text-xs text-[#9ca3af]">发布者</span>
+                                                <div className="mt-1 truncate font-medium text-[#1f2937]">
+                                                    {task.createdByName}
+                                                </div>
+                                                {task.departmentName ? (
+                                                    <div className="mt-0.5 truncate text-xs text-[#9ca3af]">
+                                                        {task.departmentName}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="mt-3">
+                                                <span className="block text-xs text-[#9ca3af]">招标截止</span>
+                                                <div className="mt-1 font-medium text-[#1f2937]">
+                                                    {task.biddingDeadline ?? '-'}
+                                                </div>
+                                                {remainingLabel ? (
+                                                    <div className="mt-0.5 text-xs text-[#5e6ad2]">{remainingLabel}</div>
+                                                ) : null}
+                                            </div>
+                                        </section>
+
+                                        {/* 右侧：突出预算，并在同一区域展示当前有效投标人数。 */}
+                                        <section className="flex min-w-0 flex-col border-t border-[#eef0f3] pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
+                                            <span className="text-xs text-[#9ca3af]">任务预算</span>
+                                            <strong className="mt-1 text-xl font-semibold text-[#111827]">
+                                                {task.amountLabel}
+                                            </strong>
+                                            <span className="mt-2 text-sm text-[#6e6e80]">
+                                                {task.activeBidCount} 人投标
+                                            </span>
+                                            <Link
+                                                className="mt-auto pt-3 text-sm font-medium text-[#5e6ad2] hover:underline"
+                                                href={`/tasks/${task.id}`}
+                                            >
+                                                查看详情
+                                            </Link>
+                                        </section>
+                                    </div>
+                                </Card>
+                            </article>
+                        );
+                    })
                 )}
             </div>
 
