@@ -43,8 +43,8 @@ class StoreTaskRequest extends FormRequest
             'biddingDeadline' => ['required', 'date', 'after:now'],
             // 枚举值必须和 database/schema.sql 的 CHECK 约束保持一致。
             'complexity' => ['required', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
-            // 紧急度和复杂度是两个独立维度，同样只允许 LOW、MEDIUM、HIGH。
-            'urgency' => ['required', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
+            // 是否紧急是独立布尔值，不再使用 LOW、MEDIUM、HIGH 三级枚举。
+            'isUrgent' => ['required', 'boolean'],
             // 付款账号来自外部系统；前端只提交 ID，名称和部门由后端调用外部接口获取。
             'paymentAccountId' => ['required', 'string', 'max:64'],
             // 附件已经由外部上传接口生成 ID 和名称。
@@ -83,9 +83,8 @@ class StoreTaskRequest extends FormRequest
             'complexity.required' => '请选择任务复杂度。',
             'complexity.string' => '任务复杂度格式不正确。',
             'complexity.in' => '任务复杂度只能选择简单、中等或复杂。',
-            'urgency.required' => '请选择任务紧急度。',
-            'urgency.string' => '任务紧急度格式不正确。',
-            'urgency.in' => '任务紧急度只能选择低、中或高。',
+            'isUrgent.required' => '请确认任务是否紧急。',
+            'isUrgent.boolean' => '任务紧急标记格式不正确。',
             'paymentAccountId.required' => '请选择付款账号。',
             'paymentAccountId.string' => '付款账号格式不正确。',
             'paymentAccountId.max' => '付款账号编码不能超过 64 个字符。',

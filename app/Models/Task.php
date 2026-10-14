@@ -37,7 +37,7 @@ class Task extends Model
         'status',
         'assignment_type',
         'complexity',
-        'urgency',
+        'is_urgent',
         'created_by',
         'created_by_snapshot',
         'assigned_bid_id',
@@ -64,6 +64,8 @@ class Task extends Model
             'final_delivery' => 'date:Y-m-d',
             'bidding_deadline' => 'datetime',
             'created_by_snapshot' => 'array',
+            // 数据库存储 0/1，业务代码统一读取为 PHP bool。
+            'is_urgent' => 'boolean',
             // version 用于乐观锁，后续写业务时必须和数据库当前版本比较。
             'version' => 'integer',
             'completed_at' => 'datetime',

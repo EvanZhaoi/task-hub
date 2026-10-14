@@ -54,7 +54,7 @@ CREATE TABLE `task` (
   `status`                   VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT '任务状态：DRAFT/OPEN/ASSIGNED/COMPLETED/FAILED/CANCELLED',
   `assignment_type`          VARCHAR(20)     NOT NULL COMMENT '分配方式：BIDDING 招标选标 / DIRECT 直接指名',
   `complexity`               VARCHAR(20)     NOT NULL DEFAULT 'MEDIUM' COMMENT '复杂度：LOW/MEDIUM/HIGH',
-  `urgency`                  VARCHAR(20)     NOT NULL DEFAULT 'MEDIUM' COMMENT '紧急度：LOW/MEDIUM/HIGH',
+  `is_urgent`                TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否紧急：0 否 / 1 是',
   `created_by`               VARCHAR(32)     NOT NULL COMMENT '人员工号（外部人员接口标识）',
   `created_by_snapshot`      JSON                     COMMENT '发布者历史快照，仅用于展示和审计',
   `assigned_bid_id`          BIGINT UNSIGNED          COMMENT '中标投标 ID；DIRECT 模式为空',
@@ -76,7 +76,7 @@ CREATE TABLE `task` (
   CONSTRAINT `CHK_task_status` CHECK (`status` IN ('DRAFT', 'OPEN', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED')),
   CONSTRAINT `CHK_task_assignment_type` CHECK (`assignment_type` IN ('BIDDING', 'DIRECT')),
   CONSTRAINT `CHK_task_complexity` CHECK (`complexity` IN ('LOW', 'MEDIUM', 'HIGH')),
-  CONSTRAINT `CHK_task_urgency` CHECK (`urgency` IN ('LOW', 'MEDIUM', 'HIGH'))
+  CONSTRAINT `CHK_task_is_urgent` CHECK (`is_urgent` IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='任务主表';
 

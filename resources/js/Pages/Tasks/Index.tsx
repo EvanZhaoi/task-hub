@@ -29,7 +29,6 @@ import type {
     TaskFilters,
     TaskIndexProps,
     TaskStatus,
-    TaskUrgency,
     UploadedTaskAttachment,
 } from '@/types/task';
 import { urlWithQuery } from '@/utils/url';
@@ -52,13 +51,6 @@ const complexityLabels: Record<TaskComplexity, string> = {
     HIGH: '复杂',
 };
 
-// 紧急度是独立业务字段，不再使用 complexity 推导。
-const urgencyLabels: Record<TaskUrgency, string> = {
-    LOW: '低',
-    MEDIUM: '中',
-    HIGH: '高',
-};
-
 // 后端只传状态值，前端在这里把状态值映射为 Badge 的视觉类型。
 const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['variant']> = {
     DRAFT: 'default',
@@ -77,13 +69,6 @@ const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badg
     HIGH: 'danger',
 };
 
-// 高紧急度使用醒目的 danger，中紧急度使用 pending，低紧急度保持克制。
-const urgencyBadgeVariants: Record<TaskUrgency, ComponentProps<typeof Badge>['variant']> = {
-    LOW: 'completed',
-    MEDIUM: 'pending',
-    HIGH: 'danger',
-};
-
 type TaskCreateForm = {
     title: string;
     description: string;
@@ -91,7 +76,7 @@ type TaskCreateForm = {
     expectedDelivery: string;
     biddingDeadline: string;
     complexity: TaskComplexity;
-    urgency: TaskUrgency;
+    isUrgent: boolean;
     paymentAccountId: string;
     attachments: UploadedTaskAttachment[];
 };
@@ -150,7 +135,7 @@ export default function TaskIndex({
         expectedDelivery: '',
         biddingDeadline: '',
         complexity: 'MEDIUM',
-        urgency: 'MEDIUM',
+        isUrgent: false,
         paymentAccountId: '',
         attachments: [],
     });
@@ -255,19 +240,17 @@ export default function TaskIndex({
                                         </NativeSelect>
                                     </Field>
 
-                                    <Field label="紧急度" message={form.errors.urgency} required>
-                                        <NativeSelect
-                                            className="w-full min-w-0"
-                                            name="urgency"
-                                            onChange={(event) =>
-                                                form.setData('urgency', event.target.value as TaskUrgency)
-                                            }
-                                            value={form.data.urgency}
-                                        >
-                                            <option value="LOW">低</option>
-                                            <option value="MEDIUM">中</option>
-                                            <option value="HIGH">高</option>
-                                        </NativeSelect>
+                                    <Field label="是否紧急" message={form.errors.isUrgent}>
+                                        <label className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-[#d9dce3] bg-white px-3 text-sm text-[#374151] hover:bg-[#fafafa]">
+                                            <input
+                                                checked={form.data.isUrgent}
+                                                className="size-4 accent-[#5e6ad2]"
+                                                name="isUrgent"
+                                                onChange={(event) => form.setData('isUrgent', event.target.checked)}
+                                                type="checkbox"
+                                            />
+                                            <span>标记为紧急任务</span>
+                                        </label>
                                     </Field>
                                 </div>
 
@@ -434,7 +417,7 @@ export default function TaskIndex({
                             <article key={task.id}>
                                 <Card className="p-4 transition hover:border-[#c7d2fe] hover:shadow-sm sm:p-5">
                                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem_10rem] lg:items-stretch lg:gap-0">
-                                        {/* 左侧：标题、状态、紧急程度、描述摘要和交付日期。 */}
+                                        {/* 左侧：标题、状态、紧急标记、描述摘要和交付日期。 */}
                                         <section className="min-w-0 lg:pr-6">
                                             <div className="flex min-w-0 flex-wrap items-center gap-2">
                                                 <h2 className="m-0 min-w-0 text-base font-semibold">
@@ -448,12 +431,7 @@ export default function TaskIndex({
                                                 <Badge variant={statusBadgeVariants[task.displayStatus]}>
                                                     {statusLabels[task.displayStatus]}
                                                 </Badge>
-                                                <Badge
-                                                    title={`紧急程度：${urgencyLabels[task.urgency]}`}
-                                                    variant={urgencyBadgeVariants[task.urgency]}
-                                                >
-                                                    紧急程度：{urgencyLabels[task.urgency]}
-                                                </Badge>
+                                                {task.isUrgent ? <Badge variant="danger">紧急</Badge> : null}
                                             </div>
 
                                             <RichTextViewer
