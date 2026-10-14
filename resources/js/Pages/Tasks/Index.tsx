@@ -24,7 +24,14 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
 import type { SharedPageProps } from '@/types/page';
-import type { TaskComplexity, TaskFilters, TaskIndexProps, TaskStatus, UploadedTaskAttachment } from '@/types/task';
+import type {
+    TaskComplexity,
+    TaskFilters,
+    TaskIndexProps,
+    TaskStatus,
+    TaskUrgency,
+    UploadedTaskAttachment,
+} from '@/types/task';
 import { urlWithQuery } from '@/utils/url';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 
@@ -45,9 +52,8 @@ const complexityLabels: Record<TaskComplexity, string> = {
     HIGH: '复杂',
 };
 
-// 当前数据库没有独立的紧急程度字段，列表沿用 complexity 的三级值做紧凑展示。
-// 这里只改变列表文案，不改变筛选条件、提交值或后端业务含义。
-const urgencyLabels: Record<TaskComplexity, string> = {
+// 紧急度是独立业务字段，不再使用 complexity 推导。
+const urgencyLabels: Record<TaskUrgency, string> = {
     LOW: '低',
     MEDIUM: '中',
     HIGH: '高',
@@ -71,6 +77,13 @@ const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badg
     HIGH: 'danger',
 };
 
+// 高紧急度使用醒目的 danger，中紧急度使用 pending，低紧急度保持克制。
+const urgencyBadgeVariants: Record<TaskUrgency, ComponentProps<typeof Badge>['variant']> = {
+    LOW: 'completed',
+    MEDIUM: 'pending',
+    HIGH: 'danger',
+};
+
 type TaskCreateForm = {
     title: string;
     description: string;
@@ -78,6 +91,7 @@ type TaskCreateForm = {
     expectedDelivery: string;
     biddingDeadline: string;
     complexity: TaskComplexity;
+    urgency: TaskUrgency;
     paymentAccountId: string;
     attachments: UploadedTaskAttachment[];
 };
@@ -136,6 +150,7 @@ export default function TaskIndex({
         expectedDelivery: '',
         biddingDeadline: '',
         complexity: 'MEDIUM',
+        urgency: 'MEDIUM',
         paymentAccountId: '',
         attachments: [],
     });
@@ -209,19 +224,21 @@ export default function TaskIndex({
                                     />
                                 </Field>
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <Field label="预算金额" message={form.errors.budget} required>
-                                        <Input
-                                            className="w-full"
-                                            min="0"
-                                            name="budget"
-                                            onChange={(event) => form.setData('budget', event.target.value)}
-                                            placeholder="3000.00"
-                                            step="0.01"
-                                            type="number"
-                                            value={form.data.budget}
-                                        />
-                                    </Field>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                                    <div className="min-w-0 sm:col-span-2">
+                                        <Field label="预算金额" message={form.errors.budget} required>
+                                            <Input
+                                                className="w-full"
+                                                min="0"
+                                                name="budget"
+                                                onChange={(event) => form.setData('budget', event.target.value)}
+                                                placeholder="3000.00"
+                                                step="0.01"
+                                                type="number"
+                                                value={form.data.budget}
+                                            />
+                                        </Field>
+                                    </div>
 
                                     <Field label="复杂度" message={form.errors.complexity} required>
                                         <NativeSelect
@@ -235,6 +252,21 @@ export default function TaskIndex({
                                             <option value="LOW">简单</option>
                                             <option value="MEDIUM">中等</option>
                                             <option value="HIGH">复杂</option>
+                                        </NativeSelect>
+                                    </Field>
+
+                                    <Field label="紧急度" message={form.errors.urgency} required>
+                                        <NativeSelect
+                                            className="w-full min-w-0"
+                                            name="urgency"
+                                            onChange={(event) =>
+                                                form.setData('urgency', event.target.value as TaskUrgency)
+                                            }
+                                            value={form.data.urgency}
+                                        >
+                                            <option value="LOW">低</option>
+                                            <option value="MEDIUM">中</option>
+                                            <option value="HIGH">高</option>
                                         </NativeSelect>
                                     </Field>
                                 </div>
@@ -417,10 +449,10 @@ export default function TaskIndex({
                                                     {statusLabels[task.displayStatus]}
                                                 </Badge>
                                                 <Badge
-                                                    title={`紧急程度：${urgencyLabels[task.complexity]}`}
-                                                    variant={complexityBadgeVariants[task.complexity]}
+                                                    title={`紧急程度：${urgencyLabels[task.urgency]}`}
+                                                    variant={urgencyBadgeVariants[task.urgency]}
                                                 >
-                                                    紧急程度：{urgencyLabels[task.complexity]}
+                                                    紧急程度：{urgencyLabels[task.urgency]}
                                                 </Badge>
                                             </div>
 

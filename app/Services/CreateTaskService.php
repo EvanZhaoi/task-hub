@@ -38,6 +38,7 @@ class CreateTaskService
      *
      * @param  array<string, mixed>  $validated  StoreTaskRequest 已校验通过的表单数据。
      * @param  list<array{id: string, name: string}>  $attachments  已解析并去重后的外部附件 ID 和名称。
+     *
      * @throws PaymentAccountException 当付款账号接口不可用或账号不存在时抛出，由 Controller 转成表单错误。
      */
     public function execute(array $validated, array $attachments, SsoUser $user, string $accessToken): void
@@ -85,6 +86,7 @@ class CreateTaskService
             'status' => 'OPEN',
             'assignment_type' => 'BIDDING',
             'complexity' => $validated['complexity'],
+            'urgency' => $validated['urgency'],
             'created_by' => $employeeNo,
             'created_by_snapshot' => $this->createdBySnapshot($user),
             'version' => 0,
@@ -110,6 +112,7 @@ class CreateTaskService
                 'title' => $task->title,
                 'budget' => $task->budget,
                 'complexity' => $task->complexity,
+                'urgency' => $task->urgency,
                 'assignmentType' => $task->assignment_type,
             ],
             'remark' => '发布者创建并发布任务',

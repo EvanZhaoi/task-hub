@@ -37,6 +37,7 @@ class Task extends Model
         'status',
         'assignment_type',
         'complexity',
+        'urgency',
         'created_by',
         'created_by_snapshot',
         'assigned_bid_id',

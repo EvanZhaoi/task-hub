@@ -29,6 +29,7 @@ import type {
     TaskEventItem,
     TaskShowProps,
     TaskStatus,
+    TaskUrgency,
     UploadedTaskAttachment,
 } from '@/types/task';
 
@@ -47,6 +48,12 @@ const complexityLabels: Record<TaskComplexity, string> = {
     LOW: '简单',
     MEDIUM: '中等',
     HIGH: '复杂',
+};
+
+const urgencyLabels: Record<TaskUrgency, string> = {
+    LOW: '低',
+    MEDIUM: '中',
+    HIGH: '高',
 };
 
 const bidStatusLabels: Record<BidStatus, string> = {
@@ -88,6 +95,12 @@ const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['vari
 const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badge>['variant']> = {
     LOW: 'completed',
     MEDIUM: 'default',
+    HIGH: 'danger',
+};
+
+const urgencyBadgeVariants: Record<TaskUrgency, ComponentProps<typeof Badge>['variant']> = {
+    LOW: 'completed',
+    MEDIUM: 'pending',
     HIGH: 'danger',
 };
 
@@ -142,6 +155,9 @@ export default function TaskShow({ canPlaceBid, events, task, visibleBids }: Tas
                                         </Badge>
                                         <Badge variant={complexityBadgeVariants[task.complexity]}>
                                             {complexityLabels[task.complexity]}
+                                        </Badge>
+                                        <Badge variant={urgencyBadgeVariants[task.urgency]}>
+                                            紧急程度：{urgencyLabels[task.urgency]}
                                         </Badge>
                                         <Badge variant="default">
                                             {task.assignmentType === 'BIDDING' ? '招标选标' : '直接指派'}

@@ -82,6 +82,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         'status' => 'OPEN',
         'assignment_type' => 'BIDDING',
         'complexity' => 'MEDIUM',
+        'urgency' => 'HIGH',
         'created_by' => 'E10001',
         'created_by_snapshot' => json_encode([
             'displayName' => '陈PM',
@@ -128,6 +129,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.filters.keyword', '登录')
         ->assertJsonPath('props.paymentAccountOptions.0.value', 'PAY001')
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
+        ->assertJsonPath('props.tasks.data.0.urgency', 'HIGH')
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1);
 });
 
@@ -176,6 +178,7 @@ test('authenticated users can publish a bidding task with attachment id and name
             'expectedDelivery' => now()->addDays(7)->toDateString(),
             'biddingDeadline' => now()->addDay()->format('Y-m-d\TH:i'),
             'complexity' => 'MEDIUM',
+            'urgency' => 'HIGH',
             'paymentAccountId' => 'PAY001',
             'attachments' => [
                 ['id' => 'ATT001', 'name' => '需求说明.pdf'],
@@ -192,6 +195,7 @@ test('authenticated users can publish a bidding task with attachment id and name
     expect($task)->not->toBeNull()
         ->and($task->status)->toBe('OPEN')
         ->and($task->assignment_type)->toBe('BIDDING')
+        ->and($task->urgency)->toBe('HIGH')
         ->and($task->created_by)->toBe('E10002');
 
     expect($task->description)
@@ -687,6 +691,7 @@ test('authenticated users can view task detail page', function (): void {
         'status' => 'OPEN',
         'assignment_type' => 'BIDDING',
         'complexity' => 'MEDIUM',
+        'urgency' => 'LOW',
         'created_by' => 'E10001',
         'created_by_snapshot' => json_encode([
             'displayName' => '陈PM',
@@ -735,6 +740,7 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonPath('component', 'Tasks/Show')
         ->assertJsonPath('props.task.id', '10002')
         ->assertJsonPath('props.task.title', '任务详情页开发')
+        ->assertJsonPath('props.task.urgency', 'LOW')
         ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
         ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
         ->assertJsonPath('props.canPlaceBid', true);
@@ -1059,6 +1065,8 @@ function createTaskHallTables(): void
         $table->string('status', 20);
         $table->string('assignment_type', 20);
         $table->string('complexity', 20);
+        // 紧急度与复杂度独立，默认值兼容没有显式指定紧急度的旧测试数据。
+        $table->string('urgency', 20)->default('MEDIUM');
         $table->string('created_by', 32);
         $table->json('created_by_snapshot')->nullable();
         $table->unsignedBigInteger('assigned_bid_id')->nullable();

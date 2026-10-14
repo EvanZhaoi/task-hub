@@ -7,6 +7,9 @@ export type TaskDatabaseStatus = Exclude<TaskStatus, 'PENDING_SELECTION'>;
 
 export type TaskComplexity = 'LOW' | 'MEDIUM' | 'HIGH';
 
+// 紧急度和复杂度使用相同的三级值，但业务含义不同，因此保留独立类型。
+export type TaskUrgency = 'LOW' | 'MEDIUM' | 'HIGH';
+
 export type SelectOption = {
     // label 是展示文案，value 是提交给后端的筛选值。
     label: string;
@@ -50,6 +53,7 @@ export type TaskListItem = {
     status: TaskDatabaseStatus;
     assignmentType: 'BIDDING' | 'DIRECT';
     complexity: TaskComplexity;
+    urgency: TaskUrgency;
     // createdBy 是工号，createdByName 是快照中的展示名称。
     createdBy: string;
     createdByName: string;
@@ -145,6 +149,7 @@ export type TaskDetail = {
     status: TaskDatabaseStatus;
     assignmentType: 'BIDDING' | 'DIRECT';
     complexity: TaskComplexity;
+    urgency: TaskUrgency;
     createdBy: string;
     createdByName: string;
     departmentName: string | null;
