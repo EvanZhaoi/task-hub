@@ -17,7 +17,12 @@ class TaskAssignee extends Model
 
     public $incrementing = false;
 
-    // 成员关系创建后不在 MVP 中更新，因此表结构不需要 updated_at。
+    // task_assignee 只记录成员加入时间，数据库没有 updated_at。
+    // 保持 timestamps 开启以自动写 created_at，仅关闭 updated_at。
+    public $timestamps = true;
+
+    public const CREATED_AT = 'created_at';
+
     public const UPDATED_AT = null;
 
     protected $keyType = 'int';
@@ -28,6 +33,16 @@ class TaskAssignee extends Model
         'user_id',
         'role',
     ];
+
+    /**
+     * 将执行成员创建时间转换为 Carbon 日期时间对象。
+     */
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
+    }
 
     /**
      * 获取执行成员所属的任务。

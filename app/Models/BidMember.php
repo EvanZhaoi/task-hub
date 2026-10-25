@@ -18,7 +18,12 @@ class BidMember extends Model
     // 主键由 schema.sql / 业务层控制，不启用 Eloquent 自增。
     public $incrementing = false;
 
-    // 该表只记录成员创建，不维护 updated_at。
+    // bid_member 保留 created_at，但数据库没有 updated_at。
+    // timestamps 保持开启，让 Eloquent 创建记录时自动写入 created_at。
+    public $timestamps = true;
+
+    public const CREATED_AT = 'created_at';
+
     public const UPDATED_AT = null;
 
     protected $keyType = 'int';
@@ -30,6 +35,16 @@ class BidMember extends Model
         'user_id',
         'role',
     ];
+
+    /**
+     * 将数据库创建时间转换成 Carbon，读取成员加入时间时不需要手工解析字符串。
+     */
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
+    }
 
     /**
      * 获取成员所属的投标记录。

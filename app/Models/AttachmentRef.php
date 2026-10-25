@@ -19,7 +19,12 @@ class AttachmentRef extends Model
     // 业务主键由数据库建表脚本或业务层生成，不使用 Eloquent 自增 ID。
     public $incrementing = false;
 
-    // attachment_ref 表只有 created_at，没有 updated_at，因此关闭 Eloquent 对 updated_at 的自动维护。
+    // attachment_ref 保留 created_at，但数据库没有 updated_at。
+    // timestamps 保持开启，让通过 Eloquent 创建的附件引用自动获得 created_at。
+    public $timestamps = true;
+
+    public const CREATED_AT = 'created_at';
+
     public const UPDATED_AT = null;
 
     // MySQL BIGINT UNSIGNED 在 Eloquent 中按 int 处理；对外展示时再按需要转字符串。
@@ -34,6 +39,16 @@ class AttachmentRef extends Model
         'attachment_name',
         'uploaded_by',
     ];
+
+    /**
+     * 将附件引用创建时间转换为 Carbon 日期时间对象。
+     */
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
+    }
 
     /**
      * 获取附件所属的业务对象。

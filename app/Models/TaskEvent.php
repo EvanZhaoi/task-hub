@@ -18,6 +18,12 @@ class TaskEvent extends Model
 
     public $incrementing = false;
 
+    // task_event 是追加写入的审计时间线，只存在 created_at。
+    // 继续启用 timestamps 以自动写 created_at，并明确禁用不存在的 updated_at。
+    public $timestamps = true;
+
+    public const CREATED_AT = 'created_at';
+
     public const UPDATED_AT = null;
 
     protected $keyType = 'int';
@@ -45,6 +51,7 @@ class TaskEvent extends Model
         return [
             // event_data 保存事件发生时必要快照，例如主动流标原因、投标数量等。
             'event_data' => 'array',
+            'created_at' => 'datetime',
         ];
     }
 
