@@ -1,5 +1,5 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, ExternalLink, FileText, Paperclip, Users } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarDays, ExternalLink, FileText, Paperclip, UserRound, Users } from 'lucide-react';
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import type { SharedPageProps } from '@/types/page';
 import type {
     BidItem,
@@ -400,55 +401,115 @@ function BidList({ bids }: { bids: BidItem[] }) {
                 const collaborators = bid.members.filter((member) => member.role === 'COLLABORATOR');
 
                 return (
-                    <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfbfc] p-4" key={bid.id}>
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <strong className="text-base">{bid.amountLabel}</strong>
-                                    <Badge variant={bidStatusBadgeVariants[bid.status]}>
-                                        {bidStatusLabels[bid.status]}
-                                    </Badge>
-                                </div>
-                                <p className="mt-1 text-sm text-[#6e6e80]">
-                                    主投标人：{owner ? `${owner.displayName}（${owner.userId}）` : '-'} · 承诺交付：
-                                    {bid.deliveryDate ?? '-'}
-                                </p>
-                            </div>
-                            <span className="text-xs text-[#9ca3af]">第 {bid.revisionNo} 版 · {bid.createdAt}</span>
+                    <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white" key={bid.id}>
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#eeeeef] bg-[#fbfbfc] px-4 py-2.5">
+                            <Badge variant={bidStatusBadgeVariants[bid.status]}>{bidStatusLabels[bid.status]}</Badge>
+                            <span className="text-xs text-[#9ca3af]">
+                                第 {bid.revisionNo} 版 · {bid.createdAt ?? '-'}
+                            </span>
                         </div>
 
-                        {bid.proposal ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{bid.proposal}</p> : null}
+                        <div className="grid divide-y divide-[#eeeeef] sm:grid-cols-[minmax(0,1.4fr)_minmax(140px,0.8fr)_minmax(150px,0.9fr)] sm:divide-x sm:divide-y-0">
+                            <BidPrimaryInfo
+                                icon={<UserRound className="size-5" />}
+                                label="主投标人"
+                                value={owner ? owner.displayName : '-'}
+                                secondary={owner?.userId ?? null}
+                            />
+                            <BidPrimaryInfo
+                                emphasize
+                                icon={<Banknote className="size-5" />}
+                                label="投标金额"
+                                value={bid.amountLabel}
+                            />
+                            <BidPrimaryInfo
+                                icon={<CalendarDays className="size-5" />}
+                                label="承诺交付日期"
+                                value={bid.deliveryDate ?? '-'}
+                            />
+                        </div>
 
-                        {collaborators.length > 0 ? (
-                            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                                <span className="inline-flex items-center gap-1 text-[#6e6e80]">
-                                    <Users className="size-4" />
-                                    协作成员
-                                </span>
-                                {collaborators.map((member) => (
-                                    <span
-                                        className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
-                                        key={member.userId}
-                                        title={member.departmentName ?? undefined}
-                                    >
-                                        {member.displayName}（{member.userId}）
+                        <div className="space-y-3 border-t border-[#eeeeef] px-4 py-3.5">
+                            {bid.proposal ? (
+                                <div>
+                                    <div className="text-xs font-medium text-[#9ca3af]">投标说明</div>
+                                    <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-[#374151]">
+                                        {bid.proposal}
+                                    </p>
+                                </div>
+                            ) : null}
+
+                            {collaborators.length > 0 ? (
+                                <div className="flex flex-wrap items-center gap-2 text-sm">
+                                    <span className="inline-flex items-center gap-1 text-[#6e6e80]">
+                                        <Users className="size-4" />
+                                        协作成员
                                     </span>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="mt-3 text-xs text-[#9ca3af]">单人投标</p>
-                        )}
+                                    {collaborators.map((member) => (
+                                        <span
+                                            className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
+                                            key={member.userId}
+                                            title={member.departmentName ?? undefined}
+                                        >
+                                            {member.displayName}（{member.userId}）
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-[#9ca3af]">单人投标</p>
+                            )}
 
-                        {bid.attachments.length > 0 ? (
-                            <div className="mt-3 space-y-2">
-                                {bid.attachments.map((file) => (
-                                    <AttachmentRow id={file.id} key={file.id} name={file.name} url={file.url} />
-                                ))}
-                            </div>
-                        ) : null}
+                            {bid.attachments.length > 0 ? (
+                                <div>
+                                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[#6e6e80]">
+                                        <Paperclip className="size-4" />
+                                        投标附件（{bid.attachments.length}）
+                                    </div>
+                                    <div className="space-y-2">
+                                        {bid.attachments.map((file) => (
+                                            <AttachmentRow id={file.id} key={file.id} name={file.name} url={file.url} />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+type BidPrimaryInfoProps = {
+    emphasize?: boolean;
+    icon: ReactNode;
+    label: string;
+    secondary?: string | null;
+    value: string;
+};
+
+/**
+ * 投标卡片的一级信息单元。
+ *
+ * 三个单元使用相同结构保证对齐；金额通过 emphasize 单独提高颜色和字号层级。
+ */
+function BidPrimaryInfo({ emphasize = false, icon, label, secondary, value }: BidPrimaryInfoProps) {
+    return (
+        <div className="flex min-w-0 items-start gap-3 px-4 py-4">
+            <span className="mt-0.5 shrink-0 text-[#6e6e80]">{icon}</span>
+            <div className="min-w-0">
+                <div className="text-xs font-medium text-[#9ca3af]">{label}</div>
+                <div
+                    className={cn(
+                        'mt-1 truncate font-semibold text-[#1f2937]',
+                        emphasize && 'text-xl text-[#5e6ad2]',
+                    )}
+                    title={value}
+                >
+                    {value}
+                </div>
+                {secondary ? <div className="mt-0.5 truncate text-xs text-[#6e6e80]">{secondary}</div> : null}
+            </div>
         </div>
     );
 }

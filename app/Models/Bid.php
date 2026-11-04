@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * 投标模型。
@@ -80,9 +79,11 @@ class Bid extends Model
      *
      * 真实文件在外部文件服务中，TaskHub 只保存 attachment_id。
      */
-    public function attachments(): MorphMany
+    public function attachments(): HasMany
     {
-        // 投标附件通过 AttachmentRef 多态关联，只保存外部附件 ID 和名称。
-        return $this->morphMany(AttachmentRef::class, 'owner', 'owner_type', 'owner_id');
+        // attachment_ref.owner_type 保存数据库业务枚举 BID，而不是 PHP 模型类名。
+        // 显式按 owner_id 和 BID 查询，避免依赖 Laravel morph map 的运行时注册状态。
+        return $this->hasMany(AttachmentRef::class, 'owner_id')
+            ->where('owner_type', 'BID');
     }
 }

@@ -789,6 +789,7 @@ test('authenticated users can view task detail page', function (): void {
 test('authenticated users can place a bid for an open task', function (): void {
     $this->withoutVite();
     createTaskHallTables();
+    config(['file_operation.download_url_prefix' => 'https://files.example.test/download/']);
 
     DB::table('task')->insert([
         'id' => 10003,
@@ -851,6 +852,43 @@ test('authenticated users can place a bid for an open task', function (): void {
 
     expect(DB::table('task_event')->where('task_id', 10003)->where('event_type', 'BID_SUBMITTED')->exists())
         ->toBeTrue();
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回投标人展示信息，验证详情页会同时组装投标成员和附件。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-123');
+
+            return [new PersonnelUser(eibNameCn: '王开发', eibNumCn: 'E20001')];
+        }
+    });
+
+    // 从真实详情接口读取刚创建的投标，防止附件只入库但 Eloquent 关联条件错误。
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E20001',
+            'displayName' => '王开发',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10003')
+        ->assertOk()
+        ->assertJsonPath('props.visibleBids.0.members.0.displayName', '王开发')
+        ->assertJsonPath('props.visibleBids.0.attachments.0.id', 'ATT-BID-001')
+        ->assertJsonPath('props.visibleBids.0.attachments.0.name', '投标方案.pdf')
+        ->assertJsonPath(
+            'props.visibleBids.0.attachments.0.url',
+            'https://files.example.test/download/ATT-BID-001',
+        );
 });
 
 test('authenticated users can place a joint bid with collaborators', function (): void {
