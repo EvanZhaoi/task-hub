@@ -62,11 +62,11 @@ const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['vari
     CANCELLED: 'cancelled',
 };
 
-// 复杂度也使用 Badge，但颜色含义和状态不同，因此单独维护映射。
-const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badge>['variant']> = {
-    LOW: 'completed',
-    MEDIUM: 'default',
-    HIGH: 'danger',
+// 复杂度使用带边框的浅色标签，与实心的任务状态标签形成明确区分。
+const complexityBadgeClasses: Record<TaskComplexity, string> = {
+    LOW: 'border border-emerald-200 bg-emerald-50 text-emerald-700',
+    MEDIUM: 'border border-amber-200 bg-amber-50 text-amber-700',
+    HIGH: 'border border-violet-200 bg-violet-50 text-violet-700',
 };
 
 type TaskCreateForm = {
@@ -417,7 +417,7 @@ export default function TaskIndex({
                             <article key={task.id}>
                                 <Card className="p-4 transition hover:border-[#c7d2fe] hover:shadow-sm sm:p-5">
                                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem_10rem] lg:items-stretch lg:gap-0">
-                                        {/* 左侧：标题、状态、紧急标记、描述摘要和交付日期。 */}
+                                        {/* 左侧：标题、状态、复杂度、紧急情况、描述摘要和交付日期。 */}
                                         <section className="min-w-0 lg:pr-6">
                                             <div className="flex min-w-0 flex-wrap items-center gap-2">
                                                 <h2 className="m-0 min-w-0 text-base font-semibold">
@@ -431,7 +431,32 @@ export default function TaskIndex({
                                                 <Badge variant={statusBadgeVariants[task.displayStatus]}>
                                                     {statusLabels[task.displayStatus]}
                                                 </Badge>
-                                                {task.isUrgent ? <Badge variant="danger">紧急</Badge> : null}
+                                                {/*
+                                                 * 复杂度增加固定前缀，避免“简单/中等/复杂”被误解成任务状态。
+                                                 * 浅色描边样式用于区分属性标签和任务状态标签。
+                                                 */}
+                                                <Badge
+                                                    className={cn(
+                                                        'whitespace-nowrap',
+                                                        complexityBadgeClasses[task.complexity],
+                                                    )}
+                                                    variant="default"
+                                                >
+                                                    复杂度：{complexityLabels[task.complexity]}
+                                                </Badge>
+                                                {/*
+                                                 * 非紧急任务也明确展示，保证每张卡片都能直接比较紧急情况；
+                                                 * 紧急使用红色强调，非紧急使用中性色降低视觉重量。
+                                                 */}
+                                                <Badge
+                                                    className={cn(
+                                                        'whitespace-nowrap',
+                                                        !task.isUrgent && 'bg-slate-50 text-slate-600',
+                                                    )}
+                                                    variant={task.isUrgent ? 'danger' : 'default'}
+                                                >
+                                                    {task.isUrgent ? '紧急' : '非紧急'}
+                                                </Badge>
                                             </div>
 
                                             <RichTextViewer
