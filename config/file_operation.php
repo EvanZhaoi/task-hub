@@ -9,6 +9,8 @@ return [
     'service_key' => env('FILE_OPERATION_SERVICE_KEY'),
     // 外部接口调用超时时间，避免上传请求长时间挂起。
     'timeout' => (int) env('FILE_OPERATION_TIMEOUT', 10),
+    // 建立 TCP/TLS 连接的最长等待时间；它与上传完整请求体的总超时分开统计。
+    'connect_timeout' => (int) env('FILE_OPERATION_CONNECT_TIMEOUT', 10),
     // 本地/测试环境可关闭证书校验；生产环境建议设置为 true。
     'verify_ssl' => filter_var(env('FILE_OPERATION_VERIFY_SSL', false), FILTER_VALIDATE_BOOLEAN),
 ];

@@ -284,6 +284,7 @@ test('file upload client sends multipart request and reads data id and name', fu
         'file_operation.upload_path' => '/file-operation/file/upload',
         'file_operation.service_key' => 'TASKHUB',
         'file_operation.timeout' => 10,
+        'file_operation.connect_timeout' => 5,
         'file_operation.verify_ssl' => false,
     ]);
 
@@ -301,7 +302,8 @@ test('file upload client sends multipart request and reads data id and name', fu
     ]);
 
     $uploadedFile = app(FileUploadClient::class)->upload(
-        UploadedFile::fake()->create('原型图.png', 64, 'image/png'),
+        // 使用超过 1 MiB 的文件覆盖 Guzzle 默认启用 Expect: 100-Continue 的边界。
+        UploadedFile::fake()->create('原型图.png', 1100, 'image/png'),
         'token-file',
     );
 
@@ -311,6 +313,11 @@ test('file upload client sends multipart request and reads data id and name', fu
     Http::assertSent(fn ($request): bool => $request->method() === 'POST'
         && $request->url() === 'https://files.example.test/file-operation/file/upload'
         && ($request->header('Authorization')[0] ?? '') === 'bearer token-file'
+        // 总部网关无法正确处理大文件的 100-Continue 握手，上传请求不得携带该 Header。
+        && $request->header('Expect') === []
+        // 文件流可计算长度，因此应使用 Content-Length，而不是未知长度的 chunked 请求体。
+        && is_numeric($request->header('Content-Length')[0] ?? null)
+        && $request->header('Transfer-Encoding') === []
         && collect($request->data())->contains(fn (array $part): bool => ($part['name'] ?? null) === 'serviceKey'
             && ($part['contents'] ?? null) === 'TASKHUB')
         && collect($request->data())->contains(fn (array $part): bool => ($part['name'] ?? null) === 'businessKey'
