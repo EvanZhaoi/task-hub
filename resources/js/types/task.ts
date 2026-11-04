@@ -31,6 +31,8 @@ export type TaskAttachment = {
     id: string;
     // attachment_ref.attachment_name，详情页直接展示文件名。
     name: string;
+    // Laravel 使用配置的固定前缀和附件 ID 生成链接；未配置时返回 null。
+    url: string | null;
 };
 
 export type TaskListItem = {

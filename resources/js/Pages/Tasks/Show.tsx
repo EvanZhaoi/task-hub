@@ -1,5 +1,5 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, FileText, Paperclip } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, Paperclip } from 'lucide-react';
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -182,7 +182,7 @@ export default function TaskShow({ canPlaceBid, events, task, visibleBids }: Tas
                             {task.attachments.length > 0 ? (
                                 <div className="mt-4 space-y-2">
                                     {task.attachments.map((file) => (
-                                        <AttachmentRow id={file.id} key={file.id} name={file.name} />
+                                        <AttachmentRow id={file.id} key={file.id} name={file.name} url={file.url} />
                                     ))}
                                 </div>
                             ) : (
@@ -373,7 +373,7 @@ function BidList({ bids }: { bids: BidItem[] }) {
                         {bid.attachments.length > 0 ? (
                             <div className="mt-3 space-y-2">
                                 {bid.attachments.map((file) => (
-                                    <AttachmentRow id={file.id} key={file.id} name={file.name} />
+                                    <AttachmentRow id={file.id} key={file.id} name={file.name} url={file.url} />
                                 ))}
                             </div>
                         ) : null}
@@ -406,12 +406,27 @@ function EventTimeline({ events }: { events: TaskEventItem[] }) {
     );
 }
 
-function AttachmentRow({ id, name }: { id: string; name: string }) {
+function AttachmentRow({ id, name, url }: { id: string; name: string; url: string | null }) {
     return (
         <div className="flex min-w-0 items-center gap-2 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm">
             <Paperclip className="size-4 shrink-0 text-[#6e6e80]" />
-            <span className="min-w-0 truncate text-[#374151]">{name}</span>
+            {url ? (
+                // 附件服务是外部页面，使用浏览器原生导航并在新标签页打开。
+                <a
+                    className="min-w-0 truncate font-medium text-[#5e6ad2] hover:underline"
+                    href={url}
+                    rel="noreferrer"
+                    target="_blank"
+                    title={`打开附件：${name}`}
+                >
+                    {name}
+                </a>
+            ) : (
+                // 未配置访问前缀时仍展示名称，避免错误链接影响任务详情阅读。
+                <span className="min-w-0 truncate text-[#374151]">{name}</span>
+            )}
             <span className="shrink-0 text-xs text-[#9ca3af]">{id}</span>
+            {url ? <ExternalLink className="size-4 shrink-0 text-[#6e6ad2]" aria-hidden="true" /> : null}
         </div>
     );
 }

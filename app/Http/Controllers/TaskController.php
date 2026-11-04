@@ -6,6 +6,7 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Integrations\Payment\PaymentAccount;
 use App\Integrations\Payment\PaymentAccountClient;
 use App\Integrations\Payment\PaymentAccountException;
+use App\Models\AttachmentRef;
 use App\Models\Bid;
 use App\Models\Task;
 use App\Models\TaskEvent;
@@ -300,10 +301,9 @@ class TaskController extends Controller
             'updatedAt' => $task->updated_at?->format('Y-m-d H:i'),
             'activeBidCount' => (int) ($task->active_bid_count ?? 0),
             'isCreatedByCurrentUser' => $task->created_by === $employeeNo,
-            'attachments' => $task->attachments->map(fn ($attachment): array => [
-                'id' => $attachment->attachment_id,
-                'name' => $attachment->attachment_name,
-            ])->values(),
+            'attachments' => $task->attachments
+                ->map(fn (AttachmentRef $attachment): array => $this->attachmentItem($attachment))
+                ->values(),
         ];
     }
 
@@ -351,11 +351,51 @@ class TaskController extends Controller
                 'userId' => $member->user_id,
                 'role' => $member->role,
             ])->values(),
-            'attachments' => $bid->attachments->map(fn ($attachment): array => [
-                'id' => $attachment->attachment_id,
-                'name' => $attachment->attachment_name,
-            ])->values(),
+            'attachments' => $bid->attachments
+                ->map(fn (AttachmentRef $attachment): array => $this->attachmentItem($attachment))
+                ->values(),
         ];
+    }
+
+    /**
+     * 把数据库附件引用转换为详情页统一使用的结构。
+     *
+     * TaskHub 保存文件 ID 和名称，访问链接由后端配置的固定前缀加文件 ID 生成，
+     * 避免 React 页面硬编码总部地址，也便于不同环境使用不同文件服务域名。
+     *
+     * @return array{id: string, name: string, url: string|null}
+     */
+    private function attachmentItem(AttachmentRef $attachment): array
+    {
+        $attachmentId = (string) $attachment->attachment_id;
+
+        return [
+            'id' => $attachmentId,
+            'name' => (string) $attachment->attachment_name,
+            'url' => $this->attachmentUrl($attachmentId),
+        ];
+    }
+
+    /**
+     * 使用固定链接前缀生成外部附件访问地址。
+     *
+     * 前缀可以以 `/` 结尾表示路径参数，也可以以 `?id=` 结尾表示查询参数；
+     * 本方法不猜测接口格式，只对附件 ID 做 URL 编码后直接追加。
+     */
+    private function attachmentUrl(string $attachmentId): ?string
+    {
+        $prefix = config('file_operation.download_url_prefix');
+
+        if (! is_string($prefix) || $prefix === '') {
+            return null;
+        }
+
+        // 外部附件链接只允许 HTTP(S)，避免错误配置生成 javascript: 等危险地址。
+        if (! str_starts_with($prefix, 'https://') && ! str_starts_with($prefix, 'http://')) {
+            return null;
+        }
+
+        return $prefix.rawurlencode($attachmentId);
     }
 
     /**

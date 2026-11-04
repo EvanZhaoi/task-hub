@@ -5,6 +5,8 @@ return [
     'base_url' => env('FILE_OPERATION_BASE_URL'),
     // 总部文件上传接口 path，只写 path，不写完整 URL。
     'upload_path' => env('FILE_OPERATION_UPLOAD_PATH', '/file-operation/file/upload'),
+    // 附件详情链接的固定前缀；前缀末尾的 / 或 ?id= 由配置提供，业务代码只追加附件 ID。
+    'download_url_prefix' => env('FILE_OPERATION_DOWNLOAD_URL_PREFIX'),
     // 总部分配给 TaskHub 的文件服务标识，后端上传时作为 serviceKey 提交。
     'service_key' => env('FILE_OPERATION_SERVICE_KEY'),
     // 外部接口调用超时时间，避免上传请求长时间挂起。

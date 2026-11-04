@@ -136,6 +136,7 @@ test('authenticated users can view the task hall with filters', function (): voi
 test('authenticated users can publish a bidding task with attachment id and name', function (): void {
     $this->withoutVite();
     createTaskHallTables();
+    config(['file_operation.download_url_prefix' => 'https://files.example.test/download?id=']);
 
     $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
     {
@@ -247,8 +248,10 @@ test('authenticated users can publish a bidding task with attachment id and name
         ->assertOk()
         ->assertJsonPath('props.task.attachments.0.id', 'ATT001')
         ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
+        ->assertJsonPath('props.task.attachments.0.url', 'https://files.example.test/download?id=ATT001')
         ->assertJsonPath('props.task.attachments.1.id', 'ATT002')
-        ->assertJsonPath('props.task.attachments.1.name', '设计图.png');
+        ->assertJsonPath('props.task.attachments.1.name', '设计图.png')
+        ->assertJsonPath('props.task.attachments.1.url', 'https://files.example.test/download?id=ATT002');
 });
 
 test('authenticated users can upload task attachment through taskhub backend', function (): void {
@@ -693,6 +696,7 @@ test('sso session prefers local personnel list when user belongs to current site
 test('authenticated users can view task detail page', function (): void {
     $this->withoutVite();
     createTaskHallTables();
+    config(['file_operation.download_url_prefix' => 'https://files.example.test/download/']);
 
     DB::table('task')->insert([
         'id' => 10002,
@@ -760,6 +764,7 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonPath('props.task.title', '任务详情页开发')
         ->assertJsonPath('props.task.isUrgent', false)
         ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
+        ->assertJsonPath('props.task.attachments.0.url', 'https://files.example.test/download/ATT-TASK-001')
         ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
         ->assertJsonPath('props.canPlaceBid', true);
 });
