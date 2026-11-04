@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Integrations\Personnel\PersonnelClient;
+use App\Integrations\Personnel\PersonnelException;
+use App\Integrations\Personnel\PersonnelUser;
 use App\Integrations\Sso\SsoUser;
 use App\Models\AttachmentRef;
 use App\Models\Bid;
@@ -29,6 +32,7 @@ class PlaceBidService
      */
     public function __construct(
         private readonly SnowflakeId $ids,
+        private readonly PersonnelClient $personnel,
     ) {}
 
     /**
@@ -39,9 +43,21 @@ class PlaceBidService
      *
      * @throws ValidationException 当任务状态、截止时间或重复投标规则不满足时抛出字段错误。
      */
-    public function execute(Task $task, array $validated, array $attachments, SsoUser $user): Bid
-    {
-        return DB::transaction(function () use ($attachments, $task, $user, $validated): Bid {
+    public function execute(
+        Task $task,
+        array $validated,
+        array $attachments,
+        SsoUser $user,
+        string $accessToken,
+    ): Bid {
+        // 外部人员接口可能较慢，因此必须在数据库事务和行锁之外完成成员校验。
+        $collaboratorEmployeeNos = $this->resolveCollaboratorEmployeeNos(
+            $validated['collaboratorEmployeeNos'] ?? [],
+            $user->employeeNo(),
+            $accessToken,
+        );
+
+        return DB::transaction(function () use ($attachments, $collaboratorEmployeeNos, $task, $user, $validated): Bid {
             // 锁定任务行，避免投标提交和选标、流标等状态变更同时发生时读到旧状态。
             $lockedTask = Task::query()
                 ->whereKey($task->id)
@@ -61,12 +77,74 @@ class PlaceBidService
             }
 
             $bid = $this->createBid($lockedTask, $validated, $employeeNo, $activeKey);
-            $this->createOwnerMember($bid, $employeeNo);
+            $this->createMembers($bid, $employeeNo, $collaboratorEmployeeNos);
             $this->saveAttachments($bid, $attachments, $employeeNo);
-            $this->createBidSubmittedEvent($lockedTask, $bid, $employeeNo, count($attachments));
+            $this->createBidSubmittedEvent(
+                $lockedTask,
+                $bid,
+                $employeeNo,
+                count($attachments),
+                count($collaboratorEmployeeNos),
+            );
 
             return $bid;
         });
+    }
+
+    /**
+     * 校验并返回联合投标协作者工号。
+     *
+     * 前端候选项来自人员列表，但后端仍必须重新校验，不能信任用户手工构造的请求。
+     * 返回值只包含本据点人员接口中真实存在的工号，并且排除当前 OWNER。
+     *
+     * @param  mixed  $requestedEmployeeNos  前端提交的协作者工号数组。
+     * @return list<string>
+     */
+    private function resolveCollaboratorEmployeeNos(
+        mixed $requestedEmployeeNos,
+        string $ownerEmployeeNo,
+        string $accessToken,
+    ): array {
+        if (! is_array($requestedEmployeeNos) || $requestedEmployeeNos === []) {
+            return [];
+        }
+
+        try {
+            $personnelUsers = $this->personnel->fetchAll($accessToken);
+        } catch (PersonnelException) {
+            throw ValidationException::withMessages([
+                'collaboratorEmployeeNos' => '人员列表暂时不可用，无法校验协作成员，请稍后重试。',
+            ]);
+        }
+
+        $availableEmployeeNos = [];
+
+        foreach ($personnelUsers as $personnelUser) {
+            $availableEmployeeNos[$personnelUser->employeeNo()] = true;
+        }
+
+        $ownerNormalized = PersonnelUser::normalizeEmployeeNo($ownerEmployeeNo) ?? $ownerEmployeeNo;
+        $resolved = [];
+
+        foreach ($requestedEmployeeNos as $requestedEmployeeNo) {
+            $employeeNo = PersonnelUser::normalizeEmployeeNo($requestedEmployeeNo);
+
+            if ($employeeNo === null || $employeeNo === $ownerNormalized) {
+                throw ValidationException::withMessages([
+                    'collaboratorEmployeeNos' => '主投标人不能同时作为协作成员。',
+                ]);
+            }
+
+            if (! isset($availableEmployeeNos[$employeeNo])) {
+                throw ValidationException::withMessages([
+                    'collaboratorEmployeeNos' => "协作成员工号 {$employeeNo} 不在可选人员列表中。",
+                ]);
+            }
+
+            $resolved[$employeeNo] = $employeeNo;
+        }
+
+        return array_values($resolved);
     }
 
     /**
@@ -165,18 +243,36 @@ class PlaceBidService
     }
 
     /**
-     * 写入主投标人成员记录。
+     * 写入主投标人和协作成员记录。
      *
-     * 单人投标也必须写一条 OWNER 成员，后续选标时会从 bid_member 复制到 task_assignee。
+     * 单人投标只写一条 OWNER；联合投标额外写入 COLLABORATOR。
+     * 后续选标时会把这些成员按原角色复制到 task_assignee。
+     *
+     * @param  list<string>  $collaboratorEmployeeNos
      */
-    private function createOwnerMember(Bid $bid, string $employeeNo): void
+    private function createMembers(Bid $bid, string $employeeNo, array $collaboratorEmployeeNos): void
     {
-        BidMember::query()->create([
+        $now = now();
+        $members = [[
             'id' => $this->ids->next(),
             'bid_id' => $bid->id,
             'user_id' => $employeeNo,
             'role' => 'OWNER',
-        ]);
+            'created_at' => $now,
+        ]];
+
+        foreach ($collaboratorEmployeeNos as $collaboratorEmployeeNo) {
+            $members[] = [
+                'id' => $this->ids->next(),
+                'bid_id' => $bid->id,
+                'user_id' => $collaboratorEmployeeNo,
+                'role' => 'COLLABORATOR',
+                'created_at' => $now,
+            ];
+        }
+
+        // 一次 insert 保证成员使用同一个创建时间，也避免逐条触发多次 SQL。
+        BidMember::query()->insert($members);
     }
 
     /**
@@ -213,8 +309,13 @@ class PlaceBidService
      *
      * TaskEvent 用于任务详情时间线和审计，不用于反向重建任务当前状态。
      */
-    private function createBidSubmittedEvent(Task $task, Bid $bid, string $employeeNo, int $attachmentCount): void
-    {
+    private function createBidSubmittedEvent(
+        Task $task,
+        Bid $bid,
+        string $employeeNo,
+        int $attachmentCount,
+        int $collaboratorCount,
+    ): void {
         TaskEvent::query()->create([
             'id' => $this->ids->next(),
             'task_id' => $task->id,
@@ -229,6 +330,8 @@ class PlaceBidService
                 'deliveryDate' => $bid->delivery_date?->toDateString(),
                 'revisionNo' => $bid->revision_no,
                 'attachmentCount' => $attachmentCount,
+                'memberCount' => $collaboratorCount + 1,
+                'collaboratorCount' => $collaboratorCount,
             ],
             'remark' => '开发者提交投标',
         ]);

@@ -26,6 +26,14 @@ export type UploadedTaskAttachment = {
     name: string;
 };
 
+export type PersonnelOption = {
+    // employeeNo 是 TaskHub 保存到人员引用字段的稳定工号。
+    employeeNo: string;
+    // 姓名和部门只用于选择器及历史记录展示，权限仍以后端实时规则为准。
+    displayName: string;
+    departmentName: string | null;
+};
+
 export type TaskAttachment = {
     // attachment_ref.attachment_id，真实文件仍在总部文件服务中。
     id: string;
@@ -105,6 +113,8 @@ export type BidMemberRole = 'OWNER' | 'COLLABORATOR';
 export type BidMemberItem = {
     // userId 保存人员工号，不是本地 users 表 ID。
     userId: string;
+    displayName: string;
+    departmentName: string | null;
     role: BidMemberRole;
 };
 
@@ -164,7 +174,9 @@ export type TaskDetail = {
 
 export type TaskShowProps = {
     canPlaceBid: boolean;
+    currentEmployeeNo: string;
     events: TaskEventItem[];
+    personnelOptions: PersonnelOption[];
     task: TaskDetail;
     visibleBids: BidItem[];
 };

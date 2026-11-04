@@ -32,6 +32,7 @@ class BidController extends Controller
             validated: $request->validated(),
             attachments: $request->attachments(),
             user: $currentUser->user(),
+            accessToken: $currentUser->accessToken(),
         );
 
         return redirect()

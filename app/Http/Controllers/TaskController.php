@@ -6,6 +6,9 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Integrations\Payment\PaymentAccount;
 use App\Integrations\Payment\PaymentAccountClient;
 use App\Integrations\Payment\PaymentAccountException;
+use App\Integrations\Personnel\PersonnelClient;
+use App\Integrations\Personnel\PersonnelException;
+use App\Integrations\Personnel\PersonnelUser;
 use App\Models\AttachmentRef;
 use App\Models\Bid;
 use App\Models\Task;
@@ -150,6 +153,7 @@ class TaskController extends Controller
         Task $task,
         CurrentUserService $currentUser,
         RichTextSanitizer $richTextSanitizer,
+        PersonnelClient $personnel,
     ): Response {
         $employeeNo = $currentUser->employeeNo();
 
@@ -162,11 +166,21 @@ class TaskController extends Controller
             'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
         ]);
 
+        $canPlaceBid = $this->canPlaceBid($task, $employeeNo);
+        // 只有需要显示人员选择器或已有投标成员时才加载大人员列表，避免无关详情请求传输全部候选项。
+        $needsPersonnelDirectory = $canPlaceBid || Bid::query()->where('task_id', $task->id)->exists();
+        $personnelDirectory = $needsPersonnelDirectory
+            ? $this->personnelDirectory($personnel, $currentUser->accessToken())
+            : ['options' => [], 'names' => []];
+
         return Inertia::render('Tasks/Show', [
             'task' => $this->taskDetail($task, $employeeNo, $richTextSanitizer),
-            'visibleBids' => $this->visibleBids($task, $employeeNo),
+            'visibleBids' => $this->visibleBids($task, $employeeNo, $personnelDirectory['names']),
             'events' => $task->events->map(fn (TaskEvent $event): array => $this->eventItem($event))->values(),
-            'canPlaceBid' => $this->canPlaceBid($task, $employeeNo),
+            'canPlaceBid' => $canPlaceBid,
+            'currentEmployeeNo' => PersonnelUser::normalizeEmployeeNo($employeeNo) ?? $employeeNo,
+            // 已有投标只需要人员名称映射；只有仍可投标时才把大候选列表传给浏览器。
+            'personnelOptions' => $canPlaceBid ? $personnelDirectory['options'] : [],
         ]);
     }
 
@@ -312,12 +326,16 @@ class TaskController extends Controller
      *
      * 发布者可以看到该任务全部投标记录；普通用户只能看到自己参与的投标记录。
      */
-    private function visibleBids(Task $task, string $employeeNo): array
+    private function visibleBids(Task $task, string $employeeNo, array $personnelNames): array
     {
         $query = Bid::query()
             ->where('task_id', $task->id)
             ->with([
-                'members' => fn ($query) => $query->orderByRaw("role = 'OWNER' DESC")->oldest('created_at'),
+                // ID 作为同一批成员 created_at 相同时的稳定次序，保证 OWNER 后的协作者展示顺序可预测。
+                'members' => fn ($query) => $query
+                    ->orderByRaw("role = 'OWNER' DESC")
+                    ->oldest('created_at')
+                    ->orderBy('id'),
                 'attachments' => fn ($query) => $query->latest('created_at'),
             ])
             ->latest('created_at');
@@ -328,7 +346,7 @@ class TaskController extends Controller
 
         return $query
             ->get()
-            ->map(fn (Bid $bid): array => $this->bidItem($bid))
+            ->map(fn (Bid $bid): array => $this->bidItem($bid, $personnelNames))
             ->values()
             ->all();
     }
@@ -336,7 +354,7 @@ class TaskController extends Controller
     /**
      * 把 Bid Model 转换成前端投标卡片需要的结构。
      */
-    private function bidItem(Bid $bid): array
+    private function bidItem(Bid $bid, array $personnelNames): array
     {
         return [
             'id' => (string) $bid->id,
@@ -349,11 +367,69 @@ class TaskController extends Controller
             'createdAt' => $bid->created_at?->format('Y-m-d H:i'),
             'members' => $bid->members->map(fn ($member): array => [
                 'userId' => $member->user_id,
+                // 人员接口不可用或人员离职时退回展示工号，保证历史投标仍可读取。
+                'displayName' => $personnelNames[$member->user_id]['displayName'] ?? $member->user_id,
+                'departmentName' => $personnelNames[$member->user_id]['departmentName'] ?? null,
                 'role' => $member->role,
             ])->values(),
             'attachments' => $bid->attachments
                 ->map(fn (AttachmentRef $attachment): array => $this->attachmentItem($attachment))
                 ->values(),
+        ];
+    }
+
+    /**
+     * 加载任务详情页使用的人员目录。
+     *
+     * 外部接口数据先由 PersonnelClient 转换为 PersonnelUser，Controller 只向页面输出最小展示结构，
+     * 不把外部系统的完整原始 JSON 暴露给 React。人员接口失败不会阻断任务详情阅读。
+     *
+     * @return array{
+     *     options: list<array{employeeNo: string, displayName: string, departmentName: string|null}>,
+     *     names: array<string, array{displayName: string, departmentName: string|null}>
+     * }
+     */
+    private function personnelDirectory(PersonnelClient $personnel, string $accessToken): array
+    {
+        try {
+            $users = $personnel->fetchAll($accessToken);
+        } catch (PersonnelException $exception) {
+            Log::warning('Personnel options are unavailable on task detail.', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return ['options' => [], 'names' => []];
+        }
+
+        $options = [];
+        $names = [];
+
+        foreach ($users as $user) {
+            $employeeNo = $user->employeeNo();
+
+            if ($employeeNo === '') {
+                continue;
+            }
+
+            $displayName = $user->displayName() ?? $employeeNo;
+            $departmentName = $user->departmentName();
+            $option = [
+                'employeeNo' => $employeeNo,
+                'displayName' => $displayName,
+                'departmentName' => $departmentName,
+            ];
+
+            // 工号是人员目录的业务唯一标识；重复数据以后出现者覆盖前者，页面只保留一个选项。
+            $options[$employeeNo] = $option;
+            $names[$employeeNo] = [
+                'displayName' => $displayName,
+                'departmentName' => $departmentName,
+            ];
+        }
+
+        return [
+            'options' => array_values($options),
+            'names' => $names,
         ];
     }
 

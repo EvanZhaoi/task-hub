@@ -35,6 +35,9 @@ class StoreBidRequest extends FormRequest
             'deliveryDate' => ['required', 'date', 'after_or_equal:today'],
             // proposal 是普通文本说明，暂不接富文本，避免投标弹窗过重。
             'proposal' => ['nullable', 'string', 'max:5000'],
+            // 联合投标成员只提交工号；主投标人由当前登录用户自动写入 OWNER，不能由前端指定。
+            'collaboratorEmployeeNos' => ['nullable', 'array', 'max:20'],
+            'collaboratorEmployeeNos.*' => ['required', 'string', 'max:32', 'distinct'],
             // 附件已经提前上传到总部文件服务，投标时只提交 id/name 引用。
             'attachments' => ['nullable', 'array', 'max:20'],
             'attachments.*.id' => ['required', 'string', 'max:128'],
@@ -61,6 +64,12 @@ class StoreBidRequest extends FormRequest
             'deliveryDate.after_or_equal' => '承诺交付日期不能早于今天。',
             'proposal.string' => '投标说明必须是文本。',
             'proposal.max' => '投标说明不能超过 5000 个字符。',
+            'collaboratorEmployeeNos.array' => '协作成员数据格式不正确。',
+            'collaboratorEmployeeNos.max' => '一次投标最多选择 20 名协作成员。',
+            'collaboratorEmployeeNos.*.required' => '协作成员工号不能为空。',
+            'collaboratorEmployeeNos.*.string' => '协作成员工号格式不正确。',
+            'collaboratorEmployeeNos.*.max' => '协作成员工号不能超过 32 个字符。',
+            'collaboratorEmployeeNos.*.distinct' => '不能重复选择同一名协作成员。',
             'attachments.array' => '附件数据格式不正确。',
             'attachments.max' => '一次最多上传 20 个附件。',
             'attachments.*.id.required' => '附件缺少文件 ID，请重新上传。',

@@ -1,10 +1,11 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, ExternalLink, FileText, Paperclip } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, Paperclip, Users } from 'lucide-react';
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
 import { AttachmentIcon } from '@/components/common/AttachmentIcon';
 import { DatePicker } from '@/components/common/DatePicker';
+import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ import type { SharedPageProps } from '@/types/page';
 import type {
     BidItem,
     BidStatus,
+    PersonnelOption,
     TaskComplexity,
     TaskEventItem,
     TaskShowProps,
@@ -101,17 +103,32 @@ const bidStatusBadgeVariants: Record<BidStatus, ComponentProps<typeof Badge>['va
 
 type BidForm = {
     amount: string;
+    collaboratorEmployeeNos: string[];
     deliveryDate: string;
     proposal: string;
     attachments: UploadedTaskAttachment[];
 };
 
-export default function TaskShow({ canPlaceBid, events, task, visibleBids }: TaskShowProps) {
+export default function TaskShow({
+    canPlaceBid,
+    currentEmployeeNo,
+    events,
+    personnelOptions,
+    task,
+    visibleBids,
+}: TaskShowProps) {
     const { flash } = usePage<SharedPageProps>().props;
 
     return (
         <AppLayout
-            actions={<PlaceBidDialog canPlaceBid={canPlaceBid} taskId={task.id} />}
+            actions={
+                <PlaceBidDialog
+                    canPlaceBid={canPlaceBid}
+                    currentEmployeeNo={currentEmployeeNo}
+                    personnelOptions={personnelOptions}
+                    taskId={task.id}
+                />
+            }
             activeNav="tasks"
             subtitle="查看任务完整信息、投标记录和业务时间线"
             title="任务详情"
@@ -223,11 +240,24 @@ export default function TaskShow({ canPlaceBid, events, task, visibleBids }: Tas
     );
 }
 
-function PlaceBidDialog({ canPlaceBid, taskId }: { canPlaceBid: boolean; taskId: string }) {
+type PlaceBidDialogProps = {
+    canPlaceBid: boolean;
+    currentEmployeeNo: string;
+    personnelOptions: PersonnelOption[];
+    taskId: string;
+};
+
+/**
+ * 提交投标弹窗。
+ *
+ * 当前登录人始终作为 OWNER，用户只需要选择可选的 COLLABORATOR；后端会再次校验人员有效性。
+ */
+function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, taskId }: PlaceBidDialogProps) {
     const [open, setOpen] = useState(false);
     const [uploadedAttachments, setUploadedAttachments] = useState<UploadedTaskAttachment[]>([]);
     const form = useForm<BidForm>({
         amount: '',
+        collaboratorEmployeeNos: [],
         deliveryDate: '',
         proposal: '',
         attachments: [],
@@ -279,7 +309,7 @@ function PlaceBidDialog({ canPlaceBid, taskId }: { canPlaceBid: boolean; taskId:
                 <DialogHeader className="mb-0 rounded-t-lg border-b border-[#e5e7eb] bg-[#fbfbfc] px-6 py-4">
                     <DialogTitle>提交投标</DialogTitle>
                     <DialogDescription>
-                        第一版先支持单人投标。提交后会生成一条 OWNER 投标成员记录，并进入发布者选标范围。
+                        你将作为主投标人，可以邀请协作成员共同参与。提交后成员名单不可在本投标中直接修改。
                     </DialogDescription>
                 </DialogHeader>
 
@@ -306,6 +336,22 @@ function PlaceBidDialog({ canPlaceBid, taskId }: { canPlaceBid: boolean; taskId:
                                 />
                             </Field>
                         </div>
+
+                        <Field
+                            label="协作成员"
+                            message={form.errors.collaboratorEmployeeNos}
+                        >
+                            <PersonnelMultiSelect
+                                disabled={form.processing}
+                                excludedEmployeeNos={[currentEmployeeNo]}
+                                onChange={(employeeNos) => form.setData('collaboratorEmployeeNos', employeeNos)}
+                                options={personnelOptions}
+                                value={form.data.collaboratorEmployeeNos}
+                            />
+                            <p className="text-xs leading-5 text-[#6e6e80]">
+                                可不选择协作者；你会自动作为主投标人。
+                            </p>
+                        </Field>
 
                         <Field label="投标说明" message={form.errors.proposal}>
                             <Textarea
@@ -351,6 +397,7 @@ function BidList({ bids }: { bids: BidItem[] }) {
         <div className="mt-4 space-y-3">
             {bids.map((bid) => {
                 const owner = bid.members.find((member) => member.role === 'OWNER');
+                const collaborators = bid.members.filter((member) => member.role === 'COLLABORATOR');
 
                 return (
                     <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfbfc] p-4" key={bid.id}>
@@ -363,13 +410,34 @@ function BidList({ bids }: { bids: BidItem[] }) {
                                     </Badge>
                                 </div>
                                 <p className="mt-1 text-sm text-[#6e6e80]">
-                                    主投标人：{owner?.userId ?? '-'} · 承诺交付：{bid.deliveryDate ?? '-'}
+                                    主投标人：{owner ? `${owner.displayName}（${owner.userId}）` : '-'} · 承诺交付：
+                                    {bid.deliveryDate ?? '-'}
                                 </p>
                             </div>
                             <span className="text-xs text-[#9ca3af]">第 {bid.revisionNo} 版 · {bid.createdAt}</span>
                         </div>
 
                         {bid.proposal ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{bid.proposal}</p> : null}
+
+                        {collaborators.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                                <span className="inline-flex items-center gap-1 text-[#6e6e80]">
+                                    <Users className="size-4" />
+                                    协作成员
+                                </span>
+                                {collaborators.map((member) => (
+                                    <span
+                                        className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
+                                        key={member.userId}
+                                        title={member.departmentName ?? undefined}
+                                    >
+                                        {member.displayName}（{member.userId}）
+                                    </span>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="mt-3 text-xs text-[#9ca3af]">单人投标</p>
+                        )}
 
                         {bid.attachments.length > 0 ? (
                             <div className="mt-3 space-y-2">

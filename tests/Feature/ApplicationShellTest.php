@@ -698,6 +698,21 @@ test('authenticated users can view task detail page', function (): void {
     createTaskHallTables();
     config(['file_operation.download_url_prefix' => 'https://files.example.test/download/']);
 
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回详情页联合投标选择器使用的测试人员。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-123');
+
+            return [
+                new PersonnelUser(eibNameCn: '协作开发', eibNumCn: 'E30001'),
+            ];
+        }
+    });
+
     DB::table('task')->insert([
         'id' => 10002,
         'title' => '任务详情页开发',
@@ -766,6 +781,8 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
         ->assertJsonPath('props.task.attachments.0.url', 'https://files.example.test/download/ATT-TASK-001')
         ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
+        ->assertJsonPath('props.personnelOptions.0.employeeNo', 'E30001')
+        ->assertJsonPath('props.personnelOptions.0.displayName', '协作开发')
         ->assertJsonPath('props.canPlaceBid', true);
 });
 
@@ -834,6 +851,162 @@ test('authenticated users can place a bid for an open task', function (): void {
 
     expect(DB::table('task_event')->where('task_id', 10003)->where('event_type', 'BID_SUBMITTED')->exists())
         ->toBeTrue();
+});
+
+test('authenticated users can place a joint bid with collaborators', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10004,
+        'title' => '联合投标功能开发',
+        'description' => '验证主投标人与协作成员共同投标。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 5000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'HIGH',
+        'created_by' => 'E10001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回可参与联合投标的本据点人员，隔离真实外部人员接口。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-joint-bid');
+
+            return [
+                new PersonnelUser(eibNameCn: '协作开发甲', eibNumCn: 'E30001'),
+                new PersonnelUser(eibNameCn: '协作开发乙', eibNumCn: 'E30002'),
+            ];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E20001',
+            'displayName' => '主投标人',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-joint-bid',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->post('/tasks/10004/bids', [
+            'amount' => '4500.00',
+            'deliveryDate' => now()->addDays(7)->toDateString(),
+            'proposal' => '三人协作完成开发和测试。',
+            'collaboratorEmployeeNos' => ['E30001', 'E30002'],
+        ])
+        ->assertRedirect(route('tasks.show', 10004))
+        ->assertSessionHas('success', '投标已提交。');
+
+    $bid = DB::table('bid')->where('task_id', 10004)->first();
+    $members = DB::table('bid_member')
+        ->where('bid_id', $bid->id)
+        ->orderBy('role', 'desc')
+        ->orderBy('user_id')
+        ->get(['user_id', 'role'])
+        ->map(fn (object $member): array => [
+            'userId' => $member->user_id,
+            'role' => $member->role,
+        ])
+        ->all();
+
+    expect($members)->toBe([
+        ['userId' => 'E20001', 'role' => 'OWNER'],
+        ['userId' => 'E30001', 'role' => 'COLLABORATOR'],
+        ['userId' => 'E30002', 'role' => 'COLLABORATOR'],
+    ]);
+
+    $eventData = DB::table('task_event')
+        ->where('task_id', 10004)
+        ->where('event_type', 'BID_SUBMITTED')
+        ->value('event_data');
+
+    expect(json_decode($eventData, true, flags: JSON_THROW_ON_ERROR))->toMatchArray([
+        'memberCount' => 3,
+        'collaboratorCount' => 2,
+    ]);
+
+    // 再请求详情页，验证数据库成员能通过人员目录转换为页面展示名称。
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E20001',
+            'displayName' => '主投标人',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-joint-bid',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10004')
+        ->assertOk()
+        ->assertJsonPath('props.visibleBids.0.members.0.role', 'OWNER')
+        ->assertJsonPath('props.visibleBids.0.members.1.displayName', '协作开发甲')
+        ->assertJsonPath('props.visibleBids.0.members.2.displayName', '协作开发乙');
+});
+
+test('joint bid rejects collaborators outside the personnel directory', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10005,
+        'title' => '非法协作者校验',
+        'description' => '验证后端不信任前端工号。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 1000,
+        'expected_delivery' => now()->addDays(5)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'LOW',
+        'created_by' => 'E10001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 只返回一个合法人员，验证手工提交的未知工号会被拒绝。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [new PersonnelUser(eibNameCn: '合法人员', eibNumCn: 'E30001')];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E20001', 'displayName' => '主投标人'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-invalid-member',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10005')
+        ->post('/tasks/10005/bids', [
+            'amount' => '900.00',
+            'deliveryDate' => now()->addDays(4)->toDateString(),
+            'collaboratorEmployeeNos' => ['UNKNOWN'],
+        ])
+        ->assertRedirect('/tasks/10005')
+        ->assertSessionHasErrors('collaboratorEmployeeNos');
+
+    expect(DB::table('bid')->where('task_id', 10005)->exists())->toBeFalse();
 });
 
 test('logout clears sso session and redirects home', function (): void {
