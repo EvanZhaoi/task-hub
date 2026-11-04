@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * 任务模型。
@@ -143,9 +142,11 @@ class Task extends Model
      *
      * 多态 owner_type 为 TASK 时会关联到当前任务。
      */
-    public function attachments(): MorphMany
+    public function attachments(): HasMany
     {
-        // 发布任务时上传的附件通过多态关联挂到 TASK。
-        return $this->morphMany(AttachmentRef::class, 'owner', 'owner_type', 'owner_id');
+        // attachment_ref.owner_type 保存的是数据库业务枚举 TASK，而不是 PHP 模型类名。
+        // 这里显式按 owner_id 和 TASK 查询，避免详情展示依赖全局 morph map 的运行时注册状态。
+        return $this->hasMany(AttachmentRef::class, 'owner_id')
+            ->where('owner_type', 'TASK');
     }
 }

@@ -224,6 +224,7 @@ test('authenticated users can publish a bidding task with attachment id and name
         ]);
 
     expect(DB::table('attachment_ref')
+        ->where('owner_type', 'TASK')
         ->where('owner_id', $task->id)
         ->orderBy('attachment_id')
         ->get(['attachment_id', 'attachment_name'])
@@ -238,6 +239,16 @@ test('authenticated users can publish a bidding task with attachment id and name
 
     expect(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
         ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
+
+    // 发布与详情必须作为一条完整链路验证，防止附件虽然入库但详情关联条件不一致。
+    $this->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/'.$task->id)
+        ->assertOk()
+        ->assertJsonPath('props.task.attachments.0.id', 'ATT001')
+        ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
+        ->assertJsonPath('props.task.attachments.1.id', 'ATT002')
+        ->assertJsonPath('props.task.attachments.1.name', '设计图.png');
 });
 
 test('authenticated users can upload task attachment through taskhub backend', function (): void {
