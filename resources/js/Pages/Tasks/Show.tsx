@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, FileText, Paperclip } from 'lucide-react';
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import { AttachmentIcon } from '@/components/common/AttachmentIcon';
 import { DatePicker } from '@/components/common/DatePicker';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
@@ -409,7 +410,7 @@ function EventTimeline({ events }: { events: TaskEventItem[] }) {
 function AttachmentRow({ id, name, url }: { id: string; name: string; url: string | null }) {
     return (
         <div className="flex min-w-0 items-center gap-2 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm">
-            <Paperclip className="size-4 shrink-0 text-[#6e6e80]" />
+            <AttachmentIcon fileName={name} />
             {url ? (
                 // 附件服务是外部页面，使用浏览器原生导航并在新标签页打开。
                 <a

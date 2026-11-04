@@ -1,6 +1,7 @@
-import { Paperclip, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useRef, useState, type ChangeEvent } from 'react';
 
+import { AttachmentIcon } from '@/components/common/AttachmentIcon';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { UploadedTaskAttachment } from '@/types/task';
@@ -159,7 +160,7 @@ export function TaskAttachmentUploader({ disabled = false, onChange, value }: Ta
                             key={file.id}
                         >
                             <span className="flex min-w-0 items-center gap-2">
-                                <Paperclip className="size-4 shrink-0 text-[#6e6e80]" />
+                                <AttachmentIcon fileName={file.name} />
                                 <span className="min-w-0 truncate text-[#374151]">{file.name}</span>
                                 <span className="shrink-0 text-xs text-[#9ca3af]">{file.id}</span>
                             </span>
