@@ -38,6 +38,9 @@ class TaskController extends Controller
     // 复杂度枚举来自 schema.sql，前端筛选和后端校验保持一致。
     private const COMPLEXITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
+    // 投标事件包含投标人行为和方案关联，只对任务发布者或该投标成员可见。
+    private const PRIVATE_BID_EVENT_TYPES = ['BID_SUBMITTED', 'BID_WITHDRAWN', 'BID_ACCEPTED'];
+
     /**
      * 展示任务大厅列表页。
      *
@@ -160,24 +163,34 @@ class TaskController extends Controller
         $task->load([
             // 任务发布附件用于详情页直接展示 attachment_name。
             'attachments' => fn ($query) => $query->latest('created_at'),
-            // 任务事件按时间倒序展示，方便用户优先看到最新动作。
-            'events' => fn ($query) => $query->latest('created_at'),
             // 执行成员按 OWNER 优先、ID 稳定排序，用于选标后的任务成员展示。
             'assignees' => fn ($query) => $query
                 ->orderByRaw("role = 'OWNER' DESC")
                 ->orderBy('id'),
         ])->loadCount([
             'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
+            // 总投标数用于隐私提示；普通用户只看到数量，不会收到他人投标详情。
+            'bids as bid_count',
         ]);
 
         $canPlaceBid = $this->canPlaceBid($task, $employeeNo);
-        // 只有需要显示人员选择器或已有投标成员时才加载大人员列表，避免无关详情请求传输全部候选项。
+        $canViewBidMembers = $task->created_by === $employeeNo
+            || Bid::query()
+                ->where('task_id', $task->id)
+                ->whereHas('members', fn ($query) => $query->where('user_id', $employeeNo))
+                ->exists();
+        // 只有需要投标选择器、可见投标成员或正式执行成员时才加载大人员列表。
+        // 无关访问者即使看到“已有投标”的数量，也不需要为隐藏记录查询人员姓名。
         $needsPersonnelDirectory = $canPlaceBid
-            || Bid::query()->where('task_id', $task->id)->exists()
+            || $canViewBidMembers
             || $task->assignees->isNotEmpty();
         $personnelDirectory = $needsPersonnelDirectory
             ? $this->personnelDirectory($personnel, $currentUser->accessToken())
             : ['options' => [], 'names' => []];
+
+        $visibleBids = $this->visibleBids($task, $employeeNo, $personnelDirectory['names']);
+        $visibleBidIds = array_column($visibleBids, 'id');
+        $totalBidCount = (int) ($task->bid_count ?? 0);
 
         return Inertia::render('Tasks/Show', [
             'task' => $this->taskDetail(
@@ -186,8 +199,14 @@ class TaskController extends Controller
                 $richTextSanitizer,
                 $personnelDirectory['names'],
             ),
-            'visibleBids' => $this->visibleBids($task, $employeeNo, $personnelDirectory['names']),
-            'events' => $task->events->map(fn (TaskEvent $event): array => $this->eventItem($event))->values(),
+            'visibleBids' => $visibleBids,
+            'bidOverview' => [
+                'totalCount' => $totalBidCount,
+                'visibleCount' => count($visibleBids),
+                'hiddenCount' => max(0, $totalBidCount - count($visibleBids)),
+            ],
+            // 投标事件在查询层按权限过滤，不把无权查看的事件发送到浏览器。
+            'events' => $this->visibleEvents($task, $employeeNo, $visibleBidIds),
             'canPlaceBid' => $canPlaceBid,
             'currentEmployeeNo' => PersonnelUser::normalizeEmployeeNo($employeeNo) ?? $employeeNo,
             // 已有投标只需要人员名称映射；只有仍可投标时才把大候选列表传给浏览器。
@@ -274,6 +293,7 @@ class TaskController extends Controller
             // 新数据会在保存前清洗；这里再清洗一次是为了兼容历史数据，避免旧脏数据进入 Viewer。
             'description' => $richTextSanitizer->clean($task->description),
             'amountLabel' => $this->amountLabel($task),
+            'amountType' => $task->final_amount === null ? 'BUDGET' : 'FINAL',
             'expectedDelivery' => $task->expected_delivery?->toDateString(),
             'finalDelivery' => $task->final_delivery?->toDateString(),
             'biddingDeadline' => $task->bidding_deadline?->format('Y-m-d H:i'),
@@ -310,6 +330,7 @@ class TaskController extends Controller
             'title' => $task->title,
             'description' => $richTextSanitizer->clean($task->description),
             'amountLabel' => $this->amountLabel($task),
+            'amountType' => $task->final_amount === null ? 'BUDGET' : 'FINAL',
             'budget' => (string) $task->budget,
             'finalAmount' => $task->final_amount === null ? null : (string) $task->final_amount,
             'expectedDelivery' => $task->expected_delivery?->toDateString(),
@@ -500,6 +521,44 @@ class TaskController extends Controller
         }
 
         return $prefix.rawurlencode($attachmentId);
+    }
+
+    /**
+     * 查询当前用户允许看到的任务事件。
+     *
+     * 任务创建、发布、指派等生命周期事件对详情页访问者公开；投标提交、撤回和中标事件
+     * 只向任务发布者或对应投标成员展示，避免时间线绕过投标列表权限泄露他人履历。
+     *
+     * @param  list<string>  $visibleBidIds  当前用户有权查看的投标 ID
+     * @return list<array<string, string|null>>
+     */
+    private function visibleEvents(Task $task, string $employeeNo, array $visibleBidIds): array
+    {
+        $query = TaskEvent::query()
+            ->where('task_id', $task->id)
+            ->latest('created_at');
+
+        if ($task->created_by !== $employeeNo) {
+            $query->where(function (Builder $query) use ($visibleBidIds): void {
+                // 普通任务事件始终可见，投标相关事件则继续按 related_id 判断归属。
+                $query->whereNotIn('event_type', self::PRIVATE_BID_EVENT_TYPES);
+
+                if ($visibleBidIds !== []) {
+                    $query->orWhere(function (Builder $query) use ($visibleBidIds): void {
+                        $query
+                            ->whereIn('event_type', self::PRIVATE_BID_EVENT_TYPES)
+                            ->where('related_type', 'BID')
+                            ->whereIn('related_id', $visibleBidIds);
+                    });
+                }
+            });
+        }
+
+        return $query
+            ->get()
+            ->map(fn (TaskEvent $event): array => $this->eventItem($event))
+            ->values()
+            ->all();
     }
 
     /**

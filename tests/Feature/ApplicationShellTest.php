@@ -129,6 +129,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.filters.keyword', '登录')
         ->assertJsonPath('props.paymentAccountOptions.0.value', 'PAY001')
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
+        ->assertJsonPath('props.tasks.data.0.amountType', 'BUDGET')
         ->assertJsonPath('props.tasks.data.0.isUrgent', true)
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1);
 });
@@ -759,6 +760,41 @@ test('authenticated users can view task detail page', function (): void {
         'created_at' => now(),
     ]);
 
+    // 插入其他用户的投标和投标事件，验证普通访问者只能看到数量，不能看到方案或个人履历。
+    DB::table('bid')->insert([
+        'id' => 20002,
+        'task_id' => 10002,
+        'amount' => 1100,
+        'delivery_date' => now()->addDays(4)->toDateString(),
+        'proposal' => '只有发布者和投标成员可以看到的方案。',
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10002:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        'id' => 21001,
+        'bid_id' => 20002,
+        'user_id' => 'E20001',
+        'role' => 'OWNER',
+        'created_at' => now(),
+    ]);
+
+    DB::table('task_event')->insert([
+        'id' => 40002,
+        'task_id' => 10002,
+        'event_type' => 'BID_SUBMITTED',
+        'operator_id' => 'E20001',
+        'from_status' => 'OPEN',
+        'to_status' => 'OPEN',
+        'related_type' => 'BID',
+        'related_id' => 20002,
+        'remark' => '提交投标',
+        'created_at' => now()->addSecond(),
+    ]);
+
     $this->withSession([
         CurrentUserService::SESSION_KEY => [
             'employeeNo' => 'E10002',
@@ -777,10 +813,16 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonPath('component', 'Tasks/Show')
         ->assertJsonPath('props.task.id', '10002')
         ->assertJsonPath('props.task.title', '任务详情页开发')
+        ->assertJsonPath('props.task.amountType', 'BUDGET')
         ->assertJsonPath('props.task.isUrgent', false)
         ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
         ->assertJsonPath('props.task.attachments.0.url', 'https://files.example.test/download/ATT-TASK-001')
         ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
+        ->assertJsonCount(1, 'props.events')
+        ->assertJsonPath('props.bidOverview.totalCount', 1)
+        ->assertJsonPath('props.bidOverview.visibleCount', 0)
+        ->assertJsonPath('props.bidOverview.hiddenCount', 1)
+        ->assertJsonCount(0, 'props.visibleBids')
         ->assertJsonPath('props.personnelOptions.0.employeeNo', 'E30001')
         ->assertJsonPath('props.personnelOptions.0.displayName', '协作开发')
         ->assertJsonPath('props.canPlaceBid', true);
@@ -888,7 +930,11 @@ test('authenticated users can place a bid for an open task', function (): void {
         ->assertJsonPath(
             'props.visibleBids.0.attachments.0.url',
             'https://files.example.test/download/ATT-BID-001',
-        );
+        )
+        ->assertJsonPath('props.bidOverview.totalCount', 1)
+        ->assertJsonPath('props.bidOverview.visibleCount', 1)
+        ->assertJsonPath('props.bidOverview.hiddenCount', 0)
+        ->assertJsonPath('props.events.0.eventType', 'BID_SUBMITTED');
 });
 
 test('authenticated users can place a joint bid with collaborators', function (): void {
@@ -1151,6 +1197,8 @@ test('task creator can select a bid and assign all bid members', function (): vo
         ->get('/tasks/10006')
         ->assertOk()
         ->assertJsonPath('props.task.status', 'ASSIGNED')
+        ->assertJsonPath('props.task.amountType', 'FINAL')
+        ->assertJsonPath('props.task.amountLabel', '¥4,500.00')
         ->assertJsonPath('props.task.assignees.0.displayName', '主开发')
         ->assertJsonPath('props.task.assignees.0.role', 'OWNER')
         ->assertJsonPath('props.task.assignees.1.displayName', '协作开发')

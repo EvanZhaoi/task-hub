@@ -7,7 +7,7 @@ import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombob
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
-import { Badge } from '@/components/ui/badge';
+import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -28,46 +28,10 @@ import type {
     TaskComplexity,
     TaskFilters,
     TaskIndexProps,
-    TaskStatus,
     UploadedTaskAttachment,
 } from '@/types/task';
 import { urlWithQuery } from '@/utils/url';
-import { useState, type ComponentProps, type ReactNode } from 'react';
-
-// 页面展示文案集中在这里，避免 JSX 中散落大量枚举判断。
-const statusLabels: Record<TaskStatus, string> = {
-    DRAFT: '草稿',
-    OPEN: '招标中',
-    PENDING_SELECTION: '待选标',
-    ASSIGNED: '进行中',
-    COMPLETED: '已完成',
-    FAILED: '已流标',
-    CANCELLED: '已取消',
-};
-
-const complexityLabels: Record<TaskComplexity, string> = {
-    LOW: '简单',
-    MEDIUM: '中等',
-    HIGH: '复杂',
-};
-
-// 后端只传状态值，前端在这里把状态值映射为 Badge 的视觉类型。
-const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['variant']> = {
-    DRAFT: 'default',
-    OPEN: 'open',
-    PENDING_SELECTION: 'pending',
-    ASSIGNED: 'assigned',
-    COMPLETED: 'completed',
-    FAILED: 'failed',
-    CANCELLED: 'cancelled',
-};
-
-// 复杂度使用带边框的浅色标签，与实心的任务状态标签形成明确区分。
-const complexityBadgeClasses: Record<TaskComplexity, string> = {
-    LOW: 'border border-emerald-200 bg-emerald-50 text-emerald-700',
-    MEDIUM: 'border border-amber-200 bg-amber-50 text-amber-700',
-    HIGH: 'border border-violet-200 bg-violet-50 text-violet-700',
-};
+import { useState, type ReactNode } from 'react';
 
 type TaskCreateForm = {
     title: string;
@@ -428,35 +392,11 @@ export default function TaskIndex({
                                                         {task.title}
                                                     </Link>
                                                 </h2>
-                                                <Badge variant={statusBadgeVariants[task.displayStatus]}>
-                                                    {statusLabels[task.displayStatus]}
-                                                </Badge>
-                                                {/*
-                                                 * 复杂度增加固定前缀，避免“简单/中等/复杂”被误解成任务状态。
-                                                 * 浅色描边样式用于区分属性标签和任务状态标签。
-                                                 */}
-                                                <Badge
-                                                    className={cn(
-                                                        'whitespace-nowrap',
-                                                        complexityBadgeClasses[task.complexity],
-                                                    )}
-                                                    variant="default"
-                                                >
-                                                    复杂度：{complexityLabels[task.complexity]}
-                                                </Badge>
-                                                {/*
-                                                 * 非紧急任务也明确展示，保证每张卡片都能直接比较紧急情况；
-                                                 * 紧急使用红色强调，非紧急使用中性色降低视觉重量。
-                                                 */}
-                                                <Badge
-                                                    className={cn(
-                                                        'whitespace-nowrap',
-                                                        !task.isUrgent && 'bg-slate-50 text-slate-600',
-                                                    )}
-                                                    variant={task.isUrgent ? 'danger' : 'default'}
-                                                >
-                                                    {task.isUrgent ? '紧急' : '非紧急'}
-                                                </Badge>
+                                                <TaskAttributeBadges
+                                                    complexity={task.complexity}
+                                                    displayStatus={task.displayStatus}
+                                                    isUrgent={task.isUrgent}
+                                                />
                                             </div>
 
                                             <RichTextViewer
@@ -499,8 +439,15 @@ export default function TaskIndex({
 
                                         {/* 右侧：突出预算，并在同一区域展示当前有效投标人数。 */}
                                         <section className="flex min-w-0 flex-col border-t border-[#eef0f3] pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
-                                            <span className="text-xs text-[#9ca3af]">任务预算</span>
-                                            <strong className="mt-1 text-xl font-semibold text-[#111827]">
+                                            <span className="text-xs text-[#9ca3af]">
+                                                {task.amountType === 'FINAL' ? '确定金额' : '任务预算'}
+                                            </span>
+                                            <strong
+                                                className={cn(
+                                                    'mt-1 text-xl font-semibold',
+                                                    task.amountType === 'FINAL' ? 'text-[#4f46a5]' : 'text-[#111827]',
+                                                )}
+                                            >
                                                 {task.amountLabel}
                                             </strong>
                                             <span className="mt-2 text-sm text-[#6e6e80]">

@@ -1,5 +1,14 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, Banknote, CalendarDays, ExternalLink, FileText, Paperclip, UserRound, Users } from 'lucide-react';
+import {
+    ArrowLeft,
+    ChevronDown,
+    ExternalLink,
+    FileText,
+    Paperclip,
+    ShieldCheck,
+    UserRound,
+    Users,
+} from 'lucide-react';
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -9,6 +18,7 @@ import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { SelectBidDialog } from '@/components/tasks/SelectBidDialog';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
+import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,29 +40,10 @@ import type {
     BidItem,
     BidStatus,
     PersonnelOption,
-    TaskComplexity,
     TaskEventItem,
     TaskShowProps,
-    TaskStatus,
     UploadedTaskAttachment,
 } from '@/types/task';
-
-// 状态文案和任务大厅保持一致；后续如果多个页面继续使用，可以再抽成 task display 配置文件。
-const statusLabels: Record<TaskStatus, string> = {
-    DRAFT: '草稿',
-    OPEN: '招标中',
-    PENDING_SELECTION: '待选标',
-    ASSIGNED: '进行中',
-    COMPLETED: '已完成',
-    FAILED: '已流标',
-    CANCELLED: '已取消',
-};
-
-const complexityLabels: Record<TaskComplexity, string> = {
-    LOW: '简单',
-    MEDIUM: '中等',
-    HIGH: '复杂',
-};
 
 const bidStatusLabels: Record<BidStatus, string> = {
     ACTIVE: '有效投标',
@@ -80,22 +71,6 @@ const eventLabels: Record<string, string> = {
     BIDDING_DEADLINE_EXTENDED: '延长招标截止',
 };
 
-const statusBadgeVariants: Record<TaskStatus, ComponentProps<typeof Badge>['variant']> = {
-    DRAFT: 'default',
-    OPEN: 'open',
-    PENDING_SELECTION: 'pending',
-    ASSIGNED: 'assigned',
-    COMPLETED: 'completed',
-    FAILED: 'failed',
-    CANCELLED: 'cancelled',
-};
-
-const complexityBadgeVariants: Record<TaskComplexity, ComponentProps<typeof Badge>['variant']> = {
-    LOW: 'completed',
-    MEDIUM: 'default',
-    HIGH: 'danger',
-};
-
 const bidStatusBadgeVariants: Record<BidStatus, ComponentProps<typeof Badge>['variant']> = {
     ACTIVE: 'open',
     WITHDRAWN: 'failed',
@@ -112,6 +87,7 @@ type BidForm = {
 };
 
 export default function TaskShow({
+    bidOverview,
     canPlaceBid,
     currentEmployeeNo,
     events,
@@ -163,13 +139,11 @@ export default function TaskShow({
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div className="min-w-0">
                                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                                        <Badge variant={statusBadgeVariants[task.displayStatus]}>
-                                            {statusLabels[task.displayStatus]}
-                                        </Badge>
-                                        <Badge variant={complexityBadgeVariants[task.complexity]}>
-                                            {complexityLabels[task.complexity]}
-                                        </Badge>
-                                        {task.isUrgent ? <Badge variant="danger">紧急</Badge> : null}
+                                        <TaskAttributeBadges
+                                            complexity={task.complexity}
+                                            displayStatus={task.displayStatus}
+                                            isUrgent={task.isUrgent}
+                                        />
                                         <Badge variant="default">
                                             {task.assignmentType === 'BIDDING' ? '招标选标' : '直接指派'}
                                         </Badge>
@@ -180,9 +154,23 @@ export default function TaskShow({
                                         {task.departmentName ? ` · ${task.departmentName}` : ''}
                                     </p>
                                 </div>
-                                <div className="rounded-md bg-[#f7f7f8] px-4 py-3 text-right">
-                                    <div className="text-xs text-[#6e6e80]">预算 / 最终金额</div>
-                                    <div className="text-xl font-semibold text-[#1a1a1a]">{task.amountLabel}</div>
+                                <div
+                                    className={cn(
+                                        'rounded-md px-4 py-3 text-right',
+                                        task.amountType === 'FINAL' ? 'bg-[#f5f3ff]' : 'bg-[#f7f7f8]',
+                                    )}
+                                >
+                                    <div className="text-xs text-[#6e6e80]">
+                                        {task.amountType === 'FINAL' ? '确定金额' : '任务预算'}
+                                    </div>
+                                    <div
+                                        className={cn(
+                                            'text-xl font-semibold',
+                                            task.amountType === 'FINAL' ? 'text-[#4f46a5]' : 'text-[#1a1a1a]',
+                                        )}
+                                    >
+                                        {task.amountLabel}
+                                    </div>
                                 </div>
                             </div>
 
@@ -235,7 +223,7 @@ export default function TaskShow({
                     <Card>
                         <CardContent className="p-6">
                             <SectionTitle title="投标记录" />
-                            <BidList bids={visibleBids} taskId={task.id} />
+                            <BidList bids={visibleBids} overview={bidOverview} taskId={task.id} />
                         </CardContent>
                     </Card>
                 </div>
@@ -254,7 +242,7 @@ export default function TaskShow({
                     <Card>
                         <CardContent className="p-5">
                             <SectionTitle title="业务时间线" />
-                            <EventTimeline events={events} />
+                            <EventTimeline events={events} hasHiddenBidEvents={bidOverview.hiddenCount > 0} />
                         </CardContent>
                     </Card>
                 </aside>
@@ -411,96 +399,178 @@ function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, task
     );
 }
 
-function BidList({ bids, taskId }: { bids: BidItem[]; taskId: string }) {
+type BidListProps = {
+    bids: BidItem[];
+    overview: TaskShowProps['bidOverview'];
+    taskId: string;
+};
+
+/**
+ * 以紧凑摘要行展示当前用户有权查看的投标，说明、协作者和附件按需展开。
+ */
+function BidList({ bids, overview, taskId }: BidListProps) {
+    const [expandedBidIds, setExpandedBidIds] = useState<string[]>([]);
+
+    /**
+     * 单独维护每条投标的展开状态，避免展开一个方案时占开全部记录。
+     */
+    function toggleBid(bidId: string): void {
+        setExpandedBidIds((currentIds) =>
+            currentIds.includes(bidId)
+                ? currentIds.filter((currentId) => currentId !== bidId)
+                : [...currentIds, bidId],
+        );
+    }
+
     if (bids.length === 0) {
-        return <p className="mt-4 text-sm text-[#6e6e80]">暂无可查看的投标记录。</p>;
+        if (overview.totalCount > 0) {
+            return (
+                <div className="mt-4 flex items-start gap-3 rounded-md border border-[#e5e7eb] bg-[#f8f9fb] px-4 py-3">
+                    <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#6e6e80]" />
+                    <div>
+                        <div className="text-sm font-medium text-[#374151]">该任务已有 {overview.totalCount} 条投标</div>
+                        <p className="mt-1 text-xs leading-5 text-[#6e6e80]">
+                            投标详情仅对任务发布者和对应投标成员可见，你当前没有可查看的投标记录。
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        return <p className="mt-4 text-sm text-[#6e6e80]">当前还没有人投标。</p>;
     }
 
     return (
         <div className="mt-4 space-y-3">
+            {overview.hiddenCount > 0 ? (
+                <div className="flex items-center gap-2 rounded-md bg-[#f8f9fb] px-3 py-2 text-xs text-[#6e6e80]">
+                    <ShieldCheck className="size-4 shrink-0" />
+                    另有 {overview.hiddenCount} 条其他用户的投标已按权限隐藏。
+                </div>
+            ) : null}
+
             {bids.map((bid) => {
                 const owner = bid.members.find((member) => member.role === 'OWNER');
                 const collaborators = bid.members.filter((member) => member.role === 'COLLABORATOR');
+                const isExpanded = expandedBidIds.includes(bid.id);
 
                 return (
                     <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white" key={bid.id}>
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eeeeef] bg-[#fbfbfc] px-4 py-2.5">
-                            <Badge variant={bidStatusBadgeVariants[bid.status]}>{bidStatusLabels[bid.status]}</Badge>
-                            <div className="flex flex-wrap items-center justify-end gap-3">
-                                <span className="text-xs text-[#9ca3af]">
-                                    第 {bid.revisionNo} 版 · {bid.createdAt ?? '-'}
-                                </span>
-                                {bid.canSelect ? <SelectBidDialog bid={bid} taskId={taskId} /> : null}
-                            </div>
-                        </div>
+                        <div className="flex items-stretch gap-2 bg-[#fbfbfc] p-2">
+                            <button
+                                aria-expanded={isExpanded}
+                                className="grid min-w-0 flex-1 cursor-pointer grid-cols-2 items-center gap-x-4 gap-y-2 rounded-md px-2 py-2 text-left hover:bg-white md:grid-cols-[110px_minmax(0,1fr)_130px_150px_24px]"
+                                onClick={() => toggleBid(bid.id)}
+                                type="button"
+                            >
+                                <Badge className="w-fit" variant={bidStatusBadgeVariants[bid.status]}>
+                                    {bidStatusLabels[bid.status]}
+                                </Badge>
+                                <BidSummaryValue label="主投标人" value={owner?.displayName ?? '-'} />
+                                <BidSummaryValue emphasize label="投标金额" value={bid.amountLabel} />
+                                <BidSummaryValue label="承诺交付" value={bid.deliveryDate ?? '-'} />
+                                <ChevronDown
+                                    className={cn(
+                                        'size-5 justify-self-end text-[#6e6e80] transition-transform',
+                                        isExpanded && 'rotate-180',
+                                    )}
+                                />
+                            </button>
 
-                        <div className="grid divide-y divide-[#eeeeef] sm:grid-cols-[minmax(0,1.4fr)_minmax(140px,0.8fr)_minmax(150px,0.9fr)] sm:divide-x sm:divide-y-0">
-                            <BidPrimaryInfo
-                                icon={<UserRound className="size-5" />}
-                                label="主投标人"
-                                value={owner ? owner.displayName : '-'}
-                                secondary={owner?.userId ?? null}
-                            />
-                            <BidPrimaryInfo
-                                emphasize
-                                icon={<Banknote className="size-5" />}
-                                label="投标金额"
-                                value={bid.amountLabel}
-                            />
-                            <BidPrimaryInfo
-                                icon={<CalendarDays className="size-5" />}
-                                label="承诺交付日期"
-                                value={bid.deliveryDate ?? '-'}
-                            />
-                        </div>
-
-                        <div className="space-y-3 border-t border-[#eeeeef] px-4 py-3.5">
-                            {bid.proposal ? (
-                                <div>
-                                    <div className="text-xs font-medium text-[#9ca3af]">投标说明</div>
-                                    <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-[#374151]">
-                                        {bid.proposal}
-                                    </p>
+                            {bid.canSelect ? (
+                                <div className="flex shrink-0 items-center pr-1">
+                                    <SelectBidDialog bid={bid} taskId={taskId} />
                                 </div>
                             ) : null}
+                        </div>
 
-                            {collaborators.length > 0 ? (
-                                <div className="flex flex-wrap items-center gap-2 text-sm">
-                                    <span className="inline-flex items-center gap-1 text-[#6e6e80]">
-                                        <Users className="size-4" />
-                                        协作成员
-                                    </span>
-                                    {collaborators.map((member) => (
-                                        <span
-                                            className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
-                                            key={member.userId}
-                                            title={member.departmentName ?? undefined}
-                                        >
-                                            {member.displayName}（{member.userId}）
-                                        </span>
-                                    ))}
+                        {isExpanded ? (
+                            <div className="space-y-4 border-t border-[#eeeeef] px-4 py-4">
+                                <div className="text-xs text-[#9ca3af]">
+                                    第 {bid.revisionNo} 版 · 提交于 {bid.createdAt ?? '-'}
+                                    {owner?.userId ? ` · 主投标人工号 ${owner.userId}` : ''}
                                 </div>
-                            ) : (
-                                <p className="text-xs text-[#9ca3af]">单人投标</p>
-                            )}
 
-                            {bid.attachments.length > 0 ? (
-                                <div>
-                                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[#6e6e80]">
-                                        <Paperclip className="size-4" />
-                                        投标附件（{bid.attachments.length}）
+                                {bid.proposal ? (
+                                    <div>
+                                        <div className="text-xs font-medium text-[#9ca3af]">投标说明</div>
+                                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-[#374151]">
+                                            {bid.proposal}
+                                        </p>
                                     </div>
-                                    <div className="space-y-2">
-                                        {bid.attachments.map((file) => (
-                                            <AttachmentRow id={file.id} key={file.id} name={file.name} url={file.url} />
+                                ) : null}
+
+                                {collaborators.length > 0 ? (
+                                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                                        <span className="inline-flex items-center gap-1 text-[#6e6e80]">
+                                            <Users className="size-4" />
+                                            协作成员
+                                        </span>
+                                        {collaborators.map((member) => (
+                                            <span
+                                                className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
+                                                key={member.userId}
+                                                title={member.departmentName ?? undefined}
+                                            >
+                                                {member.displayName}（{member.userId}）
+                                            </span>
                                         ))}
                                     </div>
-                                </div>
-                            ) : null}
-                        </div>
+                                ) : (
+                                    <p className="text-xs text-[#9ca3af]">单人投标</p>
+                                )}
+
+                                {bid.attachments.length > 0 ? (
+                                    <div>
+                                        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[#6e6e80]">
+                                            <Paperclip className="size-4" />
+                                            投标附件（{bid.attachments.length}）
+                                        </div>
+                                        <div className="space-y-2">
+                                            {bid.attachments.map((file) => (
+                                                <AttachmentRow
+                                                    id={file.id}
+                                                    key={file.id}
+                                                    name={file.name}
+                                                    url={file.url}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-[#9ca3af]">未上传投标附件。</p>
+                                )}
+                            </div>
+                        ) : null}
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+type BidSummaryValueProps = {
+    emphasize?: boolean;
+    label: string;
+    value: string;
+};
+
+/**
+ * 投标摘要行中的紧凑字段，移动端仍保留标签避免金额和日期失去语义。
+ */
+function BidSummaryValue({ emphasize = false, label, value }: BidSummaryValueProps) {
+    return (
+        <div className="min-w-0">
+            <div className="text-[11px] text-[#9ca3af]">{label}</div>
+            <div
+                className={cn(
+                    'mt-0.5 truncate text-sm font-semibold text-[#374151]',
+                    emphasize && 'text-base text-[#4f46a5]',
+                )}
+                title={value}
+            >
+                {value}
+            </div>
         </div>
     );
 }
@@ -553,59 +623,39 @@ function AssigneeList({ assignees }: AssigneeListProps) {
     );
 }
 
-type BidPrimaryInfoProps = {
-    emphasize?: boolean;
-    icon: ReactNode;
-    label: string;
-    secondary?: string | null;
-    value: string;
-};
-
-/**
- * 投标卡片的一级信息单元。
- *
- * 三个单元使用相同结构保证对齐；金额通过 emphasize 单独提高颜色和字号层级。
- */
-function BidPrimaryInfo({ emphasize = false, icon, label, secondary, value }: BidPrimaryInfoProps) {
+function EventTimeline({
+    events,
+    hasHiddenBidEvents,
+}: {
+    events: TaskEventItem[];
+    hasHiddenBidEvents: boolean;
+}) {
     return (
-        <div className="flex min-w-0 items-start gap-3 px-4 py-4">
-            <span className="mt-0.5 shrink-0 text-[#6e6e80]">{icon}</span>
-            <div className="min-w-0">
-                <div className="text-xs font-medium text-[#9ca3af]">{label}</div>
-                <div
-                    className={cn(
-                        'mt-1 truncate font-semibold text-[#1f2937]',
-                        emphasize && 'text-xl text-[#5e6ad2]',
-                    )}
-                    title={value}
-                >
-                    {value}
+        <div>
+            {hasHiddenBidEvents ? (
+                <div className="mt-3 flex items-start gap-2 rounded-md bg-[#f8f9fb] px-3 py-2 text-xs leading-5 text-[#6e6e80]">
+                    <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+                    他人的投标提交、撤回和中标记录已按权限隐藏。
                 </div>
-                {secondary ? <div className="mt-0.5 truncate text-xs text-[#6e6e80]">{secondary}</div> : null}
-            </div>
+            ) : null}
+            {events.length > 0 ? (
+                <ol className="mt-4 space-y-4">
+                    {events.map((event) => (
+                        <li className="relative border-l border-[#e5e7eb] pl-4" key={event.id}>
+                            <span className="absolute -left-1.5 top-1 size-3 rounded-full bg-[#5e6ad2]" />
+                            <div className="text-sm font-medium">{eventLabels[event.eventType] ?? event.eventType}</div>
+                            <div className="mt-1 text-xs text-[#6e6e80]">
+                                {event.createdAt ?? '-'}
+                                {event.operatorId ? ` · ${event.operatorId}` : ''}
+                            </div>
+                            {event.remark ? <div className="mt-1 text-sm text-[#374151]">{event.remark}</div> : null}
+                        </li>
+                    ))}
+                </ol>
+            ) : (
+                <p className="mt-4 text-sm text-[#6e6e80]">暂无可查看的事件记录。</p>
+            )}
         </div>
-    );
-}
-
-function EventTimeline({ events }: { events: TaskEventItem[] }) {
-    if (events.length === 0) {
-        return <p className="mt-4 text-sm text-[#6e6e80]">暂无事件记录。</p>;
-    }
-
-    return (
-        <ol className="mt-4 space-y-4">
-            {events.map((event) => (
-                <li className="relative border-l border-[#e5e7eb] pl-4" key={event.id}>
-                    <span className="absolute -left-1.5 top-1 size-3 rounded-full bg-[#5e6ad2]" />
-                    <div className="text-sm font-medium">{eventLabels[event.eventType] ?? event.eventType}</div>
-                    <div className="mt-1 text-xs text-[#6e6e80]">
-                        {event.createdAt ?? '-'}
-                        {event.operatorId ? ` · ${event.operatorId}` : ''}
-                    </div>
-                    {event.remark ? <div className="mt-1 text-sm text-[#374151]">{event.remark}</div> : null}
-                </li>
-            ))}
-        </ol>
     );
 }
 

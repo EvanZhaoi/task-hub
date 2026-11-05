@@ -50,6 +50,8 @@ export type TaskListItem = {
     // 列表页描述是后端截断后的摘要，不是完整任务说明。
     description: string;
     amountLabel: string;
+    // FINAL 表示已经通过选标或后续协商确定金额；否则当前值仍是发布预算。
+    amountType: 'BUDGET' | 'FINAL';
     // 日期字段已经由后端格式化，前端不再做时区转换。
     expectedDelivery: string | null;
     finalDelivery: string | null;
@@ -153,6 +155,7 @@ export type TaskDetail = {
     title: string;
     description: string;
     amountLabel: string;
+    amountType: 'BUDGET' | 'FINAL';
     budget: string;
     finalAmount: string | null;
     expectedDelivery: string | null;
@@ -180,6 +183,12 @@ export type TaskDetail = {
 };
 
 export type TaskShowProps = {
+    // bidOverview 只公开数量，不包含无权查看的投标人、报价、说明和附件。
+    bidOverview: {
+        hiddenCount: number;
+        totalCount: number;
+        visibleCount: number;
+    };
     canPlaceBid: boolean;
     currentEmployeeNo: string;
     events: TaskEventItem[];
