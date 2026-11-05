@@ -126,11 +126,15 @@ export type BidItem = {
     deliveryDate: string | null;
     proposal: string | null;
     status: BidStatus;
+    // canSelect 由后端根据发布者、Task 状态和 Bid 状态计算；前端不重复维护权限规则。
+    canSelect: boolean;
     revisionNo: number;
     createdAt: string | null;
     members: BidMemberItem[];
     attachments: TaskAttachment[];
 };
+
+export type TaskAssigneeItem = BidMemberItem;
 
 export type TaskEventItem = {
     id: string;
@@ -169,6 +173,9 @@ export type TaskDetail = {
     updatedAt: string | null;
     activeBidCount: number;
     isCreatedByCurrentUser: boolean;
+    // 正式执行成员来自 task_assignee，不从中标 Bid 临时推导。
+    assignees: TaskAssigneeItem[];
+    currentUserAssigneeRole: BidMemberRole | null;
     attachments: TaskAttachment[];
 };
 

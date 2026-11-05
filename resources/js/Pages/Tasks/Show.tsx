@@ -7,6 +7,7 @@ import { AttachmentIcon } from '@/components/common/AttachmentIcon';
 import { DatePicker } from '@/components/common/DatePicker';
 import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
+import { SelectBidDialog } from '@/components/tasks/SelectBidDialog';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -118,7 +119,7 @@ export default function TaskShow({
     task,
     visibleBids,
 }: TaskShowProps) {
-    const { flash } = usePage<SharedPageProps>().props;
+    const { errors, flash } = usePage<SharedPageProps>().props;
 
     return (
         <AppLayout
@@ -146,6 +147,12 @@ export default function TaskShow({
             {flash?.success ? (
                 <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                     {flash.success}
+                </div>
+            ) : null}
+
+            {errors?.bid ? (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {errors.bid}
                 </div>
             ) : null}
 
@@ -188,6 +195,21 @@ export default function TaskShow({
                         </CardContent>
                     </Card>
 
+                    {task.assignees.length > 0 ? (
+                        <Card>
+                            <CardContent className="p-6">
+                                <SectionTitle icon={<Users className="size-4" />} title="任务执行成员" />
+                                {task.currentUserAssigneeRole ? (
+                                    <div className="mt-3 rounded-md bg-[#f5f3ff] px-3 py-2 text-sm text-[#4f46a5]">
+                                        你是该任务的
+                                        {task.currentUserAssigneeRole === 'OWNER' ? '负责人' : '协作成员'}。
+                                    </div>
+                                ) : null}
+                                <AssigneeList assignees={task.assignees} />
+                            </CardContent>
+                        </Card>
+                    ) : null}
+
                     <Card>
                         <CardContent className="p-6">
                             <SectionTitle icon={<FileText className="size-4" />} title="任务描述" />
@@ -213,7 +235,7 @@ export default function TaskShow({
                     <Card>
                         <CardContent className="p-6">
                             <SectionTitle title="投标记录" />
-                            <BidList bids={visibleBids} />
+                            <BidList bids={visibleBids} taskId={task.id} />
                         </CardContent>
                     </Card>
                 </div>
@@ -389,7 +411,7 @@ function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, task
     );
 }
 
-function BidList({ bids }: { bids: BidItem[] }) {
+function BidList({ bids, taskId }: { bids: BidItem[]; taskId: string }) {
     if (bids.length === 0) {
         return <p className="mt-4 text-sm text-[#6e6e80]">暂无可查看的投标记录。</p>;
     }
@@ -402,11 +424,14 @@ function BidList({ bids }: { bids: BidItem[] }) {
 
                 return (
                     <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white" key={bid.id}>
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#eeeeef] bg-[#fbfbfc] px-4 py-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eeeeef] bg-[#fbfbfc] px-4 py-2.5">
                             <Badge variant={bidStatusBadgeVariants[bid.status]}>{bidStatusLabels[bid.status]}</Badge>
-                            <span className="text-xs text-[#9ca3af]">
-                                第 {bid.revisionNo} 版 · {bid.createdAt ?? '-'}
-                            </span>
+                            <div className="flex flex-wrap items-center justify-end gap-3">
+                                <span className="text-xs text-[#9ca3af]">
+                                    第 {bid.revisionNo} 版 · {bid.createdAt ?? '-'}
+                                </span>
+                                {bid.canSelect ? <SelectBidDialog bid={bid} taskId={taskId} /> : null}
+                            </div>
                         </div>
 
                         <div className="grid divide-y divide-[#eeeeef] sm:grid-cols-[minmax(0,1.4fr)_minmax(140px,0.8fr)_minmax(150px,0.9fr)] sm:divide-x sm:divide-y-0">
@@ -476,6 +501,54 @@ function BidList({ bids }: { bids: BidItem[] }) {
                     </div>
                 );
             })}
+        </div>
+    );
+}
+
+type AssigneeListProps = {
+    assignees: TaskShowProps['task']['assignees'];
+};
+
+/**
+ * 展示任务进入 ASSIGNED 后固化的正式执行成员。
+ */
+function AssigneeList({ assignees }: AssigneeListProps) {
+    const owner = assignees.find((assignee) => assignee.role === 'OWNER');
+    const collaborators = assignees.filter((assignee) => assignee.role === 'COLLABORATOR');
+
+    return (
+        <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <div className="rounded-md border border-[#e5e7eb] bg-[#fbfbfc] p-4">
+                <div className="text-xs font-medium text-[#9ca3af]">负责人</div>
+                <div className="mt-2 flex items-center gap-2">
+                    <UserRound className="size-5 text-[#5e6ad2]" />
+                    <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-[#1f2937]">
+                            {owner?.displayName ?? '-'}
+                        </div>
+                        {owner ? <div className="text-xs text-[#6e6e80]">{owner.userId}</div> : null}
+                    </div>
+                </div>
+            </div>
+
+            <div className="rounded-md border border-[#e5e7eb] bg-[#fbfbfc] p-4">
+                <div className="text-xs font-medium text-[#9ca3af]">协作成员</div>
+                {collaborators.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {collaborators.map((assignee) => (
+                            <span
+                                className="rounded-md bg-white px-2.5 py-1.5 text-sm text-[#374151] ring-1 ring-[#e5e7eb]"
+                                key={assignee.userId}
+                                title={assignee.departmentName ?? undefined}
+                            >
+                                {assignee.displayName}（{assignee.userId}）
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="mt-2 text-sm text-[#9ca3af]">暂无协作成员</p>
+                )}
+            </div>
         </div>
     );
 }

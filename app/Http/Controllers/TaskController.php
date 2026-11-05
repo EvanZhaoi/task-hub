@@ -162,19 +162,30 @@ class TaskController extends Controller
             'attachments' => fn ($query) => $query->latest('created_at'),
             // 任务事件按时间倒序展示，方便用户优先看到最新动作。
             'events' => fn ($query) => $query->latest('created_at'),
+            // 执行成员按 OWNER 优先、ID 稳定排序，用于选标后的任务成员展示。
+            'assignees' => fn ($query) => $query
+                ->orderByRaw("role = 'OWNER' DESC")
+                ->orderBy('id'),
         ])->loadCount([
             'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
         ]);
 
         $canPlaceBid = $this->canPlaceBid($task, $employeeNo);
         // 只有需要显示人员选择器或已有投标成员时才加载大人员列表，避免无关详情请求传输全部候选项。
-        $needsPersonnelDirectory = $canPlaceBid || Bid::query()->where('task_id', $task->id)->exists();
+        $needsPersonnelDirectory = $canPlaceBid
+            || Bid::query()->where('task_id', $task->id)->exists()
+            || $task->assignees->isNotEmpty();
         $personnelDirectory = $needsPersonnelDirectory
             ? $this->personnelDirectory($personnel, $currentUser->accessToken())
             : ['options' => [], 'names' => []];
 
         return Inertia::render('Tasks/Show', [
-            'task' => $this->taskDetail($task, $employeeNo, $richTextSanitizer),
+            'task' => $this->taskDetail(
+                $task,
+                $employeeNo,
+                $richTextSanitizer,
+                $personnelDirectory['names'],
+            ),
             'visibleBids' => $this->visibleBids($task, $employeeNo, $personnelDirectory['names']),
             'events' => $task->events->map(fn (TaskEvent $event): array => $this->eventItem($event))->values(),
             'canPlaceBid' => $canPlaceBid,
@@ -285,8 +296,12 @@ class TaskController extends Controller
      *
      * 详情页展示完整富文本描述、附件、付款账号快照和当前用户相关权限提示。
      */
-    private function taskDetail(Task $task, string $employeeNo, RichTextSanitizer $richTextSanitizer): array
-    {
+    private function taskDetail(
+        Task $task,
+        string $employeeNo,
+        RichTextSanitizer $richTextSanitizer,
+        array $personnelNames,
+    ): array {
         $createdBySnapshot = $task->created_by_snapshot ?? [];
         $paymentAccountSnapshot = $task->payment_account_snapshot ?? [];
 
@@ -315,6 +330,14 @@ class TaskController extends Controller
             'updatedAt' => $task->updated_at?->format('Y-m-d H:i'),
             'activeBidCount' => (int) ($task->active_bid_count ?? 0),
             'isCreatedByCurrentUser' => $task->created_by === $employeeNo,
+            'currentUserAssigneeRole' => $task->assignees
+                ->firstWhere('user_id', $employeeNo)?->role,
+            'assignees' => $task->assignees->map(fn ($assignee): array => [
+                'userId' => $assignee->user_id,
+                'displayName' => $personnelNames[$assignee->user_id]['displayName'] ?? $assignee->user_id,
+                'departmentName' => $personnelNames[$assignee->user_id]['departmentName'] ?? null,
+                'role' => $assignee->role,
+            ])->values(),
             'attachments' => $task->attachments
                 ->map(fn (AttachmentRef $attachment): array => $this->attachmentItem($attachment))
                 ->values(),
@@ -346,7 +369,7 @@ class TaskController extends Controller
 
         return $query
             ->get()
-            ->map(fn (Bid $bid): array => $this->bidItem($bid, $personnelNames))
+            ->map(fn (Bid $bid): array => $this->bidItem($bid, $personnelNames, $task, $employeeNo))
             ->values()
             ->all();
     }
@@ -354,7 +377,7 @@ class TaskController extends Controller
     /**
      * 把 Bid Model 转换成前端投标卡片需要的结构。
      */
-    private function bidItem(Bid $bid, array $personnelNames): array
+    private function bidItem(Bid $bid, array $personnelNames, Task $task, string $employeeNo): array
     {
         return [
             'id' => (string) $bid->id,
@@ -363,6 +386,11 @@ class TaskController extends Controller
             'deliveryDate' => $bid->delivery_date?->toDateString(),
             'proposal' => $bid->proposal,
             'status' => $bid->status,
+            // 前端只消费明确权限结果；真正选标时 SelectBidService 仍会在事务内重新校验。
+            'canSelect' => $task->created_by === $employeeNo
+                && $task->status === 'OPEN'
+                && $task->assignment_type === 'BIDDING'
+                && $bid->status === 'ACTIVE',
             'revisionNo' => $bid->revision_no,
             'createdAt' => $bid->created_at?->format('Y-m-d H:i'),
             'members' => $bid->members->map(fn ($member): array => [

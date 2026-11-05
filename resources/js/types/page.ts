@@ -28,4 +28,6 @@ export type SharedPageProps = {
         // success 来自 Laravel redirect()->with('success', ...)，用于提交成功后的页面提示。
         success?: string | null;
     };
+    // Laravel ValidationException 通过 Inertia 共享到 errors，页面用于展示非字段型业务错误。
+    errors?: Record<string, string>;
 };

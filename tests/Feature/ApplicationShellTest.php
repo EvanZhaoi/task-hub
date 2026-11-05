@@ -996,6 +996,318 @@ test('authenticated users can place a joint bid with collaborators', function ()
         ->assertJsonPath('props.visibleBids.0.members.2.displayName', '协作开发乙');
 });
 
+test('task creator can select a bid and assign all bid members', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10006,
+        'title' => '选标事务测试',
+        'description' => '验证选标后任务、投标、执行成员和事件同时更新。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 5000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'HIGH',
+        'created_by' => 'E10001',
+        'version' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid')->insert([
+        [
+            'id' => 21001,
+            'task_id' => 10006,
+            'amount' => 4500,
+            'delivery_date' => now()->addDays(7)->toDateString(),
+            'proposal' => '中标方案',
+            'status' => 'ACTIVE',
+            'revision_no' => 1,
+            'active_key' => '10006:E20001',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'id' => 21002,
+            'task_id' => 10006,
+            'amount' => 4600,
+            'delivery_date' => now()->addDays(8)->toDateString(),
+            'proposal' => '其他方案',
+            'status' => 'ACTIVE',
+            'revision_no' => 1,
+            'active_key' => '10006:E30001',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    DB::table('bid_member')->insert([
+        [
+            'id' => 22001,
+            'bid_id' => 21001,
+            'user_id' => 'E20001',
+            'role' => 'OWNER',
+            'created_at' => now(),
+        ],
+        [
+            'id' => 22002,
+            'bid_id' => 21001,
+            'user_id' => 'E20002',
+            'role' => 'COLLABORATOR',
+            'created_at' => now(),
+        ],
+        [
+            'id' => 22003,
+            'bid_id' => 21002,
+            'user_id' => 'E30001',
+            'role' => 'OWNER',
+            'created_at' => now(),
+        ],
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '任务发布者',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-task-creator',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->post('/tasks/10006/bids/21001/accept')
+        ->assertRedirect(route('tasks.show', 10006))
+        ->assertSessionHas('success', '已选定中标方案，任务进入进行中。');
+
+    $task = DB::table('task')->where('id', 10006)->first();
+
+    expect($task)->toMatchObject([
+        'status' => 'ASSIGNED',
+        'assigned_bid_id' => 21001,
+        'primary_assignee_id' => 'E20001',
+        'version' => 1,
+        'updated_by' => 'E10001',
+    ])->and((float) $task->final_amount)->toBe(4500.0)
+        ->and(substr((string) $task->final_delivery, 0, 10))->toBe(now()->addDays(7)->toDateString());
+
+    expect(DB::table('bid')->where('id', 21001)->first())
+        ->toMatchObject(['status' => 'ACCEPTED', 'active_key' => null]);
+    expect(DB::table('bid')->where('id', 21002)->first())
+        ->toMatchObject(['status' => 'LOST', 'active_key' => null]);
+
+    $assignees = DB::table('task_assignee')
+        ->where('task_id', 10006)
+        ->orderBy('user_id')
+        ->get(['user_id', 'role'])
+        ->map(fn (object $assignee): array => [
+            'userId' => $assignee->user_id,
+            'role' => $assignee->role,
+        ])
+        ->all();
+
+    expect($assignees)->toBe([
+        ['userId' => 'E20001', 'role' => 'OWNER'],
+        ['userId' => 'E20002', 'role' => 'COLLABORATOR'],
+    ]);
+
+    expect(DB::table('task_event')->where('task_id', 10006)->where('event_type', 'BID_ACCEPTED')->exists())
+        ->toBeTrue()
+        ->and(DB::table('task_event')->where('task_id', 10006)->where('event_type', 'TASK_ASSIGNED')->exists())
+        ->toBeTrue();
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回中标成员的展示信息，验证详情页从 TaskAssignee 组装正式执行团队。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-task-creator');
+
+            return [
+                new PersonnelUser(eibNameCn: '主开发', eibNumCn: 'E20001'),
+                new PersonnelUser(eibNameCn: '协作开发', eibNumCn: 'E20002'),
+            ];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '任务发布者',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-task-creator',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10006')
+        ->assertOk()
+        ->assertJsonPath('props.task.status', 'ASSIGNED')
+        ->assertJsonPath('props.task.assignees.0.displayName', '主开发')
+        ->assertJsonPath('props.task.assignees.0.role', 'OWNER')
+        ->assertJsonPath('props.task.assignees.1.displayName', '协作开发')
+        ->assertJsonPath('props.task.assignees.1.role', 'COLLABORATOR')
+        ->assertJsonPath('props.visibleBids.0.canSelect', false);
+
+    // 第二次提交会在锁内读到 ASSIGNED，必须被拒绝且不能重复写成员或事件。
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '任务发布者',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-task-creator',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10006')
+        ->post('/tasks/10006/bids/21001/accept')
+        ->assertRedirect('/tasks/10006')
+        ->assertSessionHasErrors('bid');
+
+    expect(DB::table('task_assignee')->where('task_id', 10006)->count())->toBe(2)
+        ->and(DB::table('task_event')->where('task_id', 10006)->count())->toBe(2);
+});
+
+test('users other than the task creator cannot select a bid', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10007,
+        'title' => '选标权限测试',
+        'description' => '验证非发布者无法选标。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 2000,
+        'expected_delivery' => now()->addDays(8)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        'version' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 21003,
+        'task_id' => 10007,
+        'amount' => 1800,
+        'delivery_date' => now()->addDays(6)->toDateString(),
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10007:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        'id' => 22004,
+        'bid_id' => 21003,
+        'user_id' => 'E20001',
+        'role' => 'OWNER',
+        'created_at' => now(),
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E99999',
+            'displayName' => '其他用户',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-other-user',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10007')
+        ->post('/tasks/10007/bids/21003/accept')
+        ->assertRedirect('/tasks/10007')
+        ->assertSessionHasErrors('bid');
+
+    expect(DB::table('task')->where('id', 10007)->value('status'))->toBe('OPEN')
+        ->and(DB::table('bid')->where('id', 21003)->value('status'))->toBe('ACTIVE')
+        ->and(DB::table('task_assignee')->where('task_id', 10007)->exists())->toBeFalse()
+        ->and(DB::table('task_event')->where('task_id', 10007)->exists())->toBeFalse();
+});
+
+test('task creator cannot select a bid that belongs to another task', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $taskDefaults = [
+        'description' => '验证 URL 中的任务和投标必须匹配。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 2000,
+        'expected_delivery' => now()->addDays(8)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        'version' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ];
+
+    DB::table('task')->insert([
+        ['id' => 10008, 'title' => '任务甲', ...$taskDefaults],
+        ['id' => 10009, 'title' => '任务乙', ...$taskDefaults],
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 21004,
+        'task_id' => 10009,
+        'amount' => 1800,
+        'delivery_date' => now()->addDays(6)->toDateString(),
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10009:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        'id' => 22005,
+        'bid_id' => 21004,
+        'user_id' => 'E20001',
+        'role' => 'OWNER',
+        'created_at' => now(),
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '任务发布者',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-task-creator',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10008')
+        ->post('/tasks/10008/bids/21004/accept')
+        ->assertRedirect('/tasks/10008')
+        ->assertSessionHasErrors('bid');
+
+    expect(DB::table('task')->where('id', 10008)->value('status'))->toBe('OPEN')
+        ->and(DB::table('task')->where('id', 10009)->value('status'))->toBe('OPEN')
+        ->and(DB::table('bid')->where('id', 21004)->value('status'))->toBe('ACTIVE')
+        ->and(DB::table('task_assignee')->exists())->toBeFalse()
+        ->and(DB::table('task_event')->exists())->toBeFalse();
+});
+
 test('joint bid rejects collaborators outside the personnel directory', function (): void {
     $this->withoutVite();
     createTaskHallTables();
@@ -1278,6 +1590,7 @@ function createTaskHallTables(): void
 {
     // SQLite 内存库在同一测试进程内可能复用连接；创建前先清理，保证测试互不影响。
     Schema::dropIfExists('task_event');
+    Schema::dropIfExists('task_assignee');
     Schema::dropIfExists('attachment_ref');
     Schema::dropIfExists('bid_member');
     Schema::dropIfExists('bid');
@@ -1328,6 +1641,14 @@ function createTaskHallTables(): void
     Schema::create('bid_member', function (Blueprint $table): void {
         $table->unsignedBigInteger('id')->primary();
         $table->unsignedBigInteger('bid_id');
+        $table->string('user_id', 32);
+        $table->string('role', 20);
+        $table->timestamp('created_at')->nullable();
+    });
+
+    Schema::create('task_assignee', function (Blueprint $table): void {
+        $table->unsignedBigInteger('id')->primary();
+        $table->unsignedBigInteger('task_id');
         $table->string('user_id', 32);
         $table->string('role', 20);
         $table->timestamp('created_at')->nullable();

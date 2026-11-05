@@ -33,6 +33,8 @@ Route::middleware(EnsureSsoAuthenticated::class)->group(function (): void {
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
     // 投标在任务详情页模态框内提交，完整事务由 PlaceBidService 控制。
     Route::post('/tasks/{task}/bids', [BidController::class, 'store'])->name('tasks.bids.store');
+    // 发布者选标会更新任务、全部 ACTIVE 投标、执行成员和事件，完整事务由 SelectBidService 控制。
+    Route::post('/tasks/{task}/bids/{bid}/accept', [BidController::class, 'accept'])->name('tasks.bids.accept');
     // 附件先上传到 TaskHub 后端，再由后端携带当前登录 accessToken 转传到总部文件服务。
     Route::post('/attachments/upload', [AttachmentController::class, 'upload'])->name('attachments.upload');
 });

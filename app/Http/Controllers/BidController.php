@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SelectBidRequest;
 use App\Http\Requests\StoreBidRequest;
+use App\Models\Bid;
 use App\Models\Task;
 use App\Services\CurrentUserService;
 use App\Services\PlaceBidService;
+use App\Services\SelectBidService;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -38,5 +41,24 @@ class BidController extends Controller
         return redirect()
             ->route('tasks.show', $task)
             ->with('success', '投标已提交。');
+    }
+
+    /**
+     * 选定指定投标为中标方案。
+     *
+     * Controller 只传递路由模型和当前用户；完整状态流转、成员复制和事件写入由 SelectBidService 负责。
+     */
+    public function accept(
+        SelectBidRequest $request,
+        Task $task,
+        Bid $bid,
+        CurrentUserService $currentUser,
+        SelectBidService $selectBid,
+    ): RedirectResponse {
+        $selectBid->execute($task, $bid, $currentUser->user());
+
+        return redirect()
+            ->route('tasks.show', $task)
+            ->with('success', '已选定中标方案，任务进入进行中。');
     }
 }
