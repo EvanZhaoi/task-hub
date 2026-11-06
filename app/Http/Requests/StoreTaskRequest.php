@@ -31,22 +31,39 @@ class StoreTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // 发布方式决定任务进入 OPEN 招标，还是直接进入 ASSIGNED。
+            'assignmentType' => ['required', 'string', Rule::in(['BIDDING', 'DIRECT'])],
             // 标题用于列表和详情首屏展示，限制长度与 schema.sql 中 task.title 一致。
             'title' => ['required', 'string', 'max:200'],
-            // 当前描述按普通文本提交，保存到 LONGTEXT；未来接富文本编辑器时仍复用该字段。
+            // 描述由 Tiptap 以 HTML 字符串提交，Service 会在入库前执行后端白名单清洗。
             'description' => ['nullable', 'string', 'max:10000'],
             // 金额字段必须是 decimal 语义，后端用 numeric 校验，数据库用 DECIMAL(18,2) 保存。
             'budget' => ['required', 'numeric', 'min:0', 'max:9999999999999999.99'],
             // 期望交付日期只关心自然日，不能早于今天。
             'expectedDelivery' => ['required', 'date', 'after_or_equal:today'],
-            // 招标截止是具体时间，发布任务必须晚于当前时间。
-            'biddingDeadline' => ['required', 'date', 'after:now'],
+            // DIRECT 不经过招标，因此从 validated 数据中排除截止时间；BIDDING 必须提供未来时间。
+            'biddingDeadline' => ['exclude_if:assignmentType,DIRECT', 'required', 'date', 'after:now'],
             // 枚举值必须和 database/schema.sql 的 CHECK 约束保持一致。
             'complexity' => ['required', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
             // 是否紧急是独立布尔值，不再使用 LOW、MEDIUM、HIGH 三级枚举。
             'isUrgent' => ['required', 'boolean'],
             // 付款账号来自外部系统；前端只提交 ID，名称和部门由后端调用外部接口获取。
             'paymentAccountId' => ['required', 'string', 'max:64'],
+            // 直接指派必须选择一个负责人；工号是否属于人员目录由 Service 再次校验。
+            'ownerEmployeeNo' => [
+                'exclude_unless:assignmentType,DIRECT',
+                'required',
+                'string',
+                'max:32',
+            ],
+            // 协作成员为可选数组，distinct 先阻止同一个工号在请求中重复出现。
+            'collaboratorEmployeeNos' => [
+                'exclude_unless:assignmentType,DIRECT',
+                'nullable',
+                'array',
+                'max:20',
+            ],
+            'collaboratorEmployeeNos.*' => ['required', 'string', 'max:32', 'distinct'],
             // 附件已经由外部上传接口生成 ID 和名称。
             // 前端提交结构为 attachments: [{ id, name }]，后端只保存必要字段，不保存总部完整响应。
             'attachments' => ['nullable', 'array', 'max:20'],
@@ -65,6 +82,9 @@ class StoreTaskRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'assignmentType.required' => '请选择任务发布方式。',
+            'assignmentType.string' => '任务发布方式格式不正确。',
+            'assignmentType.in' => '任务发布方式只能选择招标任务或直接指派。',
             'title.required' => '请填写任务标题。',
             'title.string' => '任务标题必须是文本。',
             'title.max' => '任务标题不能超过 200 个字符。',
@@ -88,6 +108,15 @@ class StoreTaskRequest extends FormRequest
             'paymentAccountId.required' => '请选择付款账号。',
             'paymentAccountId.string' => '付款账号格式不正确。',
             'paymentAccountId.max' => '付款账号编码不能超过 64 个字符。',
+            'ownerEmployeeNo.required' => '请选择任务负责人。',
+            'ownerEmployeeNo.string' => '任务负责人工号格式不正确。',
+            'ownerEmployeeNo.max' => '任务负责人工号不能超过 32 个字符。',
+            'collaboratorEmployeeNos.array' => '协作成员数据格式不正确。',
+            'collaboratorEmployeeNos.max' => '一个任务最多选择 20 名协作成员。',
+            'collaboratorEmployeeNos.*.required' => '协作成员工号不能为空。',
+            'collaboratorEmployeeNos.*.string' => '协作成员工号格式不正确。',
+            'collaboratorEmployeeNos.*.max' => '协作成员工号不能超过 32 个字符。',
+            'collaboratorEmployeeNos.*.distinct' => '同一名协作成员不能重复选择。',
             'attachments.array' => '附件数据格式不正确。',
             'attachments.max' => '一次最多上传 20 个附件。',
             'attachments.*.id.required' => '附件缺少文件 ID，请重新上传。',

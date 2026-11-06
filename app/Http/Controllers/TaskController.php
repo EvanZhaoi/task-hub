@@ -13,6 +13,7 @@ use App\Models\AttachmentRef;
 use App\Models\Bid;
 use App\Models\Task;
 use App\Models\TaskEvent;
+use App\Services\CreateDirectTaskService;
 use App\Services\CreateTaskService;
 use App\Services\CurrentUserService;
 use App\Services\RichTextSanitizer;
@@ -44,13 +45,14 @@ class TaskController extends Controller
     /**
      * 展示任务大厅列表页。
      *
-     * 该方法读取筛选条件、查询任务分页数据、加载付款账号 Select 选项，
+     * 该方法读取筛选条件、查询任务分页数据、加载付款账号和人员选择选项，
      * 最后通过 Inertia 返回 `resources/js/Pages/Tasks/Index.tsx` 页面。
      */
     public function index(
         Request $request,
         CurrentUserService $currentUser,
         PaymentAccountClient $paymentAccounts,
+        PersonnelClient $personnel,
         RichTextSanitizer $richTextSanitizer,
     ): Response {
         // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
@@ -96,6 +98,8 @@ class TaskController extends Controller
         return Inertia::render('Tasks/Index', [
             'filters' => $filters,
             'paymentAccountOptions' => $this->paymentAccountOptions($paymentAccounts, $currentUser->accessToken()),
+            // 直接指派复用人员目录，浏览器只接收选择器需要的最小字段。
+            'personnelOptions' => $this->personnelDirectory($personnel, $currentUser->accessToken())['options'],
             'statusOptions' => $this->statusOptions(),
             'complexityOptions' => $this->complexityOptions(),
             'tasks' => [
@@ -117,20 +121,25 @@ class TaskController extends Controller
     }
 
     /**
-     * 发布一个招标任务。
+     * 发布招标任务或直接指派任务。
      *
-     * 该方法处理发布任务模态框提交的数据，在一个数据库事务中创建 task、附件引用和任务事件。
+     * Controller 只根据 assignmentType 分发到对应业务 Service。
+     * 每个 Service 分别负责自己的数据库事务、成员关系、附件和事件写入。
      * 付款账号名称不信任前端提交，必须通过 PaymentAccountClient 从外部账号列表缓存中匹配后保存历史快照。
      */
     public function store(
         StoreTaskRequest $request,
         CurrentUserService $currentUser,
         CreateTaskService $createTask,
+        CreateDirectTaskService $createDirectTask,
     ): RedirectResponse {
         try {
-            // Controller 只组织 HTTP 层输入，把完整发布流程交给 CreateTaskService。
-            $createTask->execute(
-                validated: $request->validated(),
+            $validated = $request->validated();
+            // Controller 只根据发布方式选择对应业务动作；两种流程的事务细节分别留在独立 Service 中。
+            $service = $validated['assignmentType'] === 'DIRECT' ? $createDirectTask : $createTask;
+
+            $service->execute(
+                validated: $validated,
                 attachments: $request->attachments(),
                 user: $currentUser->user(),
                 accessToken: $currentUser->accessToken(),
@@ -138,6 +147,10 @@ class TaskController extends Controller
         } catch (PaymentAccountException $exception) {
             throw ValidationException::withMessages([
                 'paymentAccountId' => $exception->getMessage(),
+            ]);
+        } catch (PersonnelException $exception) {
+            throw ValidationException::withMessages([
+                'ownerEmployeeNo' => $exception->getMessage(),
             ]);
         }
 

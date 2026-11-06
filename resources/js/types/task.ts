@@ -7,6 +7,8 @@ export type TaskDatabaseStatus = Exclude<TaskStatus, 'PENDING_SELECTION'>;
 
 export type TaskComplexity = 'LOW' | 'MEDIUM' | 'HIGH';
 
+export type TaskAssignmentType = 'BIDDING' | 'DIRECT';
+
 export type SelectOption = {
     // label 是展示文案，value 是提交给后端的筛选值。
     label: string;
@@ -60,7 +62,7 @@ export type TaskListItem = {
     displayStatus: TaskStatus;
     // status 是数据库真实状态，不包含 PENDING_SELECTION。
     status: TaskDatabaseStatus;
-    assignmentType: 'BIDDING' | 'DIRECT';
+    assignmentType: TaskAssignmentType;
     complexity: TaskComplexity;
     isUrgent: boolean;
     // createdBy 是工号，createdByName 是快照中的展示名称。
@@ -104,6 +106,8 @@ export type TaskIndexProps = {
     complexityOptions: SelectOption[];
     filters: TaskFilters;
     paymentAccountOptions: PaymentAccountOption[];
+    // 直接指派模式从本据点人员目录选择负责人和协作成员。
+    personnelOptions: PersonnelOption[];
     statusOptions: SelectOption[];
     tasks: PaginatedTasks;
 };
@@ -163,7 +167,7 @@ export type TaskDetail = {
     biddingDeadline: string | null;
     displayStatus: TaskStatus;
     status: TaskDatabaseStatus;
-    assignmentType: 'BIDDING' | 'DIRECT';
+    assignmentType: TaskAssignmentType;
     complexity: TaskComplexity;
     isUrgent: boolean;
     createdBy: string;

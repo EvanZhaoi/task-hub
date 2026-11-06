@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { DatePicker } from '@/components/common/DatePicker';
 import { DateTimePicker } from '@/components/common/DateTimePicker';
 import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombobox';
+import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
@@ -25,6 +26,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
 import type { SharedPageProps } from '@/types/page';
 import type {
+    TaskAssignmentType,
     TaskComplexity,
     TaskFilters,
     TaskIndexProps,
@@ -34,6 +36,7 @@ import { urlWithQuery } from '@/utils/url';
 import { useState, type ReactNode } from 'react';
 
 type TaskCreateForm = {
+    assignmentType: TaskAssignmentType;
     title: string;
     description: string;
     budget: string;
@@ -42,6 +45,8 @@ type TaskCreateForm = {
     complexity: TaskComplexity;
     isUrgent: boolean;
     paymentAccountId: string;
+    ownerEmployeeNo: string;
+    collaboratorEmployeeNos: string[];
     attachments: UploadedTaskAttachment[];
 };
 
@@ -86,6 +91,7 @@ export default function TaskIndex({
     complexityOptions,
     filters,
     paymentAccountOptions,
+    personnelOptions,
     statusOptions,
     tasks,
 }: TaskIndexProps) {
@@ -93,6 +99,7 @@ export default function TaskIndex({
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [uploadedAttachments, setUploadedAttachments] = useState<UploadedTaskAttachment[]>([]);
     const form = useForm<TaskCreateForm>({
+        assignmentType: 'BIDDING',
         title: '',
         description: '',
         budget: '',
@@ -101,8 +108,27 @@ export default function TaskIndex({
         complexity: 'MEDIUM',
         isUrgent: false,
         paymentAccountId: '',
+        ownerEmployeeNo: '',
+        collaboratorEmployeeNos: [],
         attachments: [],
     });
+
+    /**
+     * 切换发布方式，并清理另一种模式不应继续提交的字段。
+     */
+    function changeAssignmentType(assignmentType: TaskAssignmentType): void {
+        form.setData({
+            ...form.data,
+            assignmentType,
+            biddingDeadline: assignmentType === 'DIRECT' ? '' : form.data.biddingDeadline,
+            ownerEmployeeNo: assignmentType === 'BIDDING' ? '' : form.data.ownerEmployeeNo,
+            collaboratorEmployeeNos:
+                assignmentType === 'BIDDING' ? [] : form.data.collaboratorEmployeeNos,
+        });
+
+        // 模式切换后清理已不相关字段的旧校验错误。
+        form.clearErrors('biddingDeadline', 'ownerEmployeeNo', 'collaboratorEmployeeNos');
+    }
 
     function changeCreateOpen(nextOpen: boolean): void {
         setIsCreateOpen(nextOpen);
@@ -146,12 +172,48 @@ export default function TaskIndex({
                         <DialogHeader className="mb-0 rounded-t-lg border-b border-[#e5e7eb] bg-[#fbfbfc] px-6 py-4">
                             <DialogTitle>发布任务</DialogTitle>
                             <DialogDescription>
-                                当前阶段发布的是招标任务，发布后进入招标中。附件选择文件后会立即上传到总部文件服务。
+                                招标任务发布后等待投标；直接指派任务发布后立即进入执行中。
                             </DialogDescription>
                         </DialogHeader>
 
                         <form className="flex min-h-0 flex-1 flex-col" method="POST" onSubmit={submitCreateTask}>
                             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+                                <Field label="发布方式" message={form.errors.assignmentType} required>
+                                    <div className="grid grid-cols-2 gap-1 rounded-md border border-[#e5e7eb] bg-[#f8f9fb] p-1">
+                                        <Button
+                                            className={cn(
+                                                'w-full shadow-none',
+                                                form.data.assignmentType === 'BIDDING'
+                                                    ? 'bg-white text-[#4f46a5] hover:bg-white'
+                                                    : 'text-[#6e6e80]',
+                                            )}
+                                            onClick={() => changeAssignmentType('BIDDING')}
+                                            type="button"
+                                            variant="ghost"
+                                        >
+                                            招标选标
+                                        </Button>
+                                        <Button
+                                            className={cn(
+                                                'w-full shadow-none',
+                                                form.data.assignmentType === 'DIRECT'
+                                                    ? 'bg-white text-[#4f46a5] hover:bg-white'
+                                                    : 'text-[#6e6e80]',
+                                            )}
+                                            onClick={() => changeAssignmentType('DIRECT')}
+                                            type="button"
+                                            variant="ghost"
+                                        >
+                                            直接指派
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs leading-5 text-[#6e6e80]">
+                                        {form.data.assignmentType === 'BIDDING'
+                                            ? '所有人员可在截止时间前提交方案，由发布者选标。'
+                                            : '选择负责人和协作成员后，任务将直接进入执行中。'}
+                                    </p>
+                                </Field>
+
                                 <Field label="任务标题" message={form.errors.title} required>
                                     <Input
                                         autoFocus
@@ -227,14 +289,75 @@ export default function TaskIndex({
                                         />
                                     </Field>
 
-                                    <Field label="招标截止时间" message={form.errors.biddingDeadline} required>
-                                        <DateTimePicker
-                                            name="biddingDeadline"
-                                            onChange={(value) => form.setData('biddingDeadline', value)}
-                                            value={form.data.biddingDeadline}
-                                        />
-                                    </Field>
+                                    {form.data.assignmentType === 'BIDDING' ? (
+                                        <Field label="招标截止时间" message={form.errors.biddingDeadline} required>
+                                            <DateTimePicker
+                                                name="biddingDeadline"
+                                                onChange={(value) => form.setData('biddingDeadline', value)}
+                                                value={form.data.biddingDeadline}
+                                            />
+                                        </Field>
+                                    ) : null}
                                 </div>
+
+                                {form.data.assignmentType === 'DIRECT' ? (
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <Field label="任务负责人" message={form.errors.ownerEmployeeNo} required>
+                                            <PersonnelMultiSelect
+                                                disabled={form.processing}
+                                                maxSelections={1}
+                                                onChange={(employeeNos) => {
+                                                    const ownerEmployeeNo = employeeNos[0] ?? '';
+
+                                                    form.setData({
+                                                        ...form.data,
+                                                        ownerEmployeeNo,
+                                                        // 负责人不能同时出现在协作成员中。
+                                                        collaboratorEmployeeNos:
+                                                            form.data.collaboratorEmployeeNos.filter(
+                                                                (employeeNo) => employeeNo !== ownerEmployeeNo,
+                                                            ),
+                                                    });
+                                                }}
+                                                options={personnelOptions}
+                                                placeholder="搜索并选择负责人"
+                                                selectionLabel="负责人"
+                                                value={
+                                                    form.data.ownerEmployeeNo
+                                                        ? [form.data.ownerEmployeeNo]
+                                                        : []
+                                                }
+                                            />
+                                        </Field>
+
+                                        <Field
+                                            label="协作成员（可选）"
+                                            message={form.errors.collaboratorEmployeeNos}
+                                        >
+                                            <PersonnelMultiSelect
+                                                disabled={form.processing}
+                                                excludedEmployeeNos={
+                                                    form.data.ownerEmployeeNo
+                                                        ? [form.data.ownerEmployeeNo]
+                                                        : []
+                                                }
+                                                onChange={(employeeNos) =>
+                                                    form.setData('collaboratorEmployeeNos', employeeNos)
+                                                }
+                                                options={personnelOptions}
+                                                placeholder="搜索并添加协作成员"
+                                                selectionLabel="协作成员"
+                                                value={form.data.collaboratorEmployeeNos}
+                                            />
+                                        </Field>
+
+                                        {personnelOptions.length === 0 ? (
+                                            <p className="text-xs leading-5 text-amber-700 sm:col-span-2">
+                                                人员接口未配置或暂时不可用，当前不能直接指派成员。
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                ) : null}
 
                                 <Field label="付款账号" message={form.errors.paymentAccountId} required>
                                     <PaymentAccountCombobox
@@ -266,8 +389,20 @@ export default function TaskIndex({
                                         取消
                                     </Button>
                                 </DialogClose>
-                                <Button disabled={form.processing || paymentAccountOptions.length === 0} type="submit">
-                                    {form.processing ? '发布中...' : '发布'}
+                                <Button
+                                    disabled={
+                                        form.processing
+                                        || paymentAccountOptions.length === 0
+                                        || (form.data.assignmentType === 'DIRECT'
+                                            && personnelOptions.length === 0)
+                                    }
+                                    type="submit"
+                                >
+                                    {form.processing
+                                        ? '发布中...'
+                                        : form.data.assignmentType === 'DIRECT'
+                                          ? '发布并指派'
+                                          : '发布'}
                                 </Button>
                             </DialogFooter>
                         </form>

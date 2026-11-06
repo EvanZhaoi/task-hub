@@ -12,8 +12,11 @@ const SEARCH_DEBOUNCE_MS = 300;
 type PersonnelMultiSelectProps = {
     disabled?: boolean;
     excludedEmployeeNos?: string[];
+    maxSelections?: number;
     onChange: (employeeNos: string[]) => void;
     options: PersonnelOption[];
+    placeholder?: string;
+    selectionLabel?: string;
     value: string[];
 };
 
@@ -52,8 +55,11 @@ function optionMatches(option: PersonnelOption, keyword: string): boolean {
 export function PersonnelMultiSelect({
     disabled = false,
     excludedEmployeeNos = [],
+    maxSelections,
     onChange,
     options,
+    placeholder = '按姓名、工号或部门搜索',
+    selectionLabel = '成员',
     value,
 }: PersonnelMultiSelectProps) {
     const [keyword, setKeyword] = useState('');
@@ -78,12 +84,23 @@ export function PersonnelMultiSelect({
      * 将人员加入已选工号数组，同时清空搜索词方便继续选择下一人。
      */
     function addEmployee(employeeNo: string): void {
-        if (selectedSet.has(employeeNo) || excludedSet.has(employeeNo)) {
+        if (
+            selectedSet.has(employeeNo)
+            || excludedSet.has(employeeNo)
+            || (maxSelections !== undefined && value.length >= maxSelections)
+        ) {
             return;
         }
 
-        onChange([...value, employeeNo]);
+        const nextValue = [...value, employeeNo];
+
+        onChange(nextValue);
         setKeyword('');
+
+        // 单选场景选中负责人后立即收起候选区，避免候选列表残留在表单中。
+        if (maxSelections !== undefined && nextValue.length >= maxSelections) {
+            setShowOptions(false);
+        }
     }
 
     /**
@@ -118,7 +135,7 @@ export function PersonnelMultiSelect({
                                     {option?.displayName ?? employeeNo}（{employeeNo}）
                                 </span>
                                 <button
-                                    aria-label={`移除协作成员 ${option?.displayName ?? employeeNo}`}
+                                    aria-label={`移除${selectionLabel} ${option?.displayName ?? employeeNo}`}
                                     className="rounded-sm p-0.5 hover:bg-[#e9e5ff]"
                                     disabled={disabled}
                                     onClick={() => removeEmployee(employeeNo)}
@@ -132,20 +149,22 @@ export function PersonnelMultiSelect({
                 </div>
             ) : null}
 
-            <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
-                <Input
-                    className="pl-9"
-                    disabled={disabled || options.length === 0}
-                    onChange={(event) => setKeyword(event.target.value)}
-                    onFocus={() => setShowOptions(true)}
-                    placeholder={options.length === 0 ? '人员列表暂不可用' : '按姓名、工号或部门搜索'}
-                    type="search"
-                    value={keyword}
-                />
-            </div>
+            {maxSelections === undefined || value.length < maxSelections ? (
+                <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9ca3af]" />
+                    <Input
+                        className="pl-9"
+                        disabled={disabled || options.length === 0}
+                        onChange={(event) => setKeyword(event.target.value)}
+                        onFocus={() => setShowOptions(true)}
+                        placeholder={options.length === 0 ? '人员列表暂不可用' : placeholder}
+                        type="search"
+                        value={keyword}
+                    />
+                </div>
+            ) : null}
 
-            {showOptions && !disabled ? (
+            {showOptions && !disabled && (maxSelections === undefined || value.length < maxSelections) ? (
                 <div className="max-h-52 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white p-1 shadow-sm">
                     {filteredOptions.length === 0 ? (
                         <div className="px-3 py-5 text-center text-sm text-[#9ca3af]">没有可选择的人员</div>

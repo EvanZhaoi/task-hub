@@ -69,6 +69,19 @@ test('authenticated users can view the task hall with filters', function (): voi
         }
     });
 
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回发布弹窗直接指派模式需要的测试人员选项。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-123');
+
+            return [new PersonnelUser(eibNameCn: '王开发', eibNumCn: 'E20001')];
+        }
+    });
+
     // 插入一个已截止但仍有 ACTIVE 投标的 OPEN 任务，用来验证“待选标”派生状态。
     DB::table('task')->insert([
         'id' => 10001,
@@ -128,6 +141,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.filters.complexity', 'MEDIUM')
         ->assertJsonPath('props.filters.keyword', '登录')
         ->assertJsonPath('props.paymentAccountOptions.0.value', 'PAY001')
+        ->assertJsonPath('props.personnelOptions.0.employeeNo', 'E20001')
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
         ->assertJsonPath('props.tasks.data.0.amountType', 'BUDGET')
         ->assertJsonPath('props.tasks.data.0.isUrgent', true)
@@ -174,6 +188,7 @@ test('authenticated users can publish a bidding task with attachment id and name
         ],
     ])
         ->post('/tasks', [
+            'assignmentType' => 'BIDDING',
             'title' => '报表导出优化',
             'description' => '<h2>优化目标</h2><p onclick="alert(1)">保留<strong>重点</strong>说明</p><script>alert(1)</script><a href="javascript:alert(1)">危险链接</a><a href="https://example.com">安全链接</a>',
             'budget' => '3000.00',
@@ -253,6 +268,232 @@ test('authenticated users can publish a bidding task with attachment id and name
         ->assertJsonPath('props.task.attachments.1.id', 'ATT002')
         ->assertJsonPath('props.task.attachments.1.name', '设计图.png')
         ->assertJsonPath('props.task.attachments.1.url', 'https://files.example.test/download?id=ATT002');
+});
+
+test('authenticated users can publish a direct task with owner and collaborators', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        /**
+         * 返回直接指派测试使用的付款账号快照来源。
+         */
+        public function fetchById(string $accountId, ?string $accessToken = null): PaymentAccount
+        {
+            expect($accountId)->toBe('PAY001')
+                ->and($accessToken)->toBe('token-123');
+
+            return new PaymentAccount(
+                wbaAccountCode: 'PAY001',
+                wbaAccountName: '直接指派预算',
+                deptName: '开发一部',
+            );
+        }
+    });
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回可被指派的负责人和协作成员，隔离真实人员接口。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-123');
+
+            return [
+                new PersonnelUser(eibNameCn: '主开发', eibNumCn: 'E20001'),
+                new PersonnelUser(eibNameCn: '协作开发甲', eibNumCn: 'E20002'),
+                new PersonnelUser(eibNameCn: '协作开发乙', eibNumCn: 'E20003'),
+            ];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10002',
+            'displayName' => '李雷',
+            'departmentId' => 'DEV01',
+            'departmentName' => '开发一部',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->post('/tasks', [
+            'assignmentType' => 'DIRECT',
+            'title' => '直接指派任务',
+            'description' => '<p>由指定成员直接执行。</p>',
+            'budget' => '5000.00',
+            'expectedDelivery' => now()->addDays(10)->toDateString(),
+            // DIRECT 不提交 biddingDeadline，后端也不会为它保存招标截止时间。
+            'complexity' => 'HIGH',
+            'isUrgent' => false,
+            'paymentAccountId' => 'PAY001',
+            'ownerEmployeeNo' => 'E20001',
+            'collaboratorEmployeeNos' => ['E20002', 'E20003'],
+            'attachments' => [
+                ['id' => 'ATT-DIRECT-001', 'name' => '直接指派说明.pdf'],
+            ],
+        ])
+        ->assertRedirect(route('tasks.index'))
+        ->assertSessionHas('success', '任务已发布。');
+
+    $task = DB::table('task')->where('title', '直接指派任务')->first();
+
+    expect($task)->not->toBeNull()
+        ->and($task->status)->toBe('ASSIGNED')
+        ->and($task->assignment_type)->toBe('DIRECT')
+        ->and($task->assigned_bid_id)->toBeNull()
+        ->and($task->primary_assignee_id)->toBe('E20001')
+        ->and($task->bidding_deadline)->toBeNull()
+        ->and((float) $task->final_amount)->toBe(5000.0)
+        ->and($task->final_delivery)->toBe(now()->addDays(10)->toDateString());
+
+    expect(DB::table('task_assignee')
+        ->where('task_id', $task->id)
+        ->orderBy('user_id')
+        ->get(['user_id', 'role'])
+        ->map(fn (object $row): array => ['userId' => $row->user_id, 'role' => $row->role])
+        ->all())->toBe([
+            ['userId' => 'E20001', 'role' => 'OWNER'],
+            ['userId' => 'E20002', 'role' => 'COLLABORATOR'],
+            ['userId' => 'E20003', 'role' => 'COLLABORATOR'],
+        ]);
+
+    expect(DB::table('bid')->where('task_id', $task->id)->exists())->toBeFalse()
+        ->and(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
+        ->toBe(['TASK_CREATED', 'TASK_ASSIGNED'])
+        ->and(DB::table('attachment_ref')->where('owner_type', 'TASK')->where('owner_id', $task->id)->first())
+        ->toMatchObject([
+            'attachment_id' => 'ATT-DIRECT-001',
+            'attachment_name' => '直接指派说明.pdf',
+        ]);
+
+    // 再访问详情页，确认正式成员和确定金额能沿用现有详情展示链路。
+    $this->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/'.$task->id)
+        ->assertOk()
+        ->assertJsonPath('props.task.assignmentType', 'DIRECT')
+        ->assertJsonPath('props.task.status', 'ASSIGNED')
+        ->assertJsonPath('props.task.amountType', 'FINAL')
+        ->assertJsonPath('props.task.assignees.0.userId', 'E20001')
+        ->assertJsonPath('props.task.assignees.0.role', 'OWNER')
+        ->assertJsonCount(3, 'props.task.assignees')
+        ->assertJsonPath('props.canPlaceBid', false)
+        ->assertJsonCount(0, 'props.visibleBids');
+});
+
+test('direct task publishing rejects members outside the personnel directory', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        /**
+         * 返回有效付款账号，让测试聚焦人员目录校验。
+         */
+        public function fetchById(string $accountId, ?string $accessToken = null): PaymentAccount
+        {
+            return new PaymentAccount(wbaAccountCode: $accountId, wbaAccountName: '测试预算');
+        }
+    });
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 人员目录不包含请求中的负责人，用于验证后端不能信任前端工号。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [new PersonnelUser(eibNameCn: '合法人员', eibNumCn: 'E20001')];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E10002', 'displayName' => '李雷'],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks')
+        ->post('/tasks', [
+            'assignmentType' => 'DIRECT',
+            'title' => '非法负责人任务',
+            'budget' => '1000.00',
+            'expectedDelivery' => now()->addDays(5)->toDateString(),
+            'complexity' => 'LOW',
+            'isUrgent' => false,
+            'paymentAccountId' => 'PAY001',
+            'ownerEmployeeNo' => 'E99999',
+            'collaboratorEmployeeNos' => [],
+            'attachments' => [],
+        ])
+        ->assertRedirect('/tasks')
+        ->assertSessionHasErrors('ownerEmployeeNo');
+
+    // 人员校验失败发生在事务开始前，数据库中不能留下半成品任务或成员记录。
+    expect(DB::table('task')->where('title', '非法负责人任务')->exists())->toBeFalse()
+        ->and(DB::table('task_assignee')->exists())->toBeFalse()
+        ->and(DB::table('task_event')->exists())->toBeFalse();
+});
+
+test('direct task publishing rejects an owner repeated as collaborator', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        /**
+         * 返回有效付款账号，让测试聚焦负责人和协作者不能重复的业务规则。
+         */
+        public function fetchById(string $accountId, ?string $accessToken = null): PaymentAccount
+        {
+            return new PaymentAccount(wbaAccountCode: $accountId, wbaAccountName: '测试预算');
+        }
+    });
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回包含目标工号的人员目录，证明失败原因不是人员不存在。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [new PersonnelUser(eibNameCn: '主开发', eibNumCn: 'E20001')];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E10002', 'displayName' => '李雷'],
+        CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-123',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks')
+        ->post('/tasks', [
+            'assignmentType' => 'DIRECT',
+            'title' => '成员重复任务',
+            'budget' => '1000.00',
+            'expectedDelivery' => now()->addDays(5)->toDateString(),
+            'complexity' => 'LOW',
+            'isUrgent' => false,
+            'paymentAccountId' => 'PAY001',
+            'ownerEmployeeNo' => 'E20001',
+            'collaboratorEmployeeNos' => ['E20001'],
+            'attachments' => [],
+        ])
+        ->assertRedirect('/tasks')
+        ->assertSessionHasErrors('collaboratorEmployeeNos');
+
+    expect(DB::table('task')->where('title', '成员重复任务')->exists())->toBeFalse();
 });
 
 test('authenticated users can upload task attachment through taskhub backend', function (): void {
