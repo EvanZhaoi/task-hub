@@ -26,6 +26,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
 import type { SharedPageProps } from '@/types/page';
 import type {
+    BidStatus,
     TaskAssignmentType,
     TaskComplexity,
     TaskFilters,
@@ -50,11 +51,20 @@ type TaskCreateForm = {
     attachments: UploadedTaskAttachment[];
 };
 
+// 投标状态文案只服务于“我的投标”卡片摘要，数据真实状态仍由后端决定。
+const bidStatusLabels: Record<BidStatus, string> = {
+    ACTIVE: '有效',
+    WITHDRAWN: '已撤回',
+    ACCEPTED: '已中标',
+    LOST: '未中标',
+};
+
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
     // 快捷筛选要保留其它筛选条件，只替换用户当前点击的那一项。
     const merged = { ...filters, ...nextFilters };
 
     return urlWithQuery('/tasks', {
+        scope: merged.scope === 'HALL' ? null : merged.scope,
         keyword: merged.keyword,
         status: merged.status === 'ALL' ? null : merged.status,
         complexity: merged.complexity === 'ALL' ? null : merged.complexity,
@@ -92,6 +102,7 @@ export default function TaskIndex({
     filters,
     paymentAccountOptions,
     personnelOptions,
+    scopeOptions,
     statusOptions,
     tasks,
 }: TaskIndexProps) {
@@ -421,8 +432,32 @@ export default function TaskIndex({
 
             <Card className="mb-4">
                 <CardContent>
+                    {/* 范围切换先决定“查谁的任务”，状态和其他筛选再作用于这个范围。 */}
+                    <nav aria-label="任务范围" className="mb-4 flex gap-1 overflow-x-auto border-b border-[#e5e7eb]">
+                        {scopeOptions.map((option) => {
+                            const isActive = filters.scope === option.value;
+
+                            return (
+                                <a
+                                    className={cn(
+                                        'shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                                        isActive
+                                            ? 'border-[#5e6ad2] text-[#4f46a5]'
+                                            : 'border-transparent text-[#6e6e80] hover:text-[#374151]',
+                                    )}
+                                    href={filterUrl({ scope: option.value }, filters)}
+                                    key={option.value}
+                                >
+                                    {option.label}
+                                </a>
+                            );
+                        })}
+                    </nav>
+
                     {/* GET 表单适合列表筛选：URL 可复制、可刷新、可用于浏览器前进后退。 */}
                     <form action="/tasks" className="flex flex-col gap-3 lg:flex-row lg:items-center" method="GET">
+                        {/* 搜索和复杂度表单提交时必须保留当前个人范围。 */}
+                        {filters.scope !== 'HALL' ? <input name="scope" type="hidden" value={filters.scope} /> : null}
                         {/* 状态由下方 Tab 控制；提交搜索或复杂度筛选时用 hidden 保留当前状态。 */}
                         {filters.status !== 'ALL' ? <input name="status" type="hidden" value={filters.status} /> : null}
 
@@ -458,7 +493,7 @@ export default function TaskIndex({
 
                         <Button type="submit">查询</Button>
                         <Button asChild variant="outline">
-                            <a href="/tasks">重置</a>
+                            <a href={filterUrl({ keyword: '', status: 'ALL', complexity: 'ALL' }, filters)}>重置</a>
                         </Button>
                     </form>
 
@@ -532,6 +567,11 @@ export default function TaskIndex({
                                                     displayStatus={task.displayStatus}
                                                     isUrgent={task.isUrgent}
                                                 />
+                                                {task.relationLabel ? (
+                                                    <span className="rounded-full bg-[#f5f3ff] px-2.5 py-1 text-xs font-medium text-[#5e6ad2]">
+                                                        {task.relationLabel}
+                                                    </span>
+                                                ) : null}
                                             </div>
 
                                             <RichTextViewer
@@ -545,6 +585,15 @@ export default function TaskIndex({
                                                     {task.finalDelivery ?? task.expectedDelivery ?? '-'}
                                                 </span>
                                             </div>
+
+                                            {task.myBid ? (
+                                                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-[#f8f9fb] px-3 py-2 text-xs text-[#6e6e80]">
+                                                    <span className="font-medium text-[#374151]">我的投标</span>
+                                                    <span>{bidStatusLabels[task.myBid.status]}</span>
+                                                    <span>{task.myBid.amountLabel}</span>
+                                                    <span>第 {task.myBid.revisionNo} 版</span>
+                                                </div>
+                                            ) : null}
                                         </section>
 
                                         {/* 中间：只展示人员和招标时间，避免与左右两侧信息重复。 */}

@@ -157,6 +157,172 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.tasks.data.0.bidCount', 1);
 });
 
+test('authenticated users can filter tasks related to themselves without trusting query employee number', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    // 个人范围查询不依赖外部目录内容，这里隔离真实总部接口。
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        /**
+         * 返回空账号列表，本测试只验证任务范围查询。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [];
+        }
+    });
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回空人员列表，避免列表页访问真实人员接口。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [];
+        }
+    });
+
+    $taskDefaults = [
+        'description' => '个人范围查询测试。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 1000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'bidding_deadline' => now()->addDays(2),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'is_urgent' => false,
+        'created_by' => 'E90000',
+        'created_at' => now()->subDays(5),
+        'updated_at' => now()->subDays(5),
+    ];
+
+    DB::table('task')->insert([
+        ['id' => 11001, 'title' => '我发布的任务', ...$taskDefaults, 'created_by' => 'E10002'],
+        ['id' => 11002, 'title' => '我主投标的任务', ...$taskDefaults, 'created_at' => now()->subDays(4)],
+        ['id' => 11003, 'title' => '我协作投标的任务', ...$taskDefaults, 'created_at' => now()->subDays(3)],
+        [
+            'id' => 11004,
+            'title' => '我正式负责的任务',
+            ...$taskDefaults,
+            'status' => 'ASSIGNED',
+            'created_at' => now()->subDays(2),
+        ],
+        ['id' => 11005, 'title' => '与我无关的任务', ...$taskDefaults, 'created_at' => now()->subDay()],
+    ]);
+
+    DB::table('bid')->insert([
+        [
+            'id' => 31001,
+            'task_id' => 11002,
+            'amount' => 880,
+            'delivery_date' => now()->addDays(8)->toDateString(),
+            'status' => 'ACTIVE',
+            'revision_no' => 1,
+            'active_key' => '11002:E10002',
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+        ],
+        [
+            'id' => 31002,
+            'task_id' => 11003,
+            'amount' => 900,
+            'delivery_date' => now()->addDays(9)->toDateString(),
+            'status' => 'ACTIVE',
+            'revision_no' => 1,
+            'active_key' => '11003:E30001',
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
+        ],
+        [
+            'id' => 31003,
+            'task_id' => 11004,
+            'amount' => 950,
+            'delivery_date' => now()->addDays(7)->toDateString(),
+            'status' => 'ACCEPTED',
+            'revision_no' => 1,
+            'active_key' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    DB::table('bid_member')->insert([
+        ['id' => 32001, 'bid_id' => 31001, 'user_id' => 'E10002', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 32002, 'bid_id' => 31002, 'user_id' => 'E30001', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 32003, 'bid_id' => 31002, 'user_id' => 'E10002', 'role' => 'COLLABORATOR', 'created_at' => now()],
+        ['id' => 32004, 'bid_id' => 31003, 'user_id' => 'E30002', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 32005, 'bid_id' => 31003, 'user_id' => 'E10002', 'role' => 'COLLABORATOR', 'created_at' => now()],
+    ]);
+    DB::table('task_assignee')->insert([
+        'id' => 33001,
+        'task_id' => 11004,
+        'user_id' => 'E10002',
+        'role' => 'OWNER',
+        'created_at' => now(),
+    ]);
+
+    $session = [
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E10002', 'displayName' => '当前用户'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-related-tasks',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ];
+
+    // employeeNo 是恶意伪造参数；后端必须忽略它，仍使用 Session 中的 E10002。
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?scope=PUBLISHED&employeeNo=E90000')
+        ->assertOk()
+        ->assertJsonPath('props.filters.scope', 'PUBLISHED')
+        ->assertJsonPath('props.tasks.meta.total', 1)
+        ->assertJsonPath('props.tasks.data.0.id', '11001')
+        ->assertJsonPath('props.tasks.data.0.relationLabel', '我发布的');
+
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?scope=MY_BIDS')
+        ->assertOk()
+        ->assertJsonPath('props.tasks.meta.total', 1)
+        ->assertJsonPath('props.tasks.data.0.id', '11002')
+        ->assertJsonPath('props.tasks.data.0.relationLabel', '主投标人')
+        ->assertJsonPath('props.tasks.data.0.myBid.status', 'ACTIVE')
+        ->assertJsonPath('props.tasks.data.0.myBid.amountLabel', '¥880.00')
+        ->assertJsonPath('props.tasks.data.0.myBid.revisionNo', 1);
+
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?scope=PARTICIPATED')
+        ->assertOk()
+        // 11004 同时是协作投标和正式执行任务，Task 查询必须去重为一张卡片。
+        ->assertJsonPath('props.tasks.meta.total', 2)
+        ->assertJsonFragment(['id' => '11003', 'relationLabel' => '协作投标'])
+        ->assertJsonFragment(['id' => '11004', 'relationLabel' => '任务负责人']);
+
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?scope=PARTICIPATED&status=ASSIGNED')
+        ->assertOk()
+        ->assertJsonPath('props.tasks.meta.total', 1)
+        ->assertJsonPath('props.tasks.data.0.id', '11004');
+
+    // 未知范围不进入自定义 SQL，而是安全回退到任务大厅。
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?scope=UNKNOWN')
+        ->assertOk()
+        ->assertJsonPath('props.filters.scope', 'HALL')
+        ->assertJsonPath('props.tasks.meta.total', 5);
+});
+
 test('authenticated users can publish a bidding task with attachment id and name', function (): void {
     $this->withoutVite();
     createTaskHallTables();
