@@ -79,8 +79,10 @@ class TaskController extends Controller
                 'created_at',
             ])
             ->withCount([
-                // active_bid_count 用于判断“待选标”和列表展示，不需要额外手写子查询。
+                // active_bid_count 只用于判断“待选标”等当前业务状态。
                 'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
+                // bid_count 保留历史累计数；选标后 Bid 会变为 ACCEPTED/LOST，不能因此显示为 0。
+                'bids as bid_count',
             ]);
 
         $this->applyFilters($query, $filters);
@@ -321,6 +323,7 @@ class TaskController extends Controller
             'paymentAccountName' => $paymentAccountSnapshot['accountName'] ?? null,
             'createdAt' => $task->created_at?->format('Y-m-d H:i'),
             'activeBidCount' => (int) ($task->active_bid_count ?? 0),
+            'bidCount' => (int) ($task->bid_count ?? 0),
         ];
     }
 

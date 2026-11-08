@@ -96,6 +96,13 @@ export default function TaskShow({
     visibleBids,
 }: TaskShowProps) {
     const { errors, flash } = usePage<SharedPageProps>().props;
+    // OPEN 阶段关心当前可选方案；选标后 ACTIVE 必然归零，此时应展示历史累计数。
+    const bidSummary =
+        task.assignmentType === 'DIRECT'
+            ? { label: '分配方式', value: '直接指派' }
+            : task.status === 'OPEN'
+              ? { label: '有效投标', value: `${task.activeBidCount} 个` }
+              : { label: '累计投标', value: `${bidOverview.totalCount} 份` };
 
     return (
         <AppLayout
@@ -178,7 +185,7 @@ export default function TaskShow({
                                 <InfoItem label="期望交付" value={task.expectedDelivery ?? '-'} />
                                 <InfoItem label="最终交付" value={task.finalDelivery ?? '-'} />
                                 <InfoItem label="招标截止" value={task.biddingDeadline ?? '-'} />
-                                <InfoItem label="有效投标" value={`${task.activeBidCount} 个`} />
+                                <InfoItem label={bidSummary.label} value={bidSummary.value} />
                             </div>
                         </CardContent>
                     </Card>

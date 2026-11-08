@@ -153,7 +153,8 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
         ->assertJsonPath('props.tasks.data.0.amountType', 'BUDGET')
         ->assertJsonPath('props.tasks.data.0.isUrgent', true)
-        ->assertJsonPath('props.tasks.data.0.activeBidCount', 1);
+        ->assertJsonPath('props.tasks.data.0.activeBidCount', 1)
+        ->assertJsonPath('props.tasks.data.0.bidCount', 1);
 });
 
 test('authenticated users can publish a bidding task with attachment id and name', function (): void {
@@ -1488,7 +1489,40 @@ test('task creator can select a bid and assign all bid members', function (): vo
         ->assertJsonPath('props.task.assignees.0.role', 'OWNER')
         ->assertJsonPath('props.task.assignees.1.displayName', '协作开发')
         ->assertJsonPath('props.task.assignees.1.role', 'COLLABORATOR')
+        // 选标后 ACTIVE 投标为 0，但两条历史投标仍然存在，详情页不能显示成“无人投标”。
+        ->assertJsonPath('props.task.activeBidCount', 0)
+        ->assertJsonPath('props.bidOverview.totalCount', 2)
         ->assertJsonPath('props.visibleBids.0.canSelect', false);
+
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        /**
+         * 列表回归测试无需真实访问总部付款账号接口。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [];
+        }
+    });
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '任务发布者',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-task-creator',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?keyword='.urlencode('选标事务测试'))
+        ->assertOk()
+        // 列表同样应保留累计投标数，不能把 ACCEPTED/LOST 当成没有投标。
+        ->assertJsonPath('props.tasks.data.0.activeBidCount', 0)
+        ->assertJsonPath('props.tasks.data.0.bidCount', 2);
 
     // 第二次提交会在锁内读到 ASSIGNED，必须被拒绝且不能重复写成员或事件。
     $this->withSession([

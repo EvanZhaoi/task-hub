@@ -71,7 +71,9 @@ export type TaskListItem = {
     departmentName: string | null;
     paymentAccountName: string | null;
     createdAt: string | null;
+    // activeBidCount 表示当前可选的方案；bidCount 表示历史累计提交数。
     activeBidCount: number;
+    bidCount: number;
 };
 
 // Laravel paginate() 转换后传给前端的分页元数据。

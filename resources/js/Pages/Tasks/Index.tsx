@@ -572,7 +572,7 @@ export default function TaskIndex({
                                             </div>
                                         </section>
 
-                                        {/* 右侧：突出预算，并在同一区域展示当前有效投标人数。 */}
+                                        {/* 右侧：突出金额，并展示不会因选标状态流转而归零的累计投标数。 */}
                                         <section className="flex min-w-0 flex-col border-t border-[#eef0f3] pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
                                             <span className="text-xs text-[#9ca3af]">
                                                 {task.amountType === 'FINAL' ? '确定金额' : '任务预算'}
@@ -586,7 +586,9 @@ export default function TaskIndex({
                                                 {task.amountLabel}
                                             </strong>
                                             <span className="mt-2 text-sm text-[#6e6e80]">
-                                                {task.activeBidCount} 人投标
+                                                {task.assignmentType === 'DIRECT'
+                                                    ? '直接指派'
+                                                    : `共 ${task.bidCount} 份投标`}
                                             </span>
                                             <Link
                                                 className="mt-auto pt-3 text-sm font-medium text-[#5e6ad2] hover:underline"
