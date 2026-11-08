@@ -406,13 +406,20 @@ final readonly class PersonnelUser
     {
         // Session 中作为 sso_user.siteUser 保存，表示“本据点人员信息”。
         // 它不覆盖总部 SSO 原始字段，只作为额外展示和后续选择器数据。
-        return [
+        $payload = [
             'employeeNo' => $this->employeeNo(),
             'displayName' => $this->displayName(),
             'departmentId' => $this->departmentId(),
             'departmentName' => $this->departmentName(),
             'raw' => $this->raw,
         ];
+
+        // 外部接口没有邮箱时不增加 null 字段，保持既有 Session 结构兼容。
+        if ($this->eibEmail() !== null) {
+            $payload['email'] = $this->eibEmail();
+        }
+
+        return $payload;
     }
 
     /**

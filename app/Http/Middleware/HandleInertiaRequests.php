@@ -31,8 +31,8 @@ class HandleInertiaRequests extends Middleware
                 'name' => config('app.name'),
             ],
             'auth' => [
-                // 这里共享的是 Session 中的用户快照，权限判断仍应通过后端服务完成。
-                'user' => $request->session()->get('sso_user'),
+                // 只共享页面展示需要的字段，邮箱、token 和外部接口原始数据不得发送到浏览器。
+                'user' => $this->sharedUser($request),
                 // 角色来自 taskhub_user_role 表，登录时写入 Session，前端只用于展示。
                 'roles' => $request->session()->get('taskhub_roles', []),
             ],
@@ -41,5 +41,39 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
             ],
         ];
+    }
+
+    /**
+     * 从 SSO Session 中挑选允许发送给 React 的公开展示字段。
+     *
+     * Session 还可能保存邮箱和外部接口 raw 数据，这些字段只供后端业务使用，不能原样成为 Inertia Props。
+     *
+     * @return array<string, mixed>|null
+     */
+    private function sharedUser(Request $request): ?array
+    {
+        $user = $request->session()->get('sso_user');
+
+        if (! is_array($user)) {
+            return null;
+        }
+
+        $shared = [
+            'employeeNo' => $user['employeeNo'] ?? null,
+            'displayName' => $user['displayName'] ?? null,
+            'departmentName' => $user['departmentName'] ?? null,
+            'avatarId' => $user['avatarId'] ?? null,
+        ];
+
+        if (isset($user['siteUser']) && is_array($user['siteUser'])) {
+            $shared['siteUser'] = [
+                'employeeNo' => $user['siteUser']['employeeNo'] ?? null,
+                'displayName' => $user['siteUser']['displayName'] ?? null,
+                'departmentId' => $user['siteUser']['departmentId'] ?? null,
+                'departmentName' => $user['siteUser']['departmentName'] ?? null,
+            ];
+        }
+
+        return $shared;
     }
 }

@@ -186,6 +186,8 @@ class CreateTaskService
             'displayName' => $user->displayName(),
             'departmentId' => $user->departmentId(),
             'departmentName' => $user->departmentName(),
+            // 邮箱只用于后端通知兜底；权限判断仍使用实时工号和人员接口。
+            'email' => $user->email(),
             // avatarId 只保存头像 ID，不拼头像 URL；未来头像服务规则确认后再统一生成完整地址。
             'avatarId' => $user->avatarId(),
         ], fn (mixed $value): bool => $value !== null && $value !== '');

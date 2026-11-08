@@ -26,6 +26,7 @@ class SelectBidService
      */
     public function __construct(
         private readonly SnowflakeId $ids,
+        private readonly TaskEmailNotificationService $emailNotifications,
     ) {}
 
     /**
@@ -33,9 +34,9 @@ class SelectBidService
      *
      * @throws ValidationException 当操作者、任务状态、投标状态或成员结构不满足选标规则时抛出中文业务错误。
      */
-    public function execute(Task $task, Bid $bid, SsoUser $user): Task
+    public function execute(Task $task, Bid $bid, SsoUser $user, string $accessToken): Task
     {
-        return DB::transaction(function () use ($bid, $task, $user): Task {
+        $assignedTask = DB::transaction(function () use ($bid, $task, $user): Task {
             // 先锁定任务，串行化同一任务上的并发选标、投标和后续状态变更。
             $lockedTask = Task::query()
                 ->whereKey($task->id)
@@ -88,6 +89,27 @@ class SelectBidService
 
             return $lockedTask->refresh();
         });
+
+        // 事务提交后重新读取中标成员，分别发送负责人/协作成员通知。
+        $members = BidMember::query()
+            ->where('bid_id', $bid->id)
+            ->orderByRaw("role = 'OWNER' DESC")
+            ->orderBy('id')
+            ->get(['user_id', 'role'])
+            ->map(fn (BidMember $member): array => [
+                'employeeNo' => (string) $member->user_id,
+                'role' => (string) $member->role,
+            ])
+            ->all();
+
+        $this->emailNotifications->notifyBidSelected(
+            task: $assignedTask,
+            bid: $bid->refresh(),
+            members: $members,
+            accessToken: $accessToken,
+        );
+
+        return $assignedTask;
     }
 
     /**

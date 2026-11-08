@@ -275,6 +275,8 @@ class CreateDirectTaskService
             'displayName' => $user->displayName(),
             'departmentId' => $user->departmentId(),
             'departmentName' => $user->departmentName(),
+            // 邮箱只作为后端邮件通知地址快照，不用于权限判断。
+            'email' => $user->email(),
             'avatarId' => $user->avatarId(),
         ], fn (mixed $value): bool => $value !== null && $value !== '');
     }

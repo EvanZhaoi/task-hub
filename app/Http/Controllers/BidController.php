@@ -55,7 +55,12 @@ class BidController extends Controller
         CurrentUserService $currentUser,
         SelectBidService $selectBid,
     ): RedirectResponse {
-        $selectBid->execute($task, $bid, $currentUser->user());
+        $selectBid->execute(
+            task: $task,
+            bid: $bid,
+            user: $currentUser->user(),
+            accessToken: $currentUser->accessToken(),
+        );
 
         return redirect()
             ->route('tasks.show', $task)

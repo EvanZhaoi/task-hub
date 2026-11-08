@@ -10,6 +10,8 @@ use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
 use App\Integrations\Sso\SsoToken;
 use App\Integrations\Sso\SsoUser;
+use App\Mail\BidSelectedMail;
+use App\Mail\BidSubmittedMail;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
@@ -20,6 +22,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 test('the inertia application shell responds successfully', function (): void {
@@ -123,6 +126,9 @@ test('authenticated users can view the task hall with filters', function (): voi
         CurrentUserService::SESSION_KEY => [
             'employeeNo' => 'E10002',
             'displayName' => '李雷',
+            // 邮箱和外部原始数据只留在后端 Session，不应进入 Inertia Props。
+            'email' => 'lilei@example.test',
+            'raw' => ['sensitiveField' => 'internal-only'],
         ],
         CurrentUserService::ROLE_SESSION_KEY => ['TOP'],
         CurrentUserService::TOKEN_SESSION_KEY => [
@@ -142,6 +148,8 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.filters.keyword', '登录')
         ->assertJsonPath('props.paymentAccountOptions.0.value', 'PAY001')
         ->assertJsonPath('props.personnelOptions.0.employeeNo', 'E20001')
+        ->assertJsonMissingPath('props.auth.user.email')
+        ->assertJsonMissingPath('props.auth.user.raw')
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
         ->assertJsonPath('props.tasks.data.0.amountType', 'BUDGET')
         ->assertJsonPath('props.tasks.data.0.isUrgent', true)
@@ -1073,6 +1081,7 @@ test('authenticated users can place a bid for an open task', function (): void {
     $this->withoutVite();
     createTaskHallTables();
     config(['file_operation.download_url_prefix' => 'https://files.example.test/download/']);
+    Mail::fake();
 
     DB::table('task')->insert([
         'id' => 10003,
@@ -1086,6 +1095,10 @@ test('authenticated users can place a bid for an open task', function (): void {
         'assignment_type' => 'BIDDING',
         'complexity' => 'HIGH',
         'created_by' => 'E10001',
+        'created_by_snapshot' => json_encode([
+            'displayName' => '任务发布者',
+            'email' => 'publisher@example.test',
+        ], JSON_THROW_ON_ERROR),
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -1135,6 +1148,14 @@ test('authenticated users can place a bid for an open task', function (): void {
 
     expect(DB::table('task_event')->where('task_id', 10003)->where('event_type', 'BID_SUBMITTED')->exists())
         ->toBeTrue();
+
+    // 投标事务提交后给任务发布者发送邮件；不把其他人员邮箱暴露为收件人。
+    Mail::assertSent(BidSubmittedMail::class, function (BidSubmittedMail $mail): bool {
+        return $mail->hasTo('publisher@example.test')
+            && $mail->taskTitle === '投标功能开发'
+            && $mail->bidderName === '王开发'
+            && $mail->amount === '¥1,800.00';
+    });
 
     $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
     {
@@ -1286,6 +1307,31 @@ test('authenticated users can place a joint bid with collaborators', function ()
 test('task creator can select a bid and assign all bid members', function (): void {
     $this->withoutVite();
     createTaskHallTables();
+    Mail::fake();
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回中标成员的姓名和邮箱，同时供邮件通知与详情成员展示使用。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-task-creator');
+
+            return [
+                new PersonnelUser(
+                    eibEmail: 'owner@example.test',
+                    eibNameCn: '主开发',
+                    eibNumCn: 'E20001',
+                ),
+                new PersonnelUser(
+                    eibEmail: 'collaborator@example.test',
+                    eibNameCn: '协作开发',
+                    eibNumCn: 'E20002',
+                ),
+            ];
+        }
+    });
 
     DB::table('task')->insert([
         'id' => 10006,
@@ -1406,20 +1452,18 @@ test('task creator can select a bid and assign all bid members', function (): vo
         ->and(DB::table('task_event')->where('task_id', 10006)->where('event_type', 'TASK_ASSIGNED')->exists())
         ->toBeTrue();
 
-    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
-    {
-        /**
-         * 返回中标成员的展示信息，验证详情页从 TaskAssignee 组装正式执行团队。
-         */
-        public function fetchAll(?string $accessToken = null): array
-        {
-            expect($accessToken)->toBe('token-task-creator');
-
-            return [
-                new PersonnelUser(eibNameCn: '主开发', eibNumCn: 'E20001'),
-                new PersonnelUser(eibNameCn: '协作开发', eibNumCn: 'E20002'),
-            ];
-        }
+    // OWNER 和 COLLABORATOR 分别收到邮件，避免通过抄送暴露其他成员邮箱。
+    Mail::assertSent(BidSelectedMail::class, 2);
+    Mail::assertSent(BidSelectedMail::class, function (BidSelectedMail $mail): bool {
+        return $mail->hasTo('owner@example.test')
+            && $mail->recipientName === '主开发'
+            && $mail->memberRole === '负责人'
+            && $mail->amount === '¥4,500.00';
+    });
+    Mail::assertSent(BidSelectedMail::class, function (BidSelectedMail $mail): bool {
+        return $mail->hasTo('collaborator@example.test')
+            && $mail->recipientName === '协作开发'
+            && $mail->memberRole === '协作成员';
     });
 
     $this->withSession([
@@ -1820,6 +1864,7 @@ test('sso user parses current employee list payload', function (): void {
                 'empCnNum' => 'E10001',
                 'empName' => '张三',
                 'empNameCn' => '张三',
+                'empEmail' => 'zhangsan@example.test',
                 'empJpNum' => 'JP10001',
                 'empPhoto' => 'avatar-002',
                 'deptInfoList' => [
@@ -1845,6 +1890,7 @@ test('sso user parses current employee list payload', function (): void {
         ->and($user->displayName())->toBe('张三')
         ->and($user->departmentId())->toBe('DEV01')
         ->and($user->departmentName())->toBe('开发一部')
+        ->and($user->email())->toBe('zhangsan@example.test')
         ->and($user->avatarId())->toBe('avatar-002')
         ->and($user->raw())->toHaveKey('data');
 });

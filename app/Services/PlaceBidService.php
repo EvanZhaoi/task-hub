@@ -33,6 +33,7 @@ class PlaceBidService
     public function __construct(
         private readonly SnowflakeId $ids,
         private readonly PersonnelClient $personnel,
+        private readonly TaskEmailNotificationService $emailNotifications,
     ) {}
 
     /**
@@ -57,7 +58,7 @@ class PlaceBidService
             $accessToken,
         );
 
-        return DB::transaction(function () use ($attachments, $collaboratorEmployeeNos, $task, $user, $validated): Bid {
+        $bid = DB::transaction(function () use ($attachments, $collaboratorEmployeeNos, $task, $user, $validated): Bid {
             // 锁定任务行，避免投标提交和选标、流标等状态变更同时发生时读到旧状态。
             $lockedTask = Task::query()
                 ->whereKey($task->id)
@@ -89,6 +90,11 @@ class PlaceBidService
 
             return $bid;
         });
+
+        // 邮件必须在事务成功提交后发送；发送失败由通知服务记录日志，不回滚已经成功的投标。
+        $this->emailNotifications->notifyBidSubmitted($task, $bid, $user, $accessToken);
+
+        return $bid;
     }
 
     /**

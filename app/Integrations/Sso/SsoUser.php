@@ -21,6 +21,8 @@ final readonly class SsoUser
         private ?string $displayName = null,
         private ?string $departmentId = null,
         private ?string $departmentName = null,
+        // email 用于任务投标、选标等业务邮件；不会发送到前端页面或写入本地用户表。
+        private ?string $email = null,
         // avatarId 是员工头像 ID，未来可以和头像服务 URL 拼接成完整图片地址。
         private ?string $avatarId = null,
         // raw 保留原始响应，便于排查总部接口字段变化。
@@ -82,6 +84,12 @@ final readonly class SsoUser
                 ?? $user['department_name']
                 ?? null
             ),
+            email: self::nullableString(
+                $user['empEmail']
+                ?? $user['eibEmail']
+                ?? $user['email']
+                ?? null
+            ),
             avatarId: self::nullableString(
                 $user['empPhoto']
                 ?? $user['avatarId']
@@ -135,6 +143,16 @@ final readonly class SsoUser
     }
 
     /**
+     * 获取总部当前人员接口返回的邮箱。
+     *
+     * 邮箱用于后端发送业务通知，不应暴露到 React 页面或写入浏览器存储。
+     */
+    public function email(): ?string
+    {
+        return $this->email;
+    }
+
+    /**
      * 获取总部 SSO 返回的员工头像 ID。
      *
      * 当前只保存头像 ID，不在这里拼接完整图片地址。
@@ -168,6 +186,7 @@ final readonly class SsoUser
             'displayName' => $this->displayName,
             'departmentId' => $this->departmentId,
             'departmentName' => $this->departmentName,
+            'email' => $this->email,
             'avatarId' => $this->avatarId,
             'raw' => $this->raw,
         ];
