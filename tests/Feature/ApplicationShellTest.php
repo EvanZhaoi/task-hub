@@ -382,7 +382,7 @@ test('authenticated users can publish a direct task with owner and collaborators
             'attachment_name' => '直接指派说明.pdf',
         ]);
 
-    // 再访问详情页，确认正式成员和确定金额能沿用现有详情展示链路。
+    // 再访问详情页，确认正式成员和成交金额能沿用现有详情展示链路。
     $this->withHeader('X-Inertia', 'true')
         ->withHeader('X-Inertia-Version', inertiaVersionForTest())
         ->get('/tasks/'.$task->id)

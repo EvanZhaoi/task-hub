@@ -52,7 +52,7 @@ export type TaskListItem = {
     // 列表页描述是后端截断后的摘要，不是完整任务说明。
     description: string;
     amountLabel: string;
-    // FINAL 表示已经通过选标或后续协商确定金额；否则当前值仍是发布预算。
+    // FINAL 表示已经通过选标或后续协商形成成交金额；否则当前值仍是发布预算。
     amountType: 'BUDGET' | 'FINAL';
     // 日期字段已经由后端格式化，前端不再做时区转换。
     expectedDelivery: string | null;

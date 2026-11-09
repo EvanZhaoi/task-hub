@@ -50,7 +50,7 @@ export default function AssignedTasks({ assignments, filters }: AssignedTasksPro
 
                                         <div className="grid grid-cols-2 gap-3 rounded-md bg-[#f8f9fb] p-3">
                                             <div>
-                                                <div className="text-xs text-[#6e6e80]">确定金额</div>
+                                                <div className="text-xs text-[#6e6e80]">成交金额</div>
                                                 <div className="mt-1 font-semibold text-[#4f46a5]">{assignment.amountLabel}</div>
                                             </div>
                                             <div>

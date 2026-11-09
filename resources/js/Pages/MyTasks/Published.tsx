@@ -79,7 +79,7 @@ export default function PublishedTasks({ filters, tasks }: PublishedTasksProps) 
 
                                         <div className="flex items-center justify-between gap-4 lg:block lg:text-right">
                                             <div>
-                                                <div className="text-xs text-[#6e6e80]">{task.amountType === 'FINAL' ? '确定金额' : '任务预算'}</div>
+                                                <div className="text-xs text-[#6e6e80]">{task.amountType === 'FINAL' ? '成交金额' : '任务预算'}</div>
                                                 <div className="mt-1 text-lg font-semibold text-[#374151]">{task.amountLabel}</div>
                                             </div>
                                             <Button asChild className="mt-0 lg:mt-3" size="sm" variant={task.displayStatus === 'PENDING_SELECTION' ? 'primary' : 'outline'}>

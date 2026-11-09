@@ -172,7 +172,7 @@ export default function TaskShow({
                                     )}
                                 >
                                     <div className="text-xs text-[#6e6e80]">
-                                        {task.amountType === 'FINAL' ? '确定金额' : '任务预算'}
+                                        {task.amountType === 'FINAL' ? '成交金额' : '任务预算'}
                                     </div>
                                     <div
                                         className={cn(

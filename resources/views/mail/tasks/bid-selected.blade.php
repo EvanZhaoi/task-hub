@@ -4,7 +4,7 @@
 {{ $recipientName }}，你参与的任务 **{{ $taskTitle }}** 已完成选标。
 
 - 你的任务角色：{{ $memberRole }}
-- 确定金额：{{ $amount }}
+- 成交金额：{{ $amount }}
 - 确定交付日期：{{ $deliveryDate }}
 
 任务已经进入“进行中”，请进入任务详情查看正式执行成员和任务要求。
