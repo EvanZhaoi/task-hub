@@ -1,14 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { csrfToken } from '@/utils/csrf';
 import type { SharedPageProps } from '@/types/page';
@@ -41,6 +35,36 @@ export default function AppLayout({ actions, activeNav, children, subtitle, titl
     const departmentLabel = user?.departmentName ?? '未同步部门';
     // 只取 pathname 判断下拉菜单当前项，查询条件变化不影响导航选中状态。
     const currentPath = page.url.split('?')[0];
+    const [isMyTasksOpen, setIsMyTasksOpen] = useState(false);
+    const myTasksMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        /**
+         * 点击导航菜单之外的区域时关闭菜单，避免菜单一直覆盖页面内容。
+         */
+        function closeOnOutsideClick(event: MouseEvent): void {
+            if (!myTasksMenuRef.current?.contains(event.target as Node)) {
+                setIsMyTasksOpen(false);
+            }
+        }
+
+        /**
+         * 键盘用户按 Escape 时关闭菜单，并保持浏览器原有焦点顺序。
+         */
+        function closeOnEscape(event: KeyboardEvent): void {
+            if (event.key === 'Escape') {
+                setIsMyTasksOpen(false);
+            }
+        }
+
+        document.addEventListener('mousedown', closeOnOutsideClick);
+        document.addEventListener('keydown', closeOnEscape);
+
+        return () => {
+            document.removeEventListener('mousedown', closeOnOutsideClick);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, []);
 
     return (
         <main className="min-h-screen bg-[#f7f7f8] text-[#1a1a1a]">
@@ -69,36 +93,45 @@ export default function AppLayout({ actions, activeNav, children, subtitle, titl
                             任务大厅
                         </Link>
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    className={cn(
-                                        'h-8 gap-1 px-3',
-                                        activeNav === 'my-tasks' && 'bg-[#f5f3ff] text-[#5e6ad2]',
-                                    )}
-                                    type="button"
-                                    variant="ghost"
+                        <div className="relative" ref={myTasksMenuRef}>
+                            <Button
+                                aria-expanded={isMyTasksOpen}
+                                aria-haspopup="menu"
+                                className={cn(
+                                    'h-8 gap-1 px-3',
+                                    activeNav === 'my-tasks' && 'bg-[#f5f3ff] text-[#5e6ad2]',
+                                )}
+                                onClick={() => setIsMyTasksOpen((isOpen) => !isOpen)}
+                                type="button"
+                                variant="ghost"
+                            >
+                                我的任务
+                                <ChevronDown className={cn('size-4 transition-transform', isMyTasksOpen && 'rotate-180')} />
+                            </Button>
+
+                            {isMyTasksOpen ? (
+                                <div
+                                    aria-label="我的任务导航"
+                                    className="absolute left-1/2 top-full z-50 mt-1 w-36 -translate-x-1/2 rounded-md border border-[#e5e7eb] bg-white p-1 shadow-lg"
+                                    role="menu"
                                 >
-                                    我的任务
-                                    <ChevronDown className="size-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="center" className="w-36">
                                 {myTaskItems.map((item) => (
-                                    <DropdownMenuItem asChild key={item.href}>
-                                        <Link
-                                            className={cn(
-                                                'w-full cursor-pointer',
-                                                currentPath === item.href && 'bg-[#f5f3ff] text-[#5e6ad2]',
-                                            )}
-                                            href={item.href}
-                                        >
-                                            {item.label}
-                                        </Link>
-                                    </DropdownMenuItem>
+                                    <Link
+                                        className={cn(
+                                            'block w-full rounded-sm px-3 py-2 text-sm text-[#374151] hover:bg-[#f3f4f6]',
+                                            currentPath === item.href && 'bg-[#f5f3ff] font-medium text-[#5e6ad2]',
+                                        )}
+                                        href={item.href}
+                                        key={item.href}
+                                        onClick={() => setIsMyTasksOpen(false)}
+                                        role="menuitem"
+                                    >
+                                        {item.label}
+                                    </Link>
                                 ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                </div>
+                            ) : null}
+                        </div>
                     </nav>
 
                     <div className="flex items-center gap-3">
