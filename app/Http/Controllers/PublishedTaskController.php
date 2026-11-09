@@ -32,7 +32,8 @@ class PublishedTaskController extends Controller
             ->where('created_by', $currentUser->employeeNo())
             ->withCount([
                 'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
-                'bids as bid_count',
+                // 已撤回记录只在详情历史中展示，不计入“我发布的”列表投标数量。
+                'bids as bid_count' => fn (Builder $query): Builder => $query->where('status', '!=', 'WITHDRAWN'),
             ]);
 
         $this->applyFilters($query, $filters);

@@ -146,8 +146,11 @@ export type BidItem = {
     status: BidStatus;
     // canSelect 由后端根据发布者、Task 状态和 Bid 状态计算；前端不重复维护权限规则。
     canSelect: boolean;
+    // canWithdraw 只对截止前 ACTIVE 投标的 OWNER 为 true，真正校验仍以后端事务为准。
+    canWithdraw: boolean;
     revisionNo: number;
     createdAt: string | null;
+    withdrawnAt: string | null;
     members: BidMemberItem[];
     attachments: TaskAttachment[];
 };

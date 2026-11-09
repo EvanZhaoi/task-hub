@@ -82,8 +82,8 @@ class TaskController extends Controller
             ->withCount([
                 // active_bid_count 只用于判断“待选标”等当前业务状态。
                 'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
-                // bid_count 保留历史累计数；选标后 Bid 会变为 ACCEPTED/LOST，不能因此显示为 0。
-                'bids as bid_count',
+                // 列表统计保留中标/未中标记录，但撤回方案不再计入用户看到的投标数量。
+                'bids as bid_count' => fn (Builder $query): Builder => $query->where('status', '!=', 'WITHDRAWN'),
             ]);
 
         $this->applyFilters($query, $filters);
@@ -403,7 +403,9 @@ class TaskController extends Controller
                     ->orderBy('id'),
                 'attachments' => fn ($query) => $query->latest('created_at'),
             ])
-            ->latest('created_at');
+            ->latest('created_at')
+            // 测试和高并发场景可能在同一秒创建多版投标，ID 用作稳定的第二排序条件。
+            ->orderByDesc('id');
 
         if ($task->created_by !== $employeeNo) {
             $query->whereHas('members', fn ($query) => $query->where('user_id', $employeeNo));
@@ -433,8 +435,15 @@ class TaskController extends Controller
                 && $task->status === 'OPEN'
                 && $task->assignment_type === 'BIDDING'
                 && $bid->status === 'ACTIVE',
+            // 只有 ACTIVE 投标的 OWNER 可以在截止前看到撤回入口；Service 仍会在事务内重复校验。
+            'canWithdraw' => $bid->status === 'ACTIVE'
+                && $task->status === 'OPEN'
+                && $task->bidding_deadline?->isFuture()
+                && $bid->members->contains(fn ($member): bool => $member->role === 'OWNER'
+                    && $member->user_id === $employeeNo),
             'revisionNo' => $bid->revision_no,
             'createdAt' => $bid->created_at?->format('Y-m-d H:i'),
+            'withdrawnAt' => $bid->withdrawn_at?->format('Y-m-d H:i'),
             'members' => $bid->members->map(fn ($member): array => [
                 'userId' => $member->user_id,
                 // 人员接口不可用或人员离职时退回展示工号，保证历史投标仍可读取。

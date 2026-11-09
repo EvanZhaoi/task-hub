@@ -1313,6 +1313,294 @@ test('authenticated users can place a joint bid with collaborators', function ()
         ->assertJsonPath('props.visibleBids.0.members.2.displayName', '协作开发乙');
 });
 
+test('bid owner can withdraw and submit a new revision while history is preserved', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+    Mail::fake();
+
+    DB::table('task')->insert([
+        'id' => 10010,
+        'title' => '撤回重投功能测试',
+        'description' => '验证撤回后保留历史，并允许主投标人提交新版本。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 5000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        // 提供发布者邮箱快照，重投邮件测试不需要访问真实外部人员接口。
+        'created_by_snapshot' => json_encode([
+            'displayName' => '任务发布者',
+            'email' => 'publisher@example.test',
+        ], JSON_THROW_ON_ERROR),
+        'version' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 21010,
+        'task_id' => 10010,
+        'amount' => 4600,
+        'delivery_date' => now()->addDays(8)->toDateString(),
+        'proposal' => '第一版投标方案',
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10010:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        ['id' => 22010, 'bid_id' => 21010, 'user_id' => 'E20001', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 22011, 'bid_id' => 21010, 'user_id' => 'E20002', 'role' => 'COLLABORATOR', 'created_at' => now()],
+    ]);
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回详情页展示所需的投标成员，不访问真实人员接口。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-withdraw-owner');
+
+            return [
+                new PersonnelUser(eibNameCn: '主投标人', eibNumCn: 'E20001'),
+                new PersonnelUser(eibNameCn: '协作成员', eibNumCn: 'E20002'),
+            ];
+        }
+    });
+
+    $session = [
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E20001',
+            'displayName' => '主投标人',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-withdraw-owner',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ];
+
+    // 页面权限结果只允许 OWNER 撤回当前 ACTIVE 投标。
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10010')
+        ->assertOk()
+        ->assertJsonPath('props.visibleBids.0.canWithdraw', true);
+
+    $this->withSession($session)
+        ->post('/tasks/10010/bids/21010/withdraw', [
+            'returnTo' => '/my-tasks/bids?status=ACTIVE',
+        ])
+        ->assertRedirect(route('tasks.show', [
+            'task' => 10010,
+            'returnTo' => '/my-tasks/bids?status=ACTIVE',
+        ]))
+        ->assertSessionHas('success', '投标已撤回，你可以在招标截止前重新投标。');
+
+    $withdrawnBid = DB::table('bid')->where('id', 21010)->first();
+
+    expect($withdrawnBid)->toMatchObject([
+        'status' => 'WITHDRAWN',
+        'active_key' => null,
+        'revision_no' => 1,
+    ])->and($withdrawnBid->withdrawn_at)->not->toBeNull();
+
+    $withdrawnEvent = DB::table('task_event')
+        ->where('task_id', 10010)
+        ->where('event_type', 'BID_WITHDRAWN')
+        ->first();
+
+    expect($withdrawnEvent)->not->toBeNull()
+        ->and($withdrawnEvent->operator_id)->toBe('E20001')
+        ->and($withdrawnEvent->related_id)->toBe(21010);
+
+    $this->app->instance(PaymentAccountClient::class, new class extends PaymentAccountClient
+    {
+        /**
+         * 撤回后的列表统计测试不需要访问真实付款账号接口。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            return [];
+        }
+    });
+
+    // 撤回记录保留在详情历史中，但任务大厅不能继续把它计算为有效投标数量。
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks?keyword='.urlencode('撤回重投功能测试'))
+        ->assertOk()
+        ->assertJsonPath('props.tasks.data.0.activeBidCount', 0)
+        ->assertJsonPath('props.tasks.data.0.bidCount', 0);
+
+    // 重复撤回必须失败，且不能重复生成审计事件。
+    $this->withSession($session)
+        ->from('/tasks/10010')
+        ->post('/tasks/10010/bids/21010/withdraw')
+        ->assertRedirect('/tasks/10010')
+        ->assertSessionHasErrors('bid');
+
+    expect(DB::table('task_event')->where('event_type', 'BID_WITHDRAWN')->count())->toBe(1);
+
+    // 撤回释放 active_key 后，主投标人可以新建第 2 版投标，旧记录不能被覆盖。
+    $this->withSession($session)
+        ->post('/tasks/10010/bids', [
+            'amount' => '4400.00',
+            'deliveryDate' => now()->addDays(7)->toDateString(),
+            'proposal' => '调整后的第二版投标方案',
+            'collaboratorEmployeeNos' => [],
+        ])
+        ->assertRedirect(route('tasks.show', 10010))
+        ->assertSessionHas('success', '投标已提交。');
+
+    $bids = DB::table('bid')
+        ->where('task_id', 10010)
+        ->orderBy('revision_no')
+        ->get();
+
+    expect($bids)->toHaveCount(2)
+        ->and($bids[0]->status)->toBe('WITHDRAWN')
+        ->and($bids[0]->revision_no)->toBe(1)
+        ->and($bids[1]->status)->toBe('ACTIVE')
+        ->and($bids[1]->revision_no)->toBe(2)
+        ->and($bids[1]->active_key)->toBe('10010:E20001');
+
+    // 详情接口同时返回当前有效版本和已撤回历史，前端负责分区并默认折叠历史。
+    $this->withSession($session)
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10010')
+        ->assertOk()
+        ->assertJsonPath('props.bidOverview.totalCount', 2)
+        ->assertJsonPath('props.task.activeBidCount', 1)
+        ->assertJsonPath('props.visibleBids.0.status', 'ACTIVE')
+        ->assertJsonPath('props.visibleBids.0.revisionNo', 2)
+        ->assertJsonPath('props.visibleBids.0.canWithdraw', true)
+        ->assertJsonPath('props.visibleBids.1.status', 'WITHDRAWN')
+        ->assertJsonPath('props.visibleBids.1.canWithdraw', false);
+});
+
+test('bid collaborator cannot withdraw the owner bid', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10011,
+        'title' => '协作者撤回权限测试',
+        'description' => '验证协作者不能撤回整个联合投标。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 3000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'bidding_deadline' => now()->addDay(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        'version' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 21011,
+        'task_id' => 10011,
+        'amount' => 2800,
+        'delivery_date' => now()->addDays(7)->toDateString(),
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10011:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        ['id' => 22012, 'bid_id' => 21011, 'user_id' => 'E20001', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 22013, 'bid_id' => 21011, 'user_id' => 'E20002', 'role' => 'COLLABORATOR', 'created_at' => now()],
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E20002', 'displayName' => '协作成员'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-withdraw-collaborator',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10011')
+        ->post('/tasks/10011/bids/21011/withdraw')
+        ->assertRedirect('/tasks/10011')
+        ->assertSessionHasErrors('bid');
+
+    expect(DB::table('bid')->where('id', 21011)->value('status'))->toBe('ACTIVE')
+        ->and(DB::table('task_event')->where('event_type', 'BID_WITHDRAWN')->exists())->toBeFalse();
+});
+
+test('bid cannot be withdrawn after the bidding deadline', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    DB::table('task')->insert([
+        'id' => 10012,
+        'title' => '截止后撤回测试',
+        'description' => '验证截止后不能撤回有效投标。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 3000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'bidding_deadline' => now()->subMinute(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        'version' => 0,
+        'created_at' => now()->subDay(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 21012,
+        'task_id' => 10012,
+        'amount' => 2800,
+        'delivery_date' => now()->addDays(7)->toDateString(),
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10012:E20001',
+        'created_at' => now()->subHour(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        'id' => 22014,
+        'bid_id' => 21012,
+        'user_id' => 'E20001',
+        'role' => 'OWNER',
+        'created_at' => now()->subHour(),
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E20001', 'displayName' => '主投标人'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-withdraw-expired',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10012')
+        ->post('/tasks/10012/bids/21012/withdraw')
+        ->assertRedirect('/tasks/10012')
+        ->assertSessionHasErrors(['bid' => '招标已经截止，不能撤回投标。']);
+
+    expect(DB::table('bid')->where('id', 21012)->value('status'))->toBe('ACTIVE')
+        ->and(DB::table('task_event')->where('event_type', 'BID_WITHDRAWN')->exists())->toBeFalse();
+});
+
 test('task creator can select a bid and assign all bid members', function (): void {
     $this->withoutVite();
     createTaskHallTables();

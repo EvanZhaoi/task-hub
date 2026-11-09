@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SelectBidRequest;
 use App\Http\Requests\StoreBidRequest;
+use App\Http\Requests\WithdrawBidRequest;
 use App\Models\Bid;
 use App\Models\Task;
 use App\Services\CurrentUserService;
 use App\Services\PlaceBidService;
 use App\Services\SelectBidService;
 use App\Services\TaskReturnNavigation;
+use App\Services\WithdrawBidService;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -82,5 +84,37 @@ class BidController extends Controller
         return redirect()
             ->route('tasks.show', $routeParameters)
             ->with('success', '已选定中标方案，任务进入进行中。');
+    }
+
+    /**
+     * 撤回指定投标。
+     *
+     * Controller 只负责读取当前用户和返回地址；OWNER 权限、截止时间、状态更新和事件记录
+     * 全部由 WithdrawBidService 在同一个数据库事务中完成。
+     */
+    public function withdraw(
+        WithdrawBidRequest $request,
+        Task $task,
+        Bid $bid,
+        CurrentUserService $currentUser,
+        WithdrawBidService $withdrawBid,
+        TaskReturnNavigation $returnNavigation,
+    ): RedirectResponse {
+        $withdrawBid->execute(
+            task: $task,
+            bid: $bid,
+            user: $currentUser->user(),
+        );
+
+        $routeParameters = ['task' => $task];
+        $returnTo = $returnNavigation->safeUrl($request->input('returnTo'));
+
+        if ($returnTo !== null) {
+            $routeParameters['returnTo'] = $returnTo;
+        }
+
+        return redirect()
+            ->route('tasks.show', $routeParameters)
+            ->with('success', '投标已撤回，你可以在招标截止前重新投标。');
     }
 }

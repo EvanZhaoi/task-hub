@@ -19,6 +19,7 @@ import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { SelectBidDialog } from '@/components/tasks/SelectBidDialog';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
+import { WithdrawBidDialog } from '@/components/tasks/WithdrawBidDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -424,6 +425,8 @@ type BidListProps = {
  */
 function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
     const [expandedBidIds, setExpandedBidIds] = useState<string[]>([]);
+    // 历史投标默认折叠，避免撤回、中标和未中标记录挤占有效方案的主要阅读空间。
+    const [showHistory, setShowHistory] = useState(false);
 
     /**
      * 单独维护每条投标的展开状态，避免展开一个方案时占开全部记录。
@@ -454,8 +457,114 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
         return <p className="mt-4 text-sm text-[#6e6e80]">当前还没有人投标。</p>;
     }
 
+    const activeBids = bids.filter((bid) => bid.status === 'ACTIVE');
+    const historicalBids = bids.filter((bid) => bid.status !== 'ACTIVE');
+
+    /**
+     * 渲染一组当前用户有权查看的投标摘要。
+     *
+     * 有效投标和历史投标共用相同的信息层级，但操作按钮由后端 canSelect/canWithdraw 明确控制。
+     */
+    function renderBidRows(rows: BidItem[]) {
+        return rows.map((bid) => {
+            const owner = bid.members.find((member) => member.role === 'OWNER');
+            const collaborators = bid.members.filter((member) => member.role === 'COLLABORATOR');
+            const isExpanded = expandedBidIds.includes(bid.id);
+
+            return (
+                <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white" key={bid.id}>
+                    <div className="flex items-stretch gap-2 bg-[#fbfbfc] p-2">
+                        <button
+                            aria-expanded={isExpanded}
+                            className="grid min-w-0 flex-1 cursor-pointer grid-cols-2 items-center gap-x-4 gap-y-2 rounded-md px-2 py-2 text-left hover:bg-white md:grid-cols-[110px_minmax(0,1fr)_130px_150px_24px]"
+                            onClick={() => toggleBid(bid.id)}
+                            type="button"
+                        >
+                            <Badge className="w-fit" variant={bidStatusBadgeVariants[bid.status]}>
+                                {bidStatusLabels[bid.status]}
+                            </Badge>
+                            <BidSummaryValue label="主投标人" value={owner?.displayName ?? '-'} />
+                            <BidSummaryValue emphasize label="投标金额" value={bid.amountLabel} />
+                            <BidSummaryValue label="承诺交付" value={bid.deliveryDate ?? '-'} />
+                            <ChevronDown
+                                className={cn(
+                                    'size-5 justify-self-end text-[#6e6e80] transition-transform',
+                                    isExpanded && 'rotate-180',
+                                )}
+                            />
+                        </button>
+
+                        {bid.canSelect || bid.canWithdraw ? (
+                            <div className="flex shrink-0 items-center gap-2 pr-1">
+                                {bid.canSelect ? <SelectBidDialog bid={bid} returnTo={returnTo} taskId={taskId} /> : null}
+                                {bid.canWithdraw ? (
+                                    <WithdrawBidDialog bidId={bid.id} returnTo={returnTo} taskId={taskId} />
+                                ) : null}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    {isExpanded ? (
+                        <div className="space-y-4 border-t border-[#eeeeef] px-4 py-4">
+                            <div className="text-xs text-[#9ca3af]">
+                                第 {bid.revisionNo} 版 · 提交于 {bid.createdAt ?? '-'}
+                                {bid.withdrawnAt ? ` · 撤回于 ${bid.withdrawnAt}` : ''}
+                                {owner?.userId ? ` · 主投标人工号 ${owner.userId}` : ''}
+                            </div>
+
+                            {bid.proposal ? (
+                                <div>
+                                    <div className="text-xs font-medium text-[#9ca3af]">投标说明</div>
+                                    <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-[#374151]">
+                                        {bid.proposal}
+                                    </p>
+                                </div>
+                            ) : null}
+
+                            {collaborators.length > 0 ? (
+                                <div className="flex flex-wrap items-center gap-2 text-sm">
+                                    <span className="inline-flex items-center gap-1 text-[#6e6e80]">
+                                        <Users className="size-4" />
+                                        协作成员
+                                    </span>
+                                    {collaborators.map((member) => (
+                                        <span
+                                            className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
+                                            key={member.userId}
+                                            title={member.departmentName ?? undefined}
+                                        >
+                                            {member.displayName}（{member.userId}）
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-[#9ca3af]">单人投标</p>
+                            )}
+
+                            {bid.attachments.length > 0 ? (
+                                <div>
+                                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[#6e6e80]">
+                                        <Paperclip className="size-4" />
+                                        投标附件（{bid.attachments.length}）
+                                    </div>
+                                    <div className="space-y-2">
+                                        {bid.attachments.map((file) => (
+                                            <AttachmentRow id={file.id} key={file.id} name={file.name} url={file.url} />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-[#9ca3af]">未上传投标附件。</p>
+                            )}
+                        </div>
+                    ) : null}
+                </div>
+            );
+        });
+    }
+
     return (
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-4">
             {overview.hiddenCount > 0 ? (
                 <div className="flex items-center gap-2 rounded-md bg-[#f8f9fb] px-3 py-2 text-xs text-[#6e6e80]">
                     <ShieldCheck className="size-4 shrink-0" />
@@ -463,102 +572,37 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
                 </div>
             ) : null}
 
-            {bids.map((bid) => {
-                const owner = bid.members.find((member) => member.role === 'OWNER');
-                const collaborators = bid.members.filter((member) => member.role === 'COLLABORATOR');
-                const isExpanded = expandedBidIds.includes(bid.id);
+            <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-[#374151]">有效投标</h3>
+                    <span className="text-xs text-[#9ca3af]">{activeBids.length} 条可见</span>
+                </div>
+                {activeBids.length > 0 ? (
+                    renderBidRows(activeBids)
+                ) : (
+                    <p className="rounded-md bg-[#f8f9fb] px-3 py-2 text-sm text-[#6e6e80]">当前没有有效投标。</p>
+                )}
+            </section>
 
-                return (
-                    <div className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-white" key={bid.id}>
-                        <div className="flex items-stretch gap-2 bg-[#fbfbfc] p-2">
-                            <button
-                                aria-expanded={isExpanded}
-                                className="grid min-w-0 flex-1 cursor-pointer grid-cols-2 items-center gap-x-4 gap-y-2 rounded-md px-2 py-2 text-left hover:bg-white md:grid-cols-[110px_minmax(0,1fr)_130px_150px_24px]"
-                                onClick={() => toggleBid(bid.id)}
-                                type="button"
-                            >
-                                <Badge className="w-fit" variant={bidStatusBadgeVariants[bid.status]}>
-                                    {bidStatusLabels[bid.status]}
-                                </Badge>
-                                <BidSummaryValue label="主投标人" value={owner?.displayName ?? '-'} />
-                                <BidSummaryValue emphasize label="投标金额" value={bid.amountLabel} />
-                                <BidSummaryValue label="承诺交付" value={bid.deliveryDate ?? '-'} />
-                                <ChevronDown
-                                    className={cn(
-                                        'size-5 justify-self-end text-[#6e6e80] transition-transform',
-                                        isExpanded && 'rotate-180',
-                                    )}
-                                />
-                            </button>
-
-                            {bid.canSelect ? (
-                                <div className="flex shrink-0 items-center pr-1">
-                                    <SelectBidDialog bid={bid} returnTo={returnTo} taskId={taskId} />
-                                </div>
-                            ) : null}
-                        </div>
-
-                        {isExpanded ? (
-                            <div className="space-y-4 border-t border-[#eeeeef] px-4 py-4">
-                                <div className="text-xs text-[#9ca3af]">
-                                    第 {bid.revisionNo} 版 · 提交于 {bid.createdAt ?? '-'}
-                                    {owner?.userId ? ` · 主投标人工号 ${owner.userId}` : ''}
-                                </div>
-
-                                {bid.proposal ? (
-                                    <div>
-                                        <div className="text-xs font-medium text-[#9ca3af]">投标说明</div>
-                                        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-[#374151]">
-                                            {bid.proposal}
-                                        </p>
-                                    </div>
-                                ) : null}
-
-                                {collaborators.length > 0 ? (
-                                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                                        <span className="inline-flex items-center gap-1 text-[#6e6e80]">
-                                            <Users className="size-4" />
-                                            协作成员
-                                        </span>
-                                        {collaborators.map((member) => (
-                                            <span
-                                                className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
-                                                key={member.userId}
-                                                title={member.departmentName ?? undefined}
-                                            >
-                                                {member.displayName}（{member.userId}）
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-[#9ca3af]">单人投标</p>
-                                )}
-
-                                {bid.attachments.length > 0 ? (
-                                    <div>
-                                        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-[#6e6e80]">
-                                            <Paperclip className="size-4" />
-                                            投标附件（{bid.attachments.length}）
-                                        </div>
-                                        <div className="space-y-2">
-                                            {bid.attachments.map((file) => (
-                                                <AttachmentRow
-                                                    id={file.id}
-                                                    key={file.id}
-                                                    name={file.name}
-                                                    url={file.url}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-[#9ca3af]">未上传投标附件。</p>
-                                )}
-                            </div>
-                        ) : null}
-                    </div>
-                );
-            })}
+            {historicalBids.length > 0 ? (
+                <section className="border-t border-[#eeeeef] pt-3">
+                    <button
+                        aria-expanded={showHistory}
+                        className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-2 text-left hover:bg-[#f8f9fb]"
+                        onClick={() => setShowHistory((current) => !current)}
+                        type="button"
+                    >
+                        <span className="text-sm font-semibold text-[#6e6e80]">历史投标（{historicalBids.length}）</span>
+                        <ChevronDown
+                            className={cn(
+                                'size-5 text-[#9ca3af] transition-transform',
+                                showHistory && 'rotate-180',
+                            )}
+                        />
+                    </button>
+                    {showHistory ? <div className="mt-3 space-y-3">{renderBidRows(historicalBids)}</div> : null}
+                </section>
+            ) : null}
         </div>
     );
 }
