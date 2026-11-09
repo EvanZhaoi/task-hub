@@ -3,7 +3,7 @@ import { ArrowRight, CalendarDays, Gavel, Plus } from 'lucide-react';
 
 import AppLayout from '@/Layouts/AppLayout';
 import { MyTaskFilters } from '@/components/my-tasks/MyTaskFilters';
-import { PaginationNav } from '@/components/my-tasks/PaginationNav';
+import { PaginationNav } from '@/components/common/PaginationNav';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Button } from '@/components/ui/button';

@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
 import { MyTaskFilters } from '@/components/my-tasks/MyTaskFilters';
-import { PaginationNav } from '@/components/my-tasks/PaginationNav';
+import { PaginationNav } from '@/components/common/PaginationNav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

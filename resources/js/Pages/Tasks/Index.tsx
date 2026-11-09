@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { DatePicker } from '@/components/common/DatePicker';
 import { DateTimePicker } from '@/components/common/DateTimePicker';
+import { PaginationNav } from '@/components/common/PaginationNav';
 import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombobox';
 import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
@@ -487,16 +488,6 @@ export default function TaskIndex({
                 </CardContent>
             </Card>
 
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-sm text-[#6e6e80]">
-                {/* 分页元数据来自 Laravel paginator，后端已经转换成 camelCase。 */}
-                <span>
-                    显示 {tasks.meta.from ?? 0}-{tasks.meta.to ?? 0} / 共 {tasks.meta.total} 条
-                </span>
-                <span>
-                    第 {tasks.meta.currentPage} / {tasks.meta.lastPage} 页
-                </span>
-            </div>
-
             <div className="space-y-3">
                 {tasks.data.length === 0 ? (
                     // 空状态要占据列表区域，告诉用户可以通过调整筛选继续操作。
@@ -606,28 +597,8 @@ export default function TaskIndex({
                 )}
             </div>
 
-            <div className="mt-5 flex items-center justify-between">
-                {tasks.links.prev ? (
-                    // asChild 让 a 标签保留链接行为，同时获得 Button 视觉样式。
-                    <Button asChild variant="outline">
-                        <a href={tasks.links.prev}>上一页</a>
-                    </Button>
-                ) : (
-                    <Button disabled variant="muted">
-                        上一页
-                    </Button>
-                )}
-
-                {tasks.links.next ? (
-                    // paginator 已经保留筛选 query string，直接使用后端给出的链接即可。
-                    <Button asChild variant="outline">
-                        <a href={tasks.links.next}>下一页</a>
-                    </Button>
-                ) : (
-                    <Button disabled variant="muted">
-                        下一页
-                    </Button>
-                )}
+            <div className="mt-5">
+                <PaginationNav links={tasks.links} meta={tasks.meta} />
             </div>
         </AppLayout>
     );

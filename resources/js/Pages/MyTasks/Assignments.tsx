@@ -4,7 +4,7 @@ import { CalendarCheck, Users } from 'lucide-react';
 import AppLayout from '@/Layouts/AppLayout';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { MyTaskFilters } from '@/components/my-tasks/MyTaskFilters';
-import { PaginationNav } from '@/components/my-tasks/PaginationNav';
+import { PaginationNav } from '@/components/common/PaginationNav';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
