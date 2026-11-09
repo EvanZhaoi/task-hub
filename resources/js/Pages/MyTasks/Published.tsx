@@ -12,7 +12,7 @@ import type { PublishedTasksProps } from '@/types/task';
 import { taskDetailUrl } from '@/utils/task-navigation';
 
 const statusOptions = [
-    { label: '全部状态', value: 'ALL' },
+    { label: '全部', value: 'ALL' },
     { label: '招标中', value: 'OPEN' },
     { label: '待选标', value: 'PENDING_SELECTION' },
     { label: '进行中', value: 'ASSIGNED' },
