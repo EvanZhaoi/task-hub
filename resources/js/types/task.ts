@@ -9,9 +9,6 @@ export type TaskComplexity = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type TaskAssignmentType = 'BIDDING' | 'DIRECT';
 
-// 个人任务范围与后端 TaskController::SCOPES 保持一致。
-export type TaskScope = 'HALL' | 'PUBLISHED' | 'MY_BIDS' | 'PARTICIPATED';
-
 export type SelectOption = {
     // label 是展示文案，value 是提交给后端的筛选值。
     label: string;
@@ -77,14 +74,6 @@ export type TaskListItem = {
     // activeBidCount 表示当前可选的方案；bidCount 表示历史累计提交数。
     activeBidCount: number;
     bidCount: number;
-    // 只在个人范围中返回，用于说明当前用户与任务的关系。
-    relationLabel: string | null;
-    // “我的投标”展示最新一版主投标摘要。
-    myBid: {
-        amountLabel: string;
-        revisionNo: number;
-        status: BidStatus;
-    } | null;
 };
 
 // Laravel paginate() 转换后传给前端的分页元数据。
@@ -112,7 +101,6 @@ export type TaskFilters = {
     keyword: string;
     status: string;
     complexity: string;
-    scope: TaskScope;
 };
 
 export type TaskIndexProps = {
@@ -122,10 +110,6 @@ export type TaskIndexProps = {
     paymentAccountOptions: PaymentAccountOption[];
     // 直接指派模式从本据点人员目录选择负责人和协作成员。
     personnelOptions: PersonnelOption[];
-    scopeOptions: Array<{
-        label: string;
-        value: TaskScope;
-    }>;
     statusOptions: SelectOption[];
     tasks: PaginatedTasks;
 };

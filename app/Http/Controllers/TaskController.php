@@ -39,9 +39,6 @@ class TaskController extends Controller
     // 复杂度枚举来自 schema.sql，前端筛选和后端校验保持一致。
     private const COMPLEXITIES = ['LOW', 'MEDIUM', 'HIGH'];
 
-    // 任务范围只允许这四种值，当前用户工号始终从 Session 获取。
-    private const SCOPES = ['HALL', 'PUBLISHED', 'MY_BIDS', 'PARTICIPATED'];
-
     // 投标事件包含投标人行为和方案关联，只对任务发布者或该投标成员可见。
     private const PRIVATE_BID_EVENT_TYPES = ['BID_SUBMITTED', 'BID_WITHDRAWN', 'BID_ACCEPTED'];
 
@@ -60,7 +57,6 @@ class TaskController extends Controller
     ): Response {
         // 先把用户输入规整成安全的筛选值，后续查询只使用规整后的 filters。
         $filters = $this->filters($request);
-        $employeeNo = $currentUser->employeeNo();
 
         $query = Task::query()
             ->select([
@@ -89,8 +85,6 @@ class TaskController extends Controller
                 'bids as bid_count',
             ]);
 
-        // 个人范围和通用筛选作用在同一个 Task Query 上，分页结果不会产生重复任务。
-        $this->applyScope($query, $filters['scope'], $employeeNo);
         $this->applyFilters($query, $filters);
 
         $paginator = $query
@@ -101,16 +95,13 @@ class TaskController extends Controller
             ->withQueryString();
 
         // through() 只转换当前页数据，不改变分页结构。
-        $tasks = $paginator->through(
-            fn (Task $task): array => $this->taskItem($task, $richTextSanitizer, $filters['scope']),
-        );
+        $tasks = $paginator->through(fn (Task $task): array => $this->taskItem($task, $richTextSanitizer));
 
         return Inertia::render('Tasks/Index', [
             'filters' => $filters,
             'paymentAccountOptions' => $this->paymentAccountOptions($paymentAccounts, $currentUser->accessToken()),
             // 直接指派复用人员目录，浏览器只接收选择器需要的最小字段。
             'personnelOptions' => $this->personnelDirectory($personnel, $currentUser->accessToken())['options'],
-            'scopeOptions' => $this->scopeOptions(),
             'statusOptions' => $this->statusOptions(),
             'complexityOptions' => $this->complexityOptions(),
             'tasks' => [
@@ -249,71 +240,13 @@ class TaskController extends Controller
         $keyword = trim((string) $request->query('keyword', ''));
         $status = (string) $request->query('status', 'ALL');
         $complexity = (string) $request->query('complexity', 'ALL');
-        $scope = (string) $request->query('scope', 'HALL');
 
         return [
             'keyword' => $keyword,
             // 非法枚举统一回到 ALL，避免用户改 URL 导致 SQL 查询异常。
             'status' => in_array($status, self::STATUSES, true) ? $status : 'ALL',
             'complexity' => in_array($complexity, self::COMPLEXITIES, true) ? $complexity : 'ALL',
-            // 非法 scope 回到公开任务大厅，不允许通过 URL 传入其他人的工号。
-            'scope' => in_array($scope, self::SCOPES, true) ? $scope : 'HALL',
         ];
-    }
-
-    /**
-     * 应用“任务大厅 / 我发布的 / 我的投标 / 我参与的”范围查询。
-     *
-     * 这里只做列表读取，不是完整业务动作，因此不需要额外 Service。
-     * 个人范围所需的关系数据在同一处预加载，避免列表逐条查询。
-     */
-    private function applyScope(Builder $query, string $scope, string $employeeNo): void
-    {
-        if ($scope === 'PUBLISHED') {
-            $query->where('created_by', $employeeNo);
-
-            return;
-        }
-
-        if ($scope === 'MY_BIDS') {
-            $query
-                ->whereHas('bids', fn (Builder $query): Builder => $query
-                    ->whereHas('members', fn (Builder $query): Builder => $query
-                        ->where('user_id', $employeeNo)
-                        ->where('role', 'OWNER')))
-                // Eager-load 回调的初始参数可能是 HasMany Relation，不与 whereHas 共用严格 Builder 闭包。
-                ->with(['bids' => fn ($query) => $query
-                    ->whereHas('members', fn (Builder $query): Builder => $query
-                        ->where('user_id', $employeeNo)
-                        ->where('role', 'OWNER'))
-                    ->latest('revision_no')
-                    ->latest('created_at')
-                    ->latest('id')]);
-
-            return;
-        }
-
-        if ($scope === 'PARTICIPATED') {
-            $query
-                ->where(function (Builder $query) use ($employeeNo): void {
-                    $query
-                        ->whereHas('bids', fn (Builder $query): Builder => $query
-                            ->whereHas('members', fn (Builder $query): Builder => $query
-                                ->where('user_id', $employeeNo)
-                                ->where('role', 'COLLABORATOR')))
-                        ->orWhereHas('assignees', fn (Builder $query): Builder => $query
-                            ->where('user_id', $employeeNo));
-                })
-                ->with([
-                    // 执行成员关系比协作投标更接近任务当前状态，页面展示时优先使用它。
-                    'assignees' => fn ($query) => $query->where('user_id', $employeeNo),
-                    'bids' => fn ($query) => $query
-                        ->whereHas('members', fn (Builder $query): Builder => $query
-                            ->where('user_id', $employeeNo)
-                            ->where('role', 'COLLABORATOR'))
-                        ->latest('created_at'),
-                ]);
-        }
     }
 
     /**
@@ -362,7 +295,7 @@ class TaskController extends Controller
      * 前端不直接消费 Eloquent Model，而是接收已经格式化好的展示字段，
      * 这样可以避免前端重复处理 BIGINT、日期、金额和 JSON 快照。
      */
-    private function taskItem(Task $task, RichTextSanitizer $richTextSanitizer, string $scope): array
+    private function taskItem(Task $task, RichTextSanitizer $richTextSanitizer): array
     {
         // 快照字段可能为空，统一转成数组，避免前端展示时反复判断 null。
         $createdBySnapshot = $task->created_by_snapshot ?? [];
@@ -391,61 +324,6 @@ class TaskController extends Controller
             'createdAt' => $task->created_at?->format('Y-m-d H:i'),
             'activeBidCount' => (int) ($task->active_bid_count ?? 0),
             'bidCount' => (int) ($task->bid_count ?? 0),
-            // 关系标签和本人投标摘要只在对应个人范围返回，任务大厅保持简洁。
-            'relationLabel' => $this->relationLabel($task, $scope),
-            'myBid' => $this->myBidSummary($task, $scope),
-        ];
-    }
-
-    /**
-     * 返回当前用户与任务的最明确关系文案。
-     */
-    private function relationLabel(Task $task, string $scope): ?string
-    {
-        if ($scope === 'PUBLISHED') {
-            return '我发布的';
-        }
-
-        if ($scope === 'MY_BIDS') {
-            return '主投标人';
-        }
-
-        if ($scope !== 'PARTICIPATED') {
-            return null;
-        }
-
-        $assignee = $task->assignees->first();
-
-        if ($assignee?->role === 'OWNER') {
-            return '任务负责人';
-        }
-
-        if ($assignee?->role === 'COLLABORATOR') {
-            return '执行协作者';
-        }
-
-        return '协作投标';
-    }
-
-    /**
-     * 返回“我的投标”卡片使用的最新投标摘要。
-     */
-    private function myBidSummary(Task $task, string $scope): ?array
-    {
-        if ($scope !== 'MY_BIDS') {
-            return null;
-        }
-
-        $bid = $task->bids->first();
-
-        if ($bid === null) {
-            return null;
-        }
-
-        return [
-            'status' => $bid->status,
-            'amountLabel' => '¥'.number_format((float) $bid->amount, 2),
-            'revisionNo' => $bid->revision_no,
         ];
     }
 
@@ -739,21 +617,6 @@ class TaskController extends Controller
                 ->where('role', 'OWNER')
                 ->where('user_id', $employeeNo))
             ->exists();
-    }
-
-    /**
-     * 返回任务大厅的个人范围选项。
-     *
-     * value 会进入 URL query string，label 只用于页面展示。
-     */
-    private function scopeOptions(): array
-    {
-        return [
-            ['value' => 'HALL', 'label' => '任务大厅'],
-            ['value' => 'PUBLISHED', 'label' => '我发布的'],
-            ['value' => 'MY_BIDS', 'label' => '我的投标'],
-            ['value' => 'PARTICIPATED', 'label' => '我参与的'],
-        ];
     }
 
     /**
