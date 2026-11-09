@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\AssignedTaskController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BidController;
+use App\Http\Controllers\MyBidController;
+use App\Http\Controllers\PublishedTaskController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\TaskController;
 use App\Http\Middleware\EnsureSsoAuthenticated;
@@ -27,6 +30,10 @@ Route::post('/logout', [SsoController::class, 'logout'])->name('sso.logout');
 // 业务页面统一受 SSO Session 保护；未登录时会被 EnsureSsoAuthenticated 重定向到 /login。
 Route::middleware(EnsureSsoAuthenticated::class)->group(function (): void {
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    // “我的任务”菜单直接进入三个独立工作页面，不增加只负责二次跳转的中间页。
+    Route::get('/my-tasks/published', PublishedTaskController::class)->name('my-tasks.published');
+    Route::get('/my-tasks/bids', MyBidController::class)->name('my-tasks.bids');
+    Route::get('/my-tasks/assignments', AssignedTaskController::class)->name('my-tasks.assignments');
     // 发布任务在任务大厅模态框内提交，不单独创建 /tasks/create 页面。
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
     // 任务详情页承载投标、选标、交付、事件时间线等后续业务动作。

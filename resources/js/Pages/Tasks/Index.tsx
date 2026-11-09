@@ -33,6 +33,7 @@ import type {
     UploadedTaskAttachment,
 } from '@/types/task';
 import { urlWithQuery } from '@/utils/url';
+import { taskDetailUrl } from '@/utils/task-navigation';
 import { useState, type ReactNode } from 'react';
 
 type TaskCreateForm = {
@@ -522,7 +523,7 @@ export default function TaskIndex({
                                                 <h2 className="m-0 min-w-0 text-base font-semibold">
                                                     <Link
                                                         className="block truncate hover:text-[#5e6ad2] hover:underline"
-                                                        href={`/tasks/${task.id}`}
+                                                        href={taskDetailUrl(task.id)}
                                                     >
                                                         {task.title}
                                                     </Link>
@@ -592,7 +593,7 @@ export default function TaskIndex({
                                             </span>
                                             <Link
                                                 className="mt-auto pt-3 text-sm font-medium text-[#5e6ad2] hover:underline"
-                                                href={`/tasks/${task.id}`}
+                                                href={taskDetailUrl(task.id)}
                                             >
                                                 查看详情
                                             </Link>

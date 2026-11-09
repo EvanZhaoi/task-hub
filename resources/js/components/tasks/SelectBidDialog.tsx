@@ -17,6 +17,7 @@ import type { BidItem } from '@/types/task';
 
 type SelectBidDialogProps = {
     bid: BidItem;
+    returnTo: string;
     taskId: string;
 };
 
@@ -26,9 +27,9 @@ type SelectBidDialogProps = {
  * 弹窗只提交 URL 中的 taskId 和 bid.id，不把金额、交期或成员重新提交给后端。
  * SelectBidService 会从锁定后的数据库记录读取真实值，避免浏览器篡改中标结果。
  */
-export function SelectBidDialog({ bid, taskId }: SelectBidDialogProps) {
+export function SelectBidDialog({ bid, returnTo, taskId }: SelectBidDialogProps) {
     const [open, setOpen] = useState(false);
-    const form = useForm<Record<string, never>>({});
+    const form = useForm({ returnTo });
     const owner = bid.members.find((member) => member.role === 'OWNER');
     const collaborators = bid.members.filter((member) => member.role === 'COLLABORATOR');
 

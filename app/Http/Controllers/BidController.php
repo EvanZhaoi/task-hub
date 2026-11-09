@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Services\CurrentUserService;
 use App\Services\PlaceBidService;
 use App\Services\SelectBidService;
+use App\Services\TaskReturnNavigation;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -29,6 +30,7 @@ class BidController extends Controller
         Task $task,
         CurrentUserService $currentUser,
         PlaceBidService $placeBid,
+        TaskReturnNavigation $returnNavigation,
     ): RedirectResponse {
         $placeBid->execute(
             task: $task,
@@ -38,8 +40,15 @@ class BidController extends Controller
             accessToken: $currentUser->accessToken(),
         );
 
+        $routeParameters = ['task' => $task];
+        $returnTo = $returnNavigation->safeUrl($request->input('returnTo'));
+
+        if ($returnTo !== null) {
+            $routeParameters['returnTo'] = $returnTo;
+        }
+
         return redirect()
-            ->route('tasks.show', $task)
+            ->route('tasks.show', $routeParameters)
             ->with('success', '投标已提交。');
     }
 
@@ -54,6 +63,7 @@ class BidController extends Controller
         Bid $bid,
         CurrentUserService $currentUser,
         SelectBidService $selectBid,
+        TaskReturnNavigation $returnNavigation,
     ): RedirectResponse {
         $selectBid->execute(
             task: $task,
@@ -62,8 +72,15 @@ class BidController extends Controller
             accessToken: $currentUser->accessToken(),
         );
 
+        $routeParameters = ['task' => $task];
+        $returnTo = $returnNavigation->safeUrl($request->input('returnTo'));
+
+        if ($returnTo !== null) {
+            $routeParameters['returnTo'] = $returnTo;
+        }
+
         return redirect()
-            ->route('tasks.show', $task)
+            ->route('tasks.show', $routeParameters)
             ->with('success', '已选定中标方案，任务进入进行中。');
     }
 }

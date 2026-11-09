@@ -84,6 +84,8 @@ type BidForm = {
     deliveryDate: string;
     proposal: string;
     attachments: UploadedTaskAttachment[];
+    // 详情页来源会随投标提交继续传递，成功后仍能返回原筛选页。
+    returnTo: string;
 };
 
 export default function TaskShow({
@@ -91,6 +93,7 @@ export default function TaskShow({
     canPlaceBid,
     currentEmployeeNo,
     events,
+    navigation,
     personnelOptions,
     task,
     visibleBids,
@@ -111,18 +114,19 @@ export default function TaskShow({
                     canPlaceBid={canPlaceBid}
                     currentEmployeeNo={currentEmployeeNo}
                     personnelOptions={personnelOptions}
+                    returnTo={navigation.returnTo}
                     taskId={task.id}
                 />
             }
-            activeNav="tasks"
+            activeNav={navigation.activeNav}
             subtitle="查看任务完整信息、投标记录和业务时间线"
             title="任务详情"
         >
             <div className="mb-4">
                 <Button asChild size="sm" variant="outline">
-                    <Link href="/tasks">
+                    <Link href={navigation.backUrl}>
                         <ArrowLeft className="mr-2 size-4" />
-                        返回任务大厅
+                        {navigation.backLabel}
                     </Link>
                 </Button>
             </div>
@@ -230,7 +234,7 @@ export default function TaskShow({
                     <Card>
                         <CardContent className="p-6">
                             <SectionTitle title="投标记录" />
-                            <BidList bids={visibleBids} overview={bidOverview} taskId={task.id} />
+                            <BidList bids={visibleBids} overview={bidOverview} returnTo={navigation.returnTo} taskId={task.id} />
                         </CardContent>
                     </Card>
                 </div>
@@ -262,6 +266,7 @@ type PlaceBidDialogProps = {
     canPlaceBid: boolean;
     currentEmployeeNo: string;
     personnelOptions: PersonnelOption[];
+    returnTo: string;
     taskId: string;
 };
 
@@ -270,7 +275,7 @@ type PlaceBidDialogProps = {
  *
  * 当前登录人始终作为 OWNER，用户只需要选择可选的 COLLABORATOR；后端会再次校验人员有效性。
  */
-function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, taskId }: PlaceBidDialogProps) {
+function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, returnTo, taskId }: PlaceBidDialogProps) {
     const [open, setOpen] = useState(false);
     const [uploadedAttachments, setUploadedAttachments] = useState<UploadedTaskAttachment[]>([]);
     const form = useForm<BidForm>({
@@ -279,6 +284,7 @@ function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, task
         deliveryDate: '',
         proposal: '',
         attachments: [],
+        returnTo,
     });
 
     function changeOpen(nextOpen: boolean): void {
@@ -409,13 +415,14 @@ function PlaceBidDialog({ canPlaceBid, currentEmployeeNo, personnelOptions, task
 type BidListProps = {
     bids: BidItem[];
     overview: TaskShowProps['bidOverview'];
+    returnTo: string;
     taskId: string;
 };
 
 /**
  * 以紧凑摘要行展示当前用户有权查看的投标，说明、协作者和附件按需展开。
  */
-function BidList({ bids, overview, taskId }: BidListProps) {
+function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
     const [expandedBidIds, setExpandedBidIds] = useState<string[]>([]);
 
     /**
@@ -486,7 +493,7 @@ function BidList({ bids, overview, taskId }: BidListProps) {
 
                             {bid.canSelect ? (
                                 <div className="flex shrink-0 items-center pr-1">
-                                    <SelectBidDialog bid={bid} taskId={taskId} />
+                                    <SelectBidDialog bid={bid} returnTo={returnTo} taskId={taskId} />
                                 </div>
                             ) : null}
                         </div>

@@ -86,6 +86,16 @@ export type PaginationMeta = {
     total: number;
 };
 
+// 新增列表页共用 Laravel 分页外形，但每个页面仍保留自己的业务记录类型。
+export type Paginated<T> = {
+    data: T[];
+    meta: PaginationMeta;
+    links: {
+        prev: string | null;
+        next: string | null;
+    };
+};
+
 export type PaginatedTasks = {
     data: TaskListItem[];
     meta: PaginationMeta;
@@ -199,6 +209,88 @@ export type TaskShowProps = {
     currentEmployeeNo: string;
     events: TaskEventItem[];
     personnelOptions: PersonnelOption[];
+    navigation: {
+        // activeNav 控制详情页顶部应高亮“任务大厅”还是“我的任务”。
+        activeNav: 'tasks' | 'my-tasks';
+        backLabel: string;
+        backUrl: string;
+        // returnTo 会随投标和选标表单继续提交，成功后仍可回到原筛选页。
+        returnTo: string;
+    };
     task: TaskDetail;
     visibleBids: BidItem[];
+};
+
+export type PersonalTaskFilters = {
+    keyword: string;
+    status: string;
+};
+
+export type PublishedTaskItem = {
+    id: string;
+    title: string;
+    description: string;
+    amountLabel: string;
+    amountType: 'BUDGET' | 'FINAL';
+    displayStatus: TaskStatus;
+    status: TaskDatabaseStatus;
+    assignmentType: TaskAssignmentType;
+    complexity: TaskComplexity;
+    isUrgent: boolean;
+    expectedDelivery: string | null;
+    finalDelivery: string | null;
+    biddingDeadline: string | null;
+    createdAt: string | null;
+    activeBidCount: number;
+    bidCount: number;
+};
+
+export type PublishedTasksProps = {
+    filters: PersonalTaskFilters;
+    tasks: Paginated<PublishedTaskItem>;
+};
+
+export type MyBidMemberItem = {
+    userId: string;
+    displayName: string;
+    role: BidMemberRole;
+};
+
+export type MyBidItem = {
+    id: string;
+    taskId: string;
+    taskTitle: string;
+    taskStatus: TaskDatabaseStatus | null;
+    status: BidStatus;
+    role: BidMemberRole;
+    amountLabel: string;
+    deliveryDate: string | null;
+    proposal: string | null;
+    revisionNo: number;
+    createdAt: string | null;
+    members: MyBidMemberItem[];
+};
+
+export type MyBidsProps = {
+    bids: Paginated<MyBidItem>;
+    filters: PersonalTaskFilters;
+};
+
+export type AssignedTaskItem = {
+    taskId: string;
+    title: string;
+    description: string;
+    status: Extract<TaskDatabaseStatus, 'ASSIGNED' | 'COMPLETED' | 'CANCELLED'>;
+    role: BidMemberRole;
+    amountLabel: string;
+    finalDelivery: string | null;
+    complexity: TaskComplexity;
+    isUrgent: boolean;
+    updatedAt: string | null;
+    assignees: MyBidMemberItem[];
+};
+
+export type AssignedTasksProps = {
+    assignments: Paginated<AssignedTaskItem>;
+    filters: PersonalTaskFilters;
 };

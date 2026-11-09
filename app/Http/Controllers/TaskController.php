@@ -17,6 +17,7 @@ use App\Services\CreateDirectTaskService;
 use App\Services\CreateTaskService;
 use App\Services\CurrentUserService;
 use App\Services\RichTextSanitizer;
+use App\Services\TaskReturnNavigation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -168,10 +169,12 @@ class TaskController extends Controller
      * 当前阶段先返回任务完整信息、任务附件、可见投标和事件时间线。
      */
     public function show(
+        Request $request,
         Task $task,
         CurrentUserService $currentUser,
         RichTextSanitizer $richTextSanitizer,
         PersonnelClient $personnel,
+        TaskReturnNavigation $returnNavigation,
     ): Response {
         $employeeNo = $currentUser->employeeNo();
 
@@ -226,6 +229,8 @@ class TaskController extends Controller
             'currentEmployeeNo' => PersonnelUser::normalizeEmployeeNo($employeeNo) ?? $employeeNo,
             // 已有投标只需要人员名称映射；只有仍可投标时才把大候选列表传给浏览器。
             'personnelOptions' => $canPlaceBid ? $personnelDirectory['options'] : [],
+            // 返回地址由后端白名单校验，前端只负责展示和继续传递。
+            'navigation' => $returnNavigation->resolve($request->query('returnTo')),
         ]);
     }
 

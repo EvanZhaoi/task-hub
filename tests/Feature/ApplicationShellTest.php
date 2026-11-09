@@ -17,6 +17,7 @@ use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
 use App\Services\SnowflakeId;
 use App\Services\TaskhubRoleService;
+use App\Services\TaskReturnNavigation;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -1058,7 +1059,7 @@ test('authenticated users can view task detail page', function (): void {
     ])
         ->withHeader('X-Inertia', 'true')
         ->withHeader('X-Inertia-Version', inertiaVersionForTest())
-        ->get('/tasks/10002')
+        ->get('/tasks/10002?returnTo='.urlencode('/my-tasks/bids?status=ACTIVE&page=2'))
         ->assertOk()
         ->assertJsonPath('component', 'Tasks/Show')
         ->assertJsonPath('props.task.id', '10002')
@@ -1075,7 +1076,10 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonCount(0, 'props.visibleBids')
         ->assertJsonPath('props.personnelOptions.0.employeeNo', 'E30001')
         ->assertJsonPath('props.personnelOptions.0.displayName', '协作开发')
-        ->assertJsonPath('props.canPlaceBid', true);
+        ->assertJsonPath('props.canPlaceBid', true)
+        ->assertJsonPath('props.navigation.activeNav', 'my-tasks')
+        ->assertJsonPath('props.navigation.backLabel', '返回我的投标')
+        ->assertJsonPath('props.navigation.backUrl', '/my-tasks/bids?status=ACTIVE&page=2');
 });
 
 test('authenticated users can place a bid for an open task', function (): void {
@@ -1122,8 +1126,12 @@ test('authenticated users can place a bid for an open task', function (): void {
             'attachments' => [
                 ['id' => 'ATT-BID-001', 'name' => '投标方案.pdf'],
             ],
+            'returnTo' => '/my-tasks/bids?status=ACTIVE',
         ])
-        ->assertRedirect(route('tasks.show', 10003))
+        ->assertRedirect(route('tasks.show', [
+            'task' => 10003,
+            'returnTo' => '/my-tasks/bids?status=ACTIVE',
+        ]))
         ->assertSessionHas('success', '投标已提交。');
 
     $bid = DB::table('bid')->where('task_id', 10003)->first();
@@ -1413,8 +1421,13 @@ test('task creator can select a bid and assign all bid members', function (): vo
             'expiresAt' => now()->addHour()->toISOString(),
         ],
     ])
-        ->post('/tasks/10006/bids/21001/accept')
-        ->assertRedirect(route('tasks.show', 10006))
+        ->post('/tasks/10006/bids/21001/accept', [
+            'returnTo' => '/my-tasks/published?status=PENDING_SELECTION',
+        ])
+        ->assertRedirect(route('tasks.show', [
+            'task' => 10006,
+            'returnTo' => '/my-tasks/published?status=PENDING_SELECTION',
+        ]))
         ->assertSessionHas('success', '已选定中标方案，任务进入进行中。');
 
     $task = DB::table('task')->where('id', 10006)->first();
@@ -1927,6 +1940,147 @@ test('sso user parses current employee list payload', function (): void {
         ->and($user->email())->toBe('zhangsan@example.test')
         ->and($user->avatarId())->toBe('avatar-002')
         ->and($user->raw())->toHaveKey('data');
+});
+
+test('authenticated users can query the three personal task workspaces', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回个人工作台展示成员名称所需的最小人员列表。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-personal-pages');
+
+            return [
+                new PersonnelUser(eibNameCn: '当前用户', eibNumCn: 'E10001'),
+                new PersonnelUser(eibNameCn: '任务负责人', eibNumCn: 'E20001'),
+            ];
+        }
+    });
+
+    DB::table('task')->insert([
+        [
+            'id' => 31001,
+            'title' => '我发布的接口任务',
+            'description' => '用于验证发布任务工作台。',
+            'payment_account_id' => 'PAY001',
+            'budget' => 3000,
+            'final_amount' => null,
+            'expected_delivery' => now()->addDays(8)->toDateString(),
+            'final_delivery' => null,
+            'bidding_deadline' => now()->addDay(),
+            'status' => 'OPEN',
+            'assignment_type' => 'BIDDING',
+            'complexity' => 'MEDIUM',
+            'is_urgent' => false,
+            'created_by' => 'E10001',
+            'primary_assignee_id' => null,
+            'created_at' => now()->subHour(),
+            'updated_at' => now()->subHour(),
+        ],
+        [
+            'id' => 31002,
+            'title' => '协作执行报表任务',
+            'description' => '用于验证正式执行成员工作台。',
+            'payment_account_id' => 'PAY002',
+            'budget' => 5000,
+            'final_amount' => 4500,
+            'expected_delivery' => now()->addDays(10)->toDateString(),
+            'final_delivery' => now()->addDays(6)->toDateString(),
+            'bidding_deadline' => null,
+            'status' => 'ASSIGNED',
+            'assignment_type' => 'DIRECT',
+            'complexity' => 'HIGH',
+            'is_urgent' => true,
+            'created_by' => 'E30001',
+            'primary_assignee_id' => 'E20001',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 32001,
+        'task_id' => 31001,
+        'amount' => 2800,
+        'delivery_date' => now()->addDays(7)->toDateString(),
+        'proposal' => '当前用户参与的联合投标方案',
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '31001:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('bid_member')->insert([
+        ['id' => 32101, 'bid_id' => 32001, 'user_id' => 'E20001', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 32102, 'bid_id' => 32001, 'user_id' => 'E10001', 'role' => 'COLLABORATOR', 'created_at' => now()],
+    ]);
+
+    DB::table('task_assignee')->insert([
+        ['id' => 33001, 'task_id' => 31002, 'user_id' => 'E20001', 'role' => 'OWNER', 'created_at' => now()],
+        ['id' => 33002, 'task_id' => 31002, 'user_id' => 'E10001', 'role' => 'COLLABORATOR', 'created_at' => now()],
+    ]);
+
+    $session = [
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E10001', 'displayName' => '当前用户'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-personal-pages',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ];
+    $headers = [
+        'X-Inertia' => 'true',
+        'X-Inertia-Version' => inertiaVersionForTest(),
+    ];
+
+    $this->withSession($session)
+        ->withHeaders($headers)
+        ->get('/my-tasks/published?status=OPEN&keyword='.urlencode('接口'))
+        ->assertOk()
+        ->assertJsonPath('component', 'MyTasks/Published')
+        ->assertJsonPath('props.tasks.meta.total', 1)
+        ->assertJsonPath('props.tasks.data.0.id', '31001')
+        ->assertJsonPath('props.tasks.data.0.bidCount', 1);
+
+    $this->withSession($session)
+        ->withHeaders($headers)
+        ->get('/my-tasks/bids?status=ACTIVE&keyword='.urlencode('联合'))
+        ->assertOk()
+        ->assertJsonPath('component', 'MyTasks/Bids')
+        ->assertJsonPath('props.bids.meta.total', 1)
+        ->assertJsonPath('props.bids.data.0.role', 'COLLABORATOR')
+        ->assertJsonPath('props.bids.data.0.members.0.displayName', '任务负责人');
+
+    $this->withSession($session)
+        ->withHeaders($headers)
+        ->get('/my-tasks/assignments?status=ASSIGNED&keyword='.urlencode('报表'))
+        ->assertOk()
+        ->assertJsonPath('component', 'MyTasks/Assignments')
+        ->assertJsonPath('props.assignments.meta.total', 1)
+        ->assertJsonPath('props.assignments.data.0.role', 'COLLABORATOR')
+        ->assertJsonPath('props.assignments.data.0.amountLabel', '¥4,500.00');
+});
+
+test('task return navigation only accepts known internal list pages', function (): void {
+    $navigation = app(TaskReturnNavigation::class);
+
+    expect($navigation->resolve('/my-tasks/published?status=OPEN&page=3'))
+        ->toMatchArray([
+            'activeNav' => 'my-tasks',
+            'backLabel' => '返回我发布的',
+            'backUrl' => '/my-tasks/published?status=OPEN&page=3',
+        ])
+        ->and($navigation->safeUrl('https://evil.example.test/tasks'))->toBeNull()
+        ->and($navigation->safeUrl('//evil.example.test/tasks'))->toBeNull()
+        ->and($navigation->safeUrl('/\\evil.example.test'))->toBeNull()
+        ->and($navigation->safeUrl('/unknown'))->toBeNull()
+        ->and($navigation->resolve('/unknown')['backUrl'])->toBe('/tasks');
 });
 
 test('task model maps to the existing task table', function (): void {
