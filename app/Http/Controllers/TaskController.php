@@ -187,8 +187,8 @@ class TaskController extends Controller
                 ->orderBy('id'),
         ])->loadCount([
             'bids as active_bid_count' => fn (Builder $query): Builder => $query->where('status', 'ACTIVE'),
-            // 总投标数用于隐私提示；普通用户只看到数量，不会收到他人投标详情。
-            'bids as bid_count',
+            // 已撤回记录只向有权查看历史的人员返回详情，不计入公开的投标数量。
+            'bids as bid_count' => fn (Builder $query): Builder => $query->where('status', '!=', 'WITHDRAWN'),
         ]);
 
         $canPlaceBid = $this->canPlaceBid($task, $employeeNo);
@@ -209,6 +209,10 @@ class TaskController extends Controller
         $visibleBids = $this->visibleBids($task, $employeeNo, $personnelDirectory['names']);
         $visibleBidIds = array_column($visibleBids, 'id');
         $totalBidCount = (int) ($task->bid_count ?? 0);
+        $visibleBidCount = count(array_filter(
+            $visibleBids,
+            fn (array $bid): bool => $bid['status'] !== 'WITHDRAWN',
+        ));
 
         return Inertia::render('Tasks/Show', [
             'task' => $this->taskDetail(
@@ -219,9 +223,10 @@ class TaskController extends Controller
             ),
             'visibleBids' => $visibleBids,
             'bidOverview' => [
+                'activeCount' => (int) ($task->active_bid_count ?? 0),
                 'totalCount' => $totalBidCount,
-                'visibleCount' => count($visibleBids),
-                'hiddenCount' => max(0, $totalBidCount - count($visibleBids)),
+                'visibleCount' => $visibleBidCount,
+                'hiddenCount' => max(0, $totalBidCount - $visibleBidCount),
             ],
             // 投标事件在查询层按权限过滤，不把无权查看的事件发送到浏览器。
             'events' => $this->visibleEvents($task, $employeeNo, $visibleBidIds),

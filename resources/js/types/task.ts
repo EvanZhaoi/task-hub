@@ -204,7 +204,10 @@ export type TaskDetail = {
 export type TaskShowProps = {
     // bidOverview 只公开数量，不包含无权查看的投标人、报价、说明和附件。
     bidOverview: {
+        // activeCount 是当前仍可参与选标的投标数，不包含撤回、中标或未中标记录。
+        activeCount: number;
         hiddenCount: number;
+        // totalCount 不包含 WITHDRAWN，撤回历史数量不会暴露给无关用户。
         totalCount: number;
         visibleCount: number;
     };

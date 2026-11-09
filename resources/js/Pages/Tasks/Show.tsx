@@ -440,12 +440,16 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
     }
 
     if (bids.length === 0) {
-        if (overview.totalCount > 0) {
+        if (overview.activeCount > 0 || overview.totalCount > 0) {
             return (
                 <div className="mt-4 flex items-start gap-3 rounded-md border border-[#e5e7eb] bg-[#f8f9fb] px-4 py-3">
                     <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[#6e6e80]" />
                     <div>
-                        <div className="text-sm font-medium text-[#374151]">该任务已有 {overview.totalCount} 条投标</div>
+                        <div className="text-sm font-medium text-[#374151]">
+                            {overview.activeCount > 0
+                                ? `该任务当前有 ${overview.activeCount} 条有效投标`
+                                : '该任务的投标阶段已经结束'}
+                        </div>
                         <p className="mt-1 text-xs leading-5 text-[#6e6e80]">
                             投标详情仅对任务发布者和对应投标成员可见，你当前没有可查看的投标记录。
                         </p>

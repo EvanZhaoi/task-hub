@@ -1070,6 +1070,7 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonPath('props.task.attachments.0.url', 'https://files.example.test/download/ATT-TASK-001')
         ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
         ->assertJsonCount(1, 'props.events')
+        ->assertJsonPath('props.bidOverview.activeCount', 1)
         ->assertJsonPath('props.bidOverview.totalCount', 1)
         ->assertJsonPath('props.bidOverview.visibleCount', 0)
         ->assertJsonPath('props.bidOverview.hiddenCount', 1)
@@ -1202,6 +1203,7 @@ test('authenticated users can place a bid for an open task', function (): void {
             'props.visibleBids.0.attachments.0.url',
             'https://files.example.test/download/ATT-BID-001',
         )
+        ->assertJsonPath('props.bidOverview.activeCount', 1)
         ->assertJsonPath('props.bidOverview.totalCount', 1)
         ->assertJsonPath('props.bidOverview.visibleCount', 1)
         ->assertJsonPath('props.bidOverview.hiddenCount', 0)
@@ -1479,13 +1481,34 @@ test('bid owner can withdraw and submit a new revision while history is preserve
         ->withHeader('X-Inertia-Version', inertiaVersionForTest())
         ->get('/tasks/10010')
         ->assertOk()
-        ->assertJsonPath('props.bidOverview.totalCount', 2)
+        ->assertJsonPath('props.bidOverview.activeCount', 1)
+        ->assertJsonPath('props.bidOverview.totalCount', 1)
+        ->assertJsonPath('props.bidOverview.visibleCount', 1)
         ->assertJsonPath('props.task.activeBidCount', 1)
         ->assertJsonPath('props.visibleBids.0.status', 'ACTIVE')
         ->assertJsonPath('props.visibleBids.0.revisionNo', 2)
         ->assertJsonPath('props.visibleBids.0.canWithdraw', true)
         ->assertJsonPath('props.visibleBids.1.status', 'WITHDRAWN')
         ->assertJsonPath('props.visibleBids.1.canWithdraw', false);
+
+    // 无关用户只得到当前有效投标数，不会从 Props 中获知已撤回历史数量。
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E90001', 'displayName' => '无关用户'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-withdraw-owner',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->withHeader('X-Inertia', 'true')
+        ->withHeader('X-Inertia-Version', inertiaVersionForTest())
+        ->get('/tasks/10010')
+        ->assertOk()
+        ->assertJsonPath('props.bidOverview.activeCount', 1)
+        ->assertJsonPath('props.bidOverview.totalCount', 1)
+        ->assertJsonPath('props.bidOverview.visibleCount', 0)
+        ->assertJsonPath('props.bidOverview.hiddenCount', 1)
+        ->assertJsonCount(0, 'props.visibleBids');
 });
 
 test('bid collaborator cannot withdraw the owner bid', function (): void {
@@ -1792,6 +1815,7 @@ test('task creator can select a bid and assign all bid members', function (): vo
         ->assertJsonPath('props.task.assignees.1.role', 'COLLABORATOR')
         // 选标后 ACTIVE 投标为 0，但两条历史投标仍然存在，详情页不能显示成“无人投标”。
         ->assertJsonPath('props.task.activeBidCount', 0)
+        ->assertJsonPath('props.bidOverview.activeCount', 0)
         ->assertJsonPath('props.bidOverview.totalCount', 2)
         ->assertJsonPath('props.visibleBids.0.canSelect', false);
 
