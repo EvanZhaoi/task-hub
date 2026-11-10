@@ -68,6 +68,8 @@ export type TaskListItem = {
     // createdBy 是工号，createdByName 是快照中的展示名称。
     createdBy: string;
     createdByName: string;
+    // 来自本据点人员目录 eibPhoto；缺失时头像组件显示姓名首字符。
+    createdByAvatarId: string | null;
     departmentName: string | null;
     paymentAccountName: string | null;
     createdAt: string | null;
@@ -133,6 +135,7 @@ export type BidMemberItem = {
     userId: string;
     displayName: string;
     departmentName: string | null;
+    avatarId: string | null;
     role: BidMemberRole;
 };
 
@@ -187,6 +190,7 @@ export type TaskDetail = {
     isUrgent: boolean;
     createdBy: string;
     createdByName: string;
+    createdByAvatarId: string | null;
     departmentName: string | null;
     paymentAccountId: string;
     paymentAccountName: string | null;

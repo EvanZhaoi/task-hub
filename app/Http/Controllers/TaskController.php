@@ -95,14 +95,21 @@ class TaskController extends Controller
             // 保留当前筛选条件，否则翻页后会丢失 keyword/status/complexity。
             ->withQueryString();
 
+        // 任务大厅本来就需要人员目录支持直接指派；头像复用同一次查询结果，不逐人调用外部接口。
+        $personnelDirectory = $this->personnelDirectory($personnel, $currentUser->accessToken());
+
         // through() 只转换当前页数据，不改变分页结构。
-        $tasks = $paginator->through(fn (Task $task): array => $this->taskItem($task, $richTextSanitizer));
+        $tasks = $paginator->through(fn (Task $task): array => $this->taskItem(
+            $task,
+            $richTextSanitizer,
+            $personnelDirectory['names'],
+        ));
 
         return Inertia::render('Tasks/Index', [
             'filters' => $filters,
             'paymentAccountOptions' => $this->paymentAccountOptions($paymentAccounts, $currentUser->accessToken()),
             // 直接指派复用人员目录，浏览器只接收选择器需要的最小字段。
-            'personnelOptions' => $this->personnelDirectory($personnel, $currentUser->accessToken())['options'],
+            'personnelOptions' => $personnelDirectory['options'],
             'statusOptions' => $this->statusOptions(),
             'complexityOptions' => $this->complexityOptions(),
             'tasks' => [
@@ -305,7 +312,7 @@ class TaskController extends Controller
      * 前端不直接消费 Eloquent Model，而是接收已经格式化好的展示字段，
      * 这样可以避免前端重复处理 BIGINT、日期、金额和 JSON 快照。
      */
-    private function taskItem(Task $task, RichTextSanitizer $richTextSanitizer): array
+    private function taskItem(Task $task, RichTextSanitizer $richTextSanitizer, array $personnelNames): array
     {
         // 快照字段可能为空，统一转成数组，避免前端展示时反复判断 null。
         $createdBySnapshot = $task->created_by_snapshot ?? [];
@@ -329,6 +336,10 @@ class TaskController extends Controller
             'isUrgent' => $task->is_urgent,
             'createdBy' => $task->created_by,
             'createdByName' => $createdBySnapshot['displayName'] ?? $task->created_by,
+            // 优先使用当前人员目录头像；目录不可用时才回退到发布快照。
+            'createdByAvatarId' => $personnelNames[$task->created_by]['avatarId']
+                ?? $createdBySnapshot['avatarId']
+                ?? null,
             'departmentName' => $createdBySnapshot['departmentName'] ?? null,
             'paymentAccountName' => $paymentAccountSnapshot['accountName'] ?? null,
             'createdAt' => $task->created_at?->format('Y-m-d H:i'),
@@ -369,6 +380,9 @@ class TaskController extends Controller
             'isUrgent' => $task->is_urgent,
             'createdBy' => $task->created_by,
             'createdByName' => $createdBySnapshot['displayName'] ?? $task->created_by,
+            'createdByAvatarId' => $personnelNames[$task->created_by]['avatarId']
+                ?? $createdBySnapshot['avatarId']
+                ?? null,
             'departmentName' => $createdBySnapshot['departmentName'] ?? null,
             'paymentAccountId' => $task->payment_account_id,
             'paymentAccountName' => $paymentAccountSnapshot['accountName'] ?? null,
@@ -383,6 +397,7 @@ class TaskController extends Controller
                 'userId' => $assignee->user_id,
                 'displayName' => $personnelNames[$assignee->user_id]['displayName'] ?? $assignee->user_id,
                 'departmentName' => $personnelNames[$assignee->user_id]['departmentName'] ?? null,
+                'avatarId' => $personnelNames[$assignee->user_id]['avatarId'] ?? null,
                 'role' => $assignee->role,
             ])->values(),
             'attachments' => $task->attachments
@@ -454,6 +469,7 @@ class TaskController extends Controller
                 // 人员接口不可用或人员离职时退回展示工号，保证历史投标仍可读取。
                 'displayName' => $personnelNames[$member->user_id]['displayName'] ?? $member->user_id,
                 'departmentName' => $personnelNames[$member->user_id]['departmentName'] ?? null,
+                'avatarId' => $personnelNames[$member->user_id]['avatarId'] ?? null,
                 'role' => $member->role,
             ])->values(),
             'attachments' => $bid->attachments
@@ -470,7 +486,7 @@ class TaskController extends Controller
      *
      * @return array{
      *     options: list<array{employeeNo: string, displayName: string, departmentName: string|null}>,
-     *     names: array<string, array{displayName: string, departmentName: string|null}>
+     *     names: array<string, array{displayName: string, departmentName: string|null, avatarId: string|null}>
      * }
      */
     private function personnelDirectory(PersonnelClient $personnel, string $accessToken): array
@@ -497,6 +513,7 @@ class TaskController extends Controller
 
             $displayName = $user->displayName() ?? $employeeNo;
             $departmentName = $user->departmentName();
+            $avatarId = $user->eibPhoto();
             $option = [
                 'employeeNo' => $employeeNo,
                 'displayName' => $displayName,
@@ -508,6 +525,7 @@ class TaskController extends Controller
             $names[$employeeNo] = [
                 'displayName' => $displayName,
                 'departmentName' => $departmentName,
+                'avatarId' => $avatarId,
             ];
         }
 

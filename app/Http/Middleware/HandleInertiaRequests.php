@@ -29,6 +29,8 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 // 给所有 React 页面提供统一应用名，避免页面硬编码 TaskHub。
                 'name' => config('app.name'),
+                // 头像前缀是公开图片地址；不下发 accessToken 或人员接口原始数据。
+                'avatarBaseUrl' => config('personnel.avatar_base_url'),
             ],
             'auth' => [
                 // 只共享页面展示需要的字段，邮箱、token 和外部接口原始数据不得发送到浏览器。
@@ -71,6 +73,7 @@ class HandleInertiaRequests extends Middleware
                 'displayName' => $user['siteUser']['displayName'] ?? null,
                 'departmentId' => $user['siteUser']['departmentId'] ?? null,
                 'departmentName' => $user['siteUser']['departmentName'] ?? null,
+                'avatarId' => $user['siteUser']['avatarId'] ?? null,
             ];
         }
 

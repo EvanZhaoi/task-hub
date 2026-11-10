@@ -8,6 +8,7 @@ import { PaymentAccountCombobox } from '@/components/common/PaymentAccountCombob
 import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Button } from '@/components/ui/button';
@@ -543,14 +544,24 @@ export default function TaskIndex({
                                         <section className="min-w-0 border-t border-[#eef0f3] pt-4 text-sm lg:border-l lg:border-t-0 lg:px-6 lg:pt-0">
                                             <div>
                                                 <span className="block text-xs text-[#9ca3af]">发布者</span>
-                                                <div className="mt-1 truncate font-medium text-[#1f2937]">
-                                                    {task.createdByName}
-                                                </div>
-                                                {task.departmentName ? (
-                                                    <div className="mt-0.5 truncate text-xs text-[#9ca3af]">
-                                                        {task.departmentName}
+                                                <div className="mt-1 flex min-w-0 items-center gap-2">
+                                                    <UserAvatar
+                                                        avatarId={task.createdByAvatarId}
+                                                        displayName={task.createdByName}
+                                                        employeeNo={task.createdBy}
+                                                        size="sm"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <div className="truncate font-medium text-[#1f2937]">
+                                                            {task.createdByName}
+                                                        </div>
+                                                        {task.departmentName ? (
+                                                            <div className="truncate text-xs text-[#9ca3af]">
+                                                                {task.departmentName}
+                                                            </div>
+                                                        ) : null}
                                                     </div>
-                                                ) : null}
+                                                </div>
                                             </div>
 
                                             <div className="mt-3">

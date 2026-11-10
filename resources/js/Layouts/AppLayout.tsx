@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { cn } from '@/lib/utils';
 import { csrfToken } from '@/utils/csrf';
 import type { SharedPageProps } from '@/types/page';
@@ -31,8 +32,8 @@ export default function AppLayout({ actions, activeNav, children, subtitle, titl
     const user = auth?.user;
     const roles = auth?.roles ?? [];
     // 优先展示姓名；没有姓名时展示工号；都没有说明 Session 中没有可展示用户信息。
-    const userLabel = user?.displayName ?? user?.employeeNo ?? '未识别用户';
-    const departmentLabel = user?.departmentName ?? '未同步部门';
+    const userLabel = user?.siteUser?.displayName ?? user?.displayName ?? user?.employeeNo ?? '未识别用户';
+    const departmentLabel = user?.siteUser?.departmentName ?? user?.departmentName ?? '未同步部门';
     // 只取 pathname 判断下拉菜单当前项，查询条件变化不影响导航选中状态。
     const currentPath = page.url.split('?')[0];
     const [isMyTasksOpen, setIsMyTasksOpen] = useState(false);
@@ -135,6 +136,13 @@ export default function AppLayout({ actions, activeNav, children, subtitle, titl
                     </nav>
 
                     <div className="flex items-center gap-3">
+                        {/* 头像只使用本据点人员列表中的 ID；没有头像时自动显示姓名首字符。 */}
+                        <UserAvatar
+                            avatarId={user?.siteUser?.avatarId}
+                            displayName={userLabel}
+                            employeeNo={user?.employeeNo}
+                            size="md"
+                        />
                         <div className="hidden text-right md:block">
                             <div className="text-sm font-medium">{userLabel}</div>
                             <div className="text-xs text-[#6e6e80]">

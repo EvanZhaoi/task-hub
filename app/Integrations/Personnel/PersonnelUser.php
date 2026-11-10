@@ -38,7 +38,7 @@ final readonly class PersonnelUser
         private ?string $eibNumCn = null,
         // eibNumJp 是真实接口中的日方工号，eibNumCn 缺失时才兜底使用。
         private ?string $eibNumJp = null,
-        // eibPhoto 是真实接口中的人员照片地址或标识，当前 MVP 暂不展示。
+        // eibPhoto 是真实接口中的头像 ID，页面会与配置的 HTTP 前缀组合成图片地址。
         private ?string $eibPhoto = null,
         // eibTurnPositiveDate 是真实接口中的转正日期，当前 MVP 暂不使用。
         private ?string $eibTurnPositiveDate = null,
@@ -253,7 +253,7 @@ final readonly class PersonnelUser
     /**
      * 获取真实接口字段 eibPhoto。
      *
-     * 当前 MVP 暂不展示人员照片。
+     * 这里只返回头像 ID，不在 Integration 层写死环境相关的 HTTP 地址。
      */
     public function eibPhoto(): ?string
     {
@@ -413,6 +413,11 @@ final readonly class PersonnelUser
             'departmentName' => $this->departmentName(),
             'raw' => $this->raw,
         ];
+
+        // 只有人员主数据确实返回头像 ID 时才写入 Session。
+        if ($this->eibPhoto() !== null) {
+            $payload['avatarId'] = $this->eibPhoto();
+        }
 
         // 外部接口没有邮箱时不增加 null 字段，保持既有 Session 结构兼容。
         if ($this->eibEmail() !== null) {

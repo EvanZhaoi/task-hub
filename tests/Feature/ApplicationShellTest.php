@@ -48,6 +48,7 @@ test('the sso callback page responds successfully', function (): void {
 
 test('authenticated users can view the task hall with filters', function (): void {
     $this->withoutVite();
+    config(['personnel.avatar_base_url' => 'http://avatars.example.test/image']);
     // 测试数据库不执行正式 schema.sql，因此这里为本测试创建最小可用表结构。
     createTaskHallTables();
 
@@ -82,7 +83,10 @@ test('authenticated users can view the task hall with filters', function (): voi
         {
             expect($accessToken)->toBe('token-123');
 
-            return [new PersonnelUser(eibNameCn: '王开发', eibNumCn: 'E20001')];
+            return [
+                new PersonnelUser(eibNameCn: '王开发', eibNumCn: 'E20001'),
+                new PersonnelUser(eibNameCn: '陈PM', eibNumCn: 'E10001', eibPhoto: 'photo-10001'),
+            ];
         }
     });
 
@@ -149,11 +153,13 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.filters.keyword', '登录')
         ->assertJsonPath('props.paymentAccountOptions.0.value', 'PAY001')
         ->assertJsonPath('props.personnelOptions.0.employeeNo', 'E20001')
+        ->assertJsonPath('props.app.avatarBaseUrl', 'http://avatars.example.test/image')
         ->assertJsonMissingPath('props.auth.user.email')
         ->assertJsonMissingPath('props.auth.user.raw')
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
         ->assertJsonPath('props.tasks.data.0.amountType', 'BUDGET')
         ->assertJsonPath('props.tasks.data.0.isUrgent', true)
+        ->assertJsonPath('props.tasks.data.0.createdByAvatarId', 'photo-10001')
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1)
         ->assertJsonPath('props.tasks.data.0.bidCount', 1);
 });
@@ -908,6 +914,7 @@ test('sso session prefers local personnel list when user belongs to current site
                 ],
                 eibNameCn: '张三',
                 eibNumCn: '10001',
+                eibPhoto: 'site-photo-10001',
             );
         }
     });
@@ -940,9 +947,12 @@ test('sso session prefers local personnel list when user belongs to current site
             'displayName' => '张三',
             'departmentId' => 'DEV01',
             'departmentName' => '开发一部',
+            'avatarId' => 'site-photo-10001',
             'raw' => [],
         ],
-    ]);
+    ])
+        // CurrentUserService 构造快照时优先使用 siteUser 头像，但 Session 顶层总部数据仍然保留。
+        ->and(app(CurrentUserService::class)->user()->avatarId())->toBe('site-photo-10001');
 });
 
 test('authenticated users can view task detail page', function (): void {
@@ -1176,7 +1186,7 @@ test('authenticated users can place a bid for an open task', function (): void {
         {
             expect($accessToken)->toBe('token-123');
 
-            return [new PersonnelUser(eibNameCn: '王开发', eibNumCn: 'E20001')];
+            return [new PersonnelUser(eibNameCn: '王开发', eibNumCn: 'E20001', eibPhoto: 'photo-20001')];
         }
     });
 
@@ -1197,6 +1207,7 @@ test('authenticated users can place a bid for an open task', function (): void {
         ->get('/tasks/10003')
         ->assertOk()
         ->assertJsonPath('props.visibleBids.0.members.0.displayName', '王开发')
+        ->assertJsonPath('props.visibleBids.0.members.0.avatarId', 'photo-20001')
         ->assertJsonPath('props.visibleBids.0.attachments.0.id', 'ATT-BID-001')
         ->assertJsonPath('props.visibleBids.0.attachments.0.name', '投标方案.pdf')
         ->assertJsonPath(

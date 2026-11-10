@@ -41,6 +41,11 @@ final readonly class SsoUser
         // 新接口返回 data 数组，当前登录人信息取第一条。
         // 旧接口返回 user 对象；Session 中保存的是扁平结构。这里三个来源都兼容。
         $user = self::firstUserPayload($payload);
+        // 授权码登录后，本据点人员列表会以 siteUser 子数组追加到 Session。
+        // 总部 SSO 原始字段仍保留在顶层，这里只在解析展示头像时优先使用本据点数据。
+        $siteUser = isset($payload['siteUser']) && is_array($payload['siteUser'])
+            ? $payload['siteUser']
+            : [];
 
         // 工号字段优先取中方工号，其次兼容旧 employeeNo 和其它可能命名。
         $employeeNo = $user['empCnNum']
@@ -91,7 +96,8 @@ final readonly class SsoUser
                 ?? null
             ),
             avatarId: self::nullableString(
-                $user['empPhoto']
+                $siteUser['avatarId']
+                ?? $user['empPhoto']
                 ?? $user['avatarId']
                 ?? $user['avatar_id']
                 ?? $user['photoId']

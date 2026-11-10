@@ -14,10 +14,17 @@ export type CurrentUser = {
         displayName?: string;
         departmentId?: string;
         departmentName?: string;
+        // 头像 ID 来自本据点人员列表，不是 SSO 当前人员接口。
+        avatarId?: string | null;
     };
 };
 
 export type SharedPageProps = {
+    app?: {
+        name?: string;
+        // 公开 HTTP 图片前缀，UserAvatar 使用它和 avatarId 组合完整地址。
+        avatarBaseUrl?: string | null;
+    };
     // auth 来自 HandleInertiaRequests.php，全站页面都可以通过 usePage() 读取。
     auth?: {
         user?: CurrentUser | null;

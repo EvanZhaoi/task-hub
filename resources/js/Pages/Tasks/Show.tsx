@@ -16,6 +16,7 @@ import { AttachmentIcon } from '@/components/common/AttachmentIcon';
 import { DatePicker } from '@/components/common/DatePicker';
 import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
+import { UserAvatar } from '@/components/common/UserAvatar';
 import { SelectBidDialog } from '@/components/tasks/SelectBidDialog';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
@@ -162,10 +163,18 @@ export default function TaskShow({
                                         </Badge>
                                     </div>
                                     <h2 className="m-0 text-2xl font-bold tracking-normal">{task.title}</h2>
-                                    <p className="mt-2 text-sm text-[#6e6e80]">
-                                        发布者：{task.createdByName}
-                                        {task.departmentName ? ` · ${task.departmentName}` : ''}
-                                    </p>
+                                    <div className="mt-3 flex items-center gap-2 text-sm text-[#6e6e80]">
+                                        <UserAvatar
+                                            avatarId={task.createdByAvatarId}
+                                            displayName={task.createdByName}
+                                            employeeNo={task.createdBy}
+                                            size="sm"
+                                        />
+                                        <span>
+                                            发布者：{task.createdByName}
+                                            {task.departmentName ? ` · ${task.departmentName}` : ''}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div
                                     className={cn(
@@ -488,7 +497,12 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
                             <Badge className="w-fit" variant={bidStatusBadgeVariants[bid.status]}>
                                 {bidStatusLabels[bid.status]}
                             </Badge>
-                            <BidSummaryValue label="主投标人" value={owner?.displayName ?? '-'} />
+                            <BidSummaryValue
+                                avatarId={owner?.avatarId}
+                                employeeNo={owner?.userId}
+                                label="主投标人"
+                                value={owner?.displayName ?? '-'}
+                            />
                             <BidSummaryValue emphasize label="投标金额" value={bid.amountLabel} />
                             <BidSummaryValue label="承诺交付" value={bid.deliveryDate ?? '-'} />
                             <ChevronDown
@@ -534,10 +548,16 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
                                     </span>
                                     {collaborators.map((member) => (
                                         <span
-                                            className="rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
+                                            className="inline-flex items-center gap-1.5 rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
                                             key={member.userId}
                                             title={member.departmentName ?? undefined}
                                         >
+                                            <UserAvatar
+                                                avatarId={member.avatarId}
+                                                displayName={member.displayName}
+                                                employeeNo={member.userId}
+                                                size="sm"
+                                            />
                                             {member.displayName}（{member.userId}）
                                         </span>
                                     ))}
@@ -613,7 +633,9 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
 }
 
 type BidSummaryValueProps = {
+    avatarId?: string | null;
     emphasize?: boolean;
+    employeeNo?: string | null;
     label: string;
     value: string;
 };
@@ -621,18 +643,28 @@ type BidSummaryValueProps = {
 /**
  * 投标摘要行中的紧凑字段，移动端仍保留标签避免金额和日期失去语义。
  */
-function BidSummaryValue({ emphasize = false, label, value }: BidSummaryValueProps) {
+function BidSummaryValue({ avatarId, emphasize = false, employeeNo, label, value }: BidSummaryValueProps) {
     return (
         <div className="min-w-0">
             <div className="text-[11px] text-[#9ca3af]">{label}</div>
-            <div
-                className={cn(
-                    'mt-0.5 truncate text-sm font-semibold text-[#374151]',
-                    emphasize && 'text-base text-[#4f46a5]',
-                )}
-                title={value}
-            >
-                {value}
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                {avatarId || employeeNo ? (
+                    <UserAvatar
+                        avatarId={avatarId}
+                        displayName={value}
+                        employeeNo={employeeNo}
+                        size="sm"
+                    />
+                ) : null}
+                <div
+                    className={cn(
+                        'truncate text-sm font-semibold text-[#374151]',
+                        emphasize && 'text-base text-[#4f46a5]',
+                    )}
+                    title={value}
+                >
+                    {value}
+                </div>
             </div>
         </div>
     );
@@ -654,7 +686,16 @@ function AssigneeList({ assignees }: AssigneeListProps) {
             <div className="rounded-md border border-[#e5e7eb] bg-[#fbfbfc] p-4">
                 <div className="text-xs font-medium text-[#9ca3af]">负责人</div>
                 <div className="mt-2 flex items-center gap-2">
-                    <UserRound className="size-5 text-[#5e6ad2]" />
+                    {owner ? (
+                        <UserAvatar
+                            avatarId={owner.avatarId}
+                            displayName={owner.displayName}
+                            employeeNo={owner.userId}
+                            size="md"
+                        />
+                    ) : (
+                        <UserRound className="size-5 text-[#5e6ad2]" />
+                    )}
                     <div className="min-w-0">
                         <div className="truncate text-sm font-semibold text-[#1f2937]">
                             {owner?.displayName ?? '-'}
@@ -670,10 +711,16 @@ function AssigneeList({ assignees }: AssigneeListProps) {
                     <div className="mt-2 flex flex-wrap gap-2">
                         {collaborators.map((assignee) => (
                             <span
-                                className="rounded-md bg-white px-2.5 py-1.5 text-sm text-[#374151] ring-1 ring-[#e5e7eb]"
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-sm text-[#374151] ring-1 ring-[#e5e7eb]"
                                 key={assignee.userId}
                                 title={assignee.departmentName ?? undefined}
                             >
+                                <UserAvatar
+                                    avatarId={assignee.avatarId}
+                                    displayName={assignee.displayName}
+                                    employeeNo={assignee.userId}
+                                    size="sm"
+                                />
                                 {assignee.displayName}（{assignee.userId}）
                             </span>
                         ))}
