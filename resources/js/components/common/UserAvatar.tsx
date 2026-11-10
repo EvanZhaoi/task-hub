@@ -30,17 +30,20 @@ function fallbackCharacter(displayName?: string | null, employeeNo?: string | nu
 }
 
 /**
- * 将环境配置的 HTTP 前缀和人员接口头像 ID 安全组合。
+ * 将环境配置的 HTTP 查询参数前缀和人员接口头像 ID 安全组合。
+ *
+ * 真实服务地址格式是 `http://server/avatar?id=` + `avatarId`，
+ * 因此这里不能自动插入 `/`，否则会生成 `?id=/xxx` 这种错误地址。
  */
 function avatarUrl(baseUrl?: string | null, avatarId?: string | null): string | null {
-    const normalizedBaseUrl = baseUrl?.trim().replace(/\/+$/, '');
-    const normalizedAvatarId = avatarId?.trim().replace(/^\/+/, '');
+    const normalizedBaseUrl = baseUrl?.trim();
+    const normalizedAvatarId = avatarId?.trim();
 
     if (!normalizedBaseUrl || !normalizedAvatarId) {
         return null;
     }
 
-    return `${normalizedBaseUrl}/${encodeURIComponent(normalizedAvatarId)}`;
+    return `${normalizedBaseUrl}${encodeURIComponent(normalizedAvatarId)}`;
 }
 
 /**

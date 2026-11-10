@@ -15,6 +15,6 @@ return [
     'cache_store' => env('EXTERNAL_DIRECTORY_CACHE_STORE', 'redis'),
     'cache_key' => env('PERSONNEL_CACHE_KEY', 'taskhub:personnel_users'),
     'cache_ttl' => (int) env('EXTERNAL_DIRECTORY_CACHE_TTL', 86400),
-    // 人员接口只返回头像 ID，浏览器使用该 HTTP 前缀拼接完整图片地址。
+    // 人员接口只返回头像 ID，该前缀格式为 http://server/avatar?id=。
     'avatar_base_url' => env('PERSONNEL_AVATAR_BASE_URL'),
 ];
