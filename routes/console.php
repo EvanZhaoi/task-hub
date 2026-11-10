@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     // Laravel 默认示例命令，当前项目没有业务依赖；保留它不影响 Web 功能。
@@ -18,3 +19,9 @@ Artisan::command('taskhub:sync-external-directories', function (): int {
 
     return 0;
 })->purpose('Refresh external payment account and personnel directories into cache');
+
+// 每分钟扫描已截止的 OPEN 招标任务；锁最多保留10分钟，防止上一轮未结束时重复启动。
+// 命令内部按100条分批并限制单轮45秒，不为每个任务单独创建 Cron。
+Schedule::command('taskhub:expire-open-tasks')
+    ->everyMinute()
+    ->withoutOverlapping(10);

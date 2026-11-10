@@ -70,6 +70,7 @@ const eventLabels: Record<string, string> = {
     TASK_CANCELLED: '任务取消',
     TASK_FAILED: '任务流标',
     BIDDING_DEADLINE_EXTENDED: '延长招标截止',
+    BIDDING_DEADLINE_REACHED: '招标截止，等待选标',
 };
 
 const bidStatusBadgeVariants: Record<BidStatus, ComponentProps<typeof Badge>['variant']> = {

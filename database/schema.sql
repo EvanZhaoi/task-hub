@@ -69,7 +69,7 @@ CREATE TABLE `task` (
   KEY `IDX_task_created_by_status_created` (`created_by`, `status`, `created_at` DESC),
   KEY `IDX_task_primary_assignee_status` (`primary_assignee_id`, `status`),
   KEY `IDX_task_payment_account_status` (`payment_account_id`, `status`),
-  KEY `IDX_task_bidding_deadline_status` (`bidding_deadline`, `status`),
+  KEY `IDX_task_status_bidding_deadline` (`status`, `bidding_deadline`),
   KEY `IDX_task_complexity_status` (`complexity`, `status`),
   CONSTRAINT `CHK_task_budget_non_negative` CHECK (`budget` >= 0),
   CONSTRAINT `CHK_task_final_amount_non_negative` CHECK (`final_amount` IS NULL OR `final_amount` >= 0),
@@ -248,7 +248,7 @@ CREATE TABLE `task_event` (
     'BID_ACCEPTED', 'TASK_ASSIGNED', 'CHANGE_REQUESTED', 'CHANGE_APPROVED',
     'CHANGE_REJECTED', 'DELIVERY_SUBMITTED', 'DELIVERY_ACCEPTED',
     'REVISION_REQUIRED', 'TASK_COMPLETED', 'TASK_CANCELLED', 'TASK_FAILED',
-    'BIDDING_DEADLINE_EXTENDED'
+    'BIDDING_DEADLINE_EXTENDED', 'BIDDING_DEADLINE_REACHED'
   )),
   CONSTRAINT `CHK_task_event_from_status` CHECK (`from_status` IS NULL OR `from_status` IN ('DRAFT', 'OPEN', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED')),
   CONSTRAINT `CHK_task_event_to_status` CHECK (`to_status` IS NULL OR `to_status` IN ('DRAFT', 'OPEN', 'ASSIGNED', 'COMPLETED', 'FAILED', 'CANCELLED'))

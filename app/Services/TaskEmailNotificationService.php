@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Integrations\Personnel\PersonnelClient;
 use App\Integrations\Personnel\PersonnelUser;
 use App\Integrations\Sso\SsoUser;
+use App\Mail\BiddingSelectionRequiredMail;
 use App\Mail\BidSelectedMail;
 use App\Mail\BidSubmittedMail;
+use App\Mail\TaskFailedNoBidMail;
 use App\Models\Bid;
 use App\Models\Task;
 use Illuminate\Mail\Mailable;
@@ -138,6 +140,92 @@ class TaskEmailNotificationService
                 notificationType: 'BID_SELECTED',
             );
         }
+    }
+
+    /**
+     * 招标截止且存在有效投标时，提醒任务发布者完成选标。
+     *
+     * Scheduler 没有浏览器 Session，也拿不到动态 SSO accessToken，因此这里只使用发布任务时
+     * 保存的 created_by_snapshot 邮箱。快照缺少邮箱时记录警告，但不影响待选标事件。
+     */
+    public function notifyBiddingSelectionRequired(Task $task, int $activeBidCount): void
+    {
+        $recipient = $this->publisherSnapshotRecipient($task, 'SELECTION_REQUIRED');
+
+        if ($recipient === null) {
+            return;
+        }
+
+        $this->sendSafely(
+            email: $recipient['email'],
+            recipientName: $recipient['name'],
+            mail: new BiddingSelectionRequiredMail(
+                taskTitle: (string) $task->title,
+                taskUrl: route('tasks.show', $task),
+                biddingDeadline: $task->bidding_deadline?->format('Y-m-d H:i') ?? '-',
+                activeBidCount: $activeBidCount,
+            ),
+            taskId: (string) $task->id,
+            employeeNo: (string) $task->created_by,
+            notificationType: 'SELECTION_REQUIRED',
+        );
+    }
+
+    /**
+     * 招标截止且没有有效投标时，通知任务发布者任务已经自动流标。
+     *
+     * 邮件发送在流标事务提交后执行；邮件异常只记录日志，不能恢复已经生效的 FAILED 状态。
+     */
+    public function notifyNoBidFailure(Task $task): void
+    {
+        $recipient = $this->publisherSnapshotRecipient($task, 'NO_BID_TIMEOUT');
+
+        if ($recipient === null) {
+            return;
+        }
+
+        $this->sendSafely(
+            email: $recipient['email'],
+            recipientName: $recipient['name'],
+            mail: new TaskFailedNoBidMail(
+                taskTitle: (string) $task->title,
+                taskUrl: route('tasks.show', $task),
+                biddingDeadline: $task->bidding_deadline?->format('Y-m-d H:i') ?? '-',
+                reason: '招标截止时没有有效投标',
+            ),
+            taskId: (string) $task->id,
+            employeeNo: (string) $task->created_by,
+            notificationType: 'NO_BID_TIMEOUT',
+        );
+    }
+
+    /**
+     * 从任务发布者历史快照读取后台通知所需的姓名和邮箱。
+     *
+     * 后台命令不能使用个人固定 Token 调总部接口。若历史任务没有邮箱快照，当前阶段记录日志并跳过邮件，
+     * 等总部提供服务端认证方式后再增加后台人员查询能力。
+     *
+     * @return array{email: string, name: string}|null
+     */
+    private function publisherSnapshotRecipient(Task $task, string $notificationType): ?array
+    {
+        $snapshot = is_array($task->created_by_snapshot) ? $task->created_by_snapshot : [];
+        $email = $this->validEmail($snapshot['email'] ?? null);
+
+        if ($email === null) {
+            Log::warning('截止邮件未发送：任务发布者快照没有可用邮箱。', [
+                'task_id' => (string) $task->id,
+                'recipient_employee_no' => (string) $task->created_by,
+                'notification_type' => $notificationType,
+            ]);
+
+            return null;
+        }
+
+        return [
+            'email' => $email,
+            'name' => $this->nullableString($snapshot['displayName'] ?? null) ?? (string) $task->created_by,
+        ];
     }
 
     /**
