@@ -33,6 +33,7 @@ class TaskEvent extends Model
         'task_id',
         'event_type',
         'operator_id',
+        'operator_name',
         'from_status',
         'to_status',
         'related_type',

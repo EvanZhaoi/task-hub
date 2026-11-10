@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FocusEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { formatDepartmentName } from '@/utils/personnel';
 import type { PersonnelOption } from '@/types/task';
 
 const MAX_VISIBLE_OPTIONS = 20;
@@ -186,7 +187,9 @@ export function PersonnelMultiSelect({
                                     <span className="block truncate font-medium">{option.displayName}</span>
                                     <span className="block truncate text-xs text-[#6e6e80]">
                                         {option.employeeNo}
-                                        {option.departmentName ? ` · ${option.departmentName}` : ''}
+                                        {option.departmentName
+                                            ? ` · ${formatDepartmentName(option.departmentName)}`
+                                            : ''}
                                     </span>
                                 </span>
                             </Button>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { cn } from '@/lib/utils';
 import { csrfToken } from '@/utils/csrf';
+import { formatDepartmentName } from '@/utils/personnel';
 import type { SharedPageProps } from '@/types/page';
 
 type AppLayoutProps = {
@@ -33,7 +34,8 @@ export default function AppLayout({ actions, activeNav, children, subtitle, titl
     const roles = auth?.roles ?? [];
     // 优先展示姓名；没有姓名时展示工号；都没有说明 Session 中没有可展示用户信息。
     const userLabel = user?.siteUser?.displayName ?? user?.displayName ?? user?.employeeNo ?? '未识别用户';
-    const departmentLabel = user?.siteUser?.departmentName ?? user?.departmentName ?? '未同步部门';
+    const departmentLabel =
+        formatDepartmentName(user?.siteUser?.departmentName ?? user?.departmentName) || '未同步部门';
     // 只取 pathname 判断下拉菜单当前项，查询条件变化不影响导航选中状态。
     const currentPath = page.url.split('?')[0];
     const [isMyTasksOpen, setIsMyTasksOpen] = useState(false);

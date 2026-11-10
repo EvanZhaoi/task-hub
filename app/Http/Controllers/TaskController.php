@@ -589,7 +589,9 @@ class TaskController extends Controller
     {
         $query = TaskEvent::query()
             ->where('task_id', $task->id)
-            ->latest('created_at');
+            // 时间线按业务发生顺序展示；同一秒内使用递增事件 ID 保证顺序稳定。
+            ->oldest('created_at')
+            ->orderBy('id');
 
         if ($task->created_by !== $employeeNo) {
             $query->where(function (Builder $query) use ($visibleBidIds): void {
@@ -623,6 +625,7 @@ class TaskController extends Controller
             'id' => (string) $event->id,
             'eventType' => $event->event_type,
             'operatorId' => $event->operator_id,
+            'operatorName' => $event->operator_name,
             'fromStatus' => $event->from_status,
             'toStatus' => $event->to_status,
             'relatedType' => $event->related_type,

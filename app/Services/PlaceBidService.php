@@ -84,6 +84,7 @@ class PlaceBidService
                 $lockedTask,
                 $bid,
                 $employeeNo,
+                $user->displayName(),
                 count($attachments),
                 count($collaboratorEmployeeNos),
             );
@@ -319,6 +320,7 @@ class PlaceBidService
         Task $task,
         Bid $bid,
         string $employeeNo,
+        string $operatorName,
         int $attachmentCount,
         int $collaboratorCount,
     ): void {
@@ -327,6 +329,7 @@ class PlaceBidService
             'task_id' => $task->id,
             'event_type' => 'BID_SUBMITTED',
             'operator_id' => $employeeNo,
+            'operator_name' => $operatorName,
             'from_status' => $task->status,
             'to_status' => $task->status,
             'related_type' => 'BID',

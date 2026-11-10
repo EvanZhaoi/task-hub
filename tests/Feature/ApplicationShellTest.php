@@ -273,6 +273,9 @@ test('authenticated users can publish a bidding task with attachment id and name
     expect(DB::table('task_event')->where('task_id', $task->id)->orderBy('id')->pluck('event_type')->all())
         ->toBe(['TASK_CREATED', 'TASK_PUBLISHED']);
 
+    expect(DB::table('task_event')->where('task_id', $task->id)->pluck('operator_name')->unique()->values()->all())
+        ->toBe(['李雷']);
+
     // 发布与详情必须作为一条完整链路验证，防止附件虽然入库但详情关联条件不一致。
     $this->withHeader('X-Inertia', 'true')
         ->withHeader('X-Inertia-Version', inertiaVersionForTest())
@@ -1010,15 +1013,31 @@ test('authenticated users can view task detail page', function (): void {
         'created_at' => now(),
     ]);
 
+    $publishedAt = now();
+
     DB::table('task_event')->insert([
-        'id' => 40001,
-        'task_id' => 10002,
-        'event_type' => 'TASK_PUBLISHED',
-        'operator_id' => 'E10001',
-        'from_status' => 'DRAFT',
-        'to_status' => 'OPEN',
-        'remark' => '任务进入招标中',
-        'created_at' => now(),
+        [
+            'id' => 40000,
+            'task_id' => 10002,
+            'event_type' => 'TASK_CREATED',
+            'operator_id' => 'E10001',
+            'operator_name' => '陈PM',
+            'from_status' => null,
+            'to_status' => 'OPEN',
+            'remark' => '发布者创建任务',
+            'created_at' => $publishedAt,
+        ],
+        [
+            'id' => 40001,
+            'task_id' => 10002,
+            'event_type' => 'TASK_PUBLISHED',
+            'operator_id' => 'E10001',
+            'operator_name' => '陈PM',
+            'from_status' => 'DRAFT',
+            'to_status' => 'OPEN',
+            'remark' => '任务进入招标中',
+            'created_at' => $publishedAt,
+        ],
     ]);
 
     // 插入其他用户的投标和投标事件，验证普通访问者只能看到数量，不能看到方案或个人履历。
@@ -1078,8 +1097,10 @@ test('authenticated users can view task detail page', function (): void {
         ->assertJsonPath('props.task.isUrgent', false)
         ->assertJsonPath('props.task.attachments.0.name', '需求说明.pdf')
         ->assertJsonPath('props.task.attachments.0.url', 'https://files.example.test/download/ATT-TASK-001')
-        ->assertJsonPath('props.events.0.eventType', 'TASK_PUBLISHED')
-        ->assertJsonCount(1, 'props.events')
+        ->assertJsonPath('props.events.0.eventType', 'TASK_CREATED')
+        ->assertJsonPath('props.events.0.operatorName', '陈PM')
+        ->assertJsonPath('props.events.1.eventType', 'TASK_PUBLISHED')
+        ->assertJsonCount(2, 'props.events')
         ->assertJsonPath('props.bidOverview.activeCount', 1)
         ->assertJsonPath('props.bidOverview.totalCount', 1)
         ->assertJsonPath('props.bidOverview.visibleCount', 0)
@@ -2515,6 +2536,7 @@ function createTaskHallTables(): void
         $table->unsignedBigInteger('task_id');
         $table->string('event_type', 40);
         $table->string('operator_id', 32)->nullable();
+        $table->string('operator_name', 100)->nullable();
         $table->string('from_status', 20)->nullable();
         $table->string('to_status', 20)->nullable();
         $table->string('related_type', 30)->nullable();

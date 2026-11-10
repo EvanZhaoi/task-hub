@@ -85,7 +85,14 @@ class SelectBidService
             $this->loseOtherActiveBids($lockedTask, $lockedBid);
             $this->assignTask($lockedTask, $lockedBid, $ownerEmployeeNo, $user->employeeNo());
             $this->copyMembersToAssignees($lockedTask, $members->all());
-            $this->createSelectionEvents($lockedTask, $lockedBid, $ownerEmployeeNo, $members->count(), $user->employeeNo());
+            $this->createSelectionEvents(
+                $lockedTask,
+                $lockedBid,
+                $ownerEmployeeNo,
+                $members->count(),
+                $user->employeeNo(),
+                $user->displayName(),
+            );
 
             return $lockedTask->refresh();
         });
@@ -230,12 +237,14 @@ class SelectBidService
         string $ownerEmployeeNo,
         int $memberCount,
         string $operatorEmployeeNo,
+        string $operatorName,
     ): void {
         TaskEvent::query()->create([
             'id' => $this->ids->next(),
             'task_id' => $task->id,
             'event_type' => 'BID_ACCEPTED',
             'operator_id' => $operatorEmployeeNo,
+            'operator_name' => $operatorName,
             'from_status' => 'OPEN',
             'to_status' => 'OPEN',
             'related_type' => 'BID',
@@ -254,6 +263,7 @@ class SelectBidService
             'task_id' => $task->id,
             'event_type' => 'TASK_ASSIGNED',
             'operator_id' => $operatorEmployeeNo,
+            'operator_name' => $operatorName,
             'from_status' => 'OPEN',
             'to_status' => 'ASSIGNED',
             'related_type' => 'BID',

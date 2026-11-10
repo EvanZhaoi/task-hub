@@ -233,6 +233,7 @@ CREATE TABLE `task_event` (
   `task_id`      BIGINT UNSIGNED NOT NULL COMMENT '任务 ID',
   `event_type`   VARCHAR(40)     NOT NULL COMMENT '事件类型',
   `operator_id`  VARCHAR(32)              COMMENT '人员工号（外部人员接口标识）；系统事件可为空',
+  `operator_name` VARCHAR(100)            COMMENT '操作人姓名快照；系统事件可为空',
   `from_status`  VARCHAR(20)              COMMENT '变更前任务状态',
   `to_status`    VARCHAR(20)              COMMENT '变更后任务状态',
   `related_type` VARCHAR(30)              COMMENT '关联对象类型，如 BID/DELIVERY/CHANGE_REQUEST',

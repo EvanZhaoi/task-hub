@@ -62,7 +62,7 @@ class WithdrawBidService
                 'withdrawn_at' => $withdrawnAt,
             ])->save();
 
-            $this->createWithdrawnEvent($lockedTask, $lockedBid, $employeeNo);
+            $this->createWithdrawnEvent($lockedTask, $lockedBid, $employeeNo, $user->displayName());
 
             return $lockedBid->refresh();
         });
@@ -142,13 +142,18 @@ class WithdrawBidService
      * Task 状态没有发生变化，因此 from_status 和 to_status 都保持 OPEN；
      * event_data 保存修订号和撤回时间，供详情时间线和后续审计使用。
      */
-    private function createWithdrawnEvent(Task $task, Bid $bid, string $employeeNo): void
-    {
+    private function createWithdrawnEvent(
+        Task $task,
+        Bid $bid,
+        string $employeeNo,
+        string $operatorName,
+    ): void {
         TaskEvent::query()->create([
             'id' => $this->ids->next(),
             'task_id' => $task->id,
             'event_type' => 'BID_WITHDRAWN',
             'operator_id' => $employeeNo,
+            'operator_name' => $operatorName,
             'from_status' => $task->status,
             'to_status' => $task->status,
             'related_type' => 'BID',

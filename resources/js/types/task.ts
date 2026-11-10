@@ -164,6 +164,7 @@ export type TaskEventItem = {
     id: string;
     eventType: string;
     operatorId: string | null;
+    operatorName: string | null;
     fromStatus: TaskDatabaseStatus | null;
     toStatus: TaskDatabaseStatus | null;
     relatedType: string | null;

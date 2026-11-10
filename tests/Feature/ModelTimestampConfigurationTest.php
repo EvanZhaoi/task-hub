@@ -52,6 +52,7 @@ beforeEach(function (): void {
         $table->unsignedBigInteger('task_id');
         $table->string('event_type', 40);
         $table->string('operator_id', 32)->nullable();
+        $table->string('operator_name', 100)->nullable();
         $table->string('from_status', 20)->nullable();
         $table->string('to_status', 20)->nullable();
         $table->string('related_type', 30)->nullable();

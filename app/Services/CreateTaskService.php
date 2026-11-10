@@ -106,6 +106,7 @@ class CreateTaskService
             'task_id' => $task->id,
             'event_type' => 'TASK_CREATED',
             'operator_id' => $user->employeeNo(),
+            'operator_name' => $user->displayName(),
             'from_status' => null,
             'to_status' => 'OPEN',
             'event_data' => [
@@ -131,6 +132,7 @@ class CreateTaskService
             'task_id' => $task->id,
             'event_type' => 'TASK_PUBLISHED',
             'operator_id' => $user->employeeNo(),
+            'operator_name' => $user->displayName(),
             'from_status' => 'DRAFT',
             'to_status' => 'OPEN',
             'event_data' => [

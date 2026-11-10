@@ -37,6 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { formatDepartmentName } from '@/utils/personnel';
 import type { SharedPageProps } from '@/types/page';
 import type {
     BidItem,
@@ -172,7 +173,9 @@ export default function TaskShow({
                                         />
                                         <span>
                                             发布者：{task.createdByName}
-                                            {task.departmentName ? ` · ${task.departmentName}` : ''}
+                                            {task.departmentName
+                                                ? ` · ${formatDepartmentName(task.departmentName)}`
+                                                : ''}
                                         </span>
                                     </div>
                                 </div>
@@ -550,7 +553,7 @@ function BidList({ bids, overview, returnTo, taskId }: BidListProps) {
                                         <span
                                             className="inline-flex items-center gap-1.5 rounded-md bg-[#f5f3ff] px-2 py-1 text-[#4f46a5]"
                                             key={member.userId}
-                                            title={member.departmentName ?? undefined}
+                                            title={formatDepartmentName(member.departmentName) || undefined}
                                         >
                                             <UserAvatar
                                                 avatarId={member.avatarId}
@@ -713,7 +716,7 @@ function AssigneeList({ assignees }: AssigneeListProps) {
                             <span
                                 className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-sm text-[#374151] ring-1 ring-[#e5e7eb]"
                                 key={assignee.userId}
-                                title={assignee.departmentName ?? undefined}
+                                title={formatDepartmentName(assignee.departmentName) || undefined}
                             >
                                 <UserAvatar
                                     avatarId={assignee.avatarId}
@@ -756,7 +759,9 @@ function EventTimeline({
                             <div className="text-sm font-medium">{eventLabels[event.eventType] ?? event.eventType}</div>
                             <div className="mt-1 text-xs text-[#6e6e80]">
                                 {event.createdAt ?? '-'}
-                                {event.operatorId ? ` · ${event.operatorId}` : ''}
+                                {event.operatorName || event.operatorId
+                                    ? ` · ${event.operatorName ?? event.operatorId}`
+                                    : ''}
                             </div>
                             {event.remark ? <div className="mt-1 text-sm text-[#374151]">{event.remark}</div> : null}
                         </li>

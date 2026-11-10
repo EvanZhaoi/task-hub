@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { cn } from '@/lib/utils';
+import { formatDepartmentName } from '@/utils/personnel';
 import type { SharedPageProps } from '@/types/page';
 import type {
     TaskAssignmentType,
@@ -557,7 +558,7 @@ export default function TaskIndex({
                                                         </div>
                                                         {task.departmentName ? (
                                                             <div className="truncate text-xs text-[#9ca3af]">
-                                                                {task.departmentName}
+                                                                {formatDepartmentName(task.departmentName)}
                                                             </div>
                                                         ) : null}
                                                     </div>

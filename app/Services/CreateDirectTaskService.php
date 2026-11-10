@@ -240,6 +240,7 @@ class CreateDirectTaskService
             'task_id' => $task->id,
             'event_type' => 'TASK_CREATED',
             'operator_id' => $user->employeeNo(),
+            'operator_name' => $user->displayName(),
             'from_status' => null,
             'to_status' => 'ASSIGNED',
             'event_data' => [
@@ -257,6 +258,7 @@ class CreateDirectTaskService
             'task_id' => $task->id,
             'event_type' => 'TASK_ASSIGNED',
             'operator_id' => $user->employeeNo(),
+            'operator_name' => $user->displayName(),
             'from_status' => 'DRAFT',
             'to_status' => 'ASSIGNED',
             'event_data' => $eventSnapshot,
