@@ -43,6 +43,9 @@ return [
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            // 明确 MySQL 连接会话时区，避免服务器系统时区不同导致 TIMESTAMP 显示偏移。
+            // 使用 +08:00 而不是 Asia/Shanghai，不依赖 MySQL 额外安装时区表。
+            'timezone' => env('DB_TIMEZONE', '+08:00'),
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
