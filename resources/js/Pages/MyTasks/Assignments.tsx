@@ -5,6 +5,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { MyTaskFilters } from '@/components/my-tasks/MyTaskFilters';
 import { PaginationNav } from '@/components/common/PaginationNav';
+import { TaskAmountDisplay } from '@/components/tasks/TaskAmountDisplay';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,8 +16,6 @@ import { taskDetailUrl } from '@/utils/task-navigation';
 const statusOptions = [
     { label: '全部', value: 'ALL' },
     { label: '进行中', value: 'ASSIGNED' },
-    { label: '已完成', value: 'COMPLETED' },
-    { label: '已取消', value: 'CANCELLED' },
 ];
 
 /**
@@ -26,7 +25,7 @@ const statusOptions = [
  */
 export default function AssignedTasks({ assignments, filters }: AssignedTasksProps) {
     return (
-        <AppLayout activeNav="my-tasks" subtitle="集中查看你作为负责人或协作成员正在执行及已经完成的任务。" title="执行任务">
+        <AppLayout activeNav="my-tasks" subtitle="集中查看你作为负责人或协作成员正在执行的任务。" title="执行任务">
             <div className="space-y-5">
                 <MyTaskFilters action="/my-tasks/assignments" filters={filters} placeholder="搜索任务标题或描述" statusOptions={statusOptions} />
 
@@ -90,12 +89,12 @@ export default function AssignedTasks({ assignments, filters }: AssignedTasksPro
 
                                         {/* 右侧统一放金额和主操作，避免按钮在不同卡片中来回跳动。 */}
                                         <section className="flex items-center justify-between gap-4 border-t border-[#eef0f3] pt-4 lg:block lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0 lg:text-right">
-                                            <div>
-                                                <div className="text-xs text-[#9ca3af]">成交金额</div>
-                                                <div className="mt-1 text-xl font-semibold text-[#4f46a5]">
-                                                    {assignment.amountLabel}
-                                                </div>
-                                            </div>
+                                            <TaskAmountDisplay
+                                                amountLabel={assignment.amountLabel}
+                                                amountType="FINAL"
+                                                className="lg:ml-auto lg:text-right"
+                                                size="lg"
+                                            />
                                             <Button asChild className="lg:mt-3" size="sm" variant="outline">
                                                 <Link href={taskDetailUrl(assignment.taskId)}>进入任务</Link>
                                             </Button>

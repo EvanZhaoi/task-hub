@@ -1,4 +1,5 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
+import { Building2 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { DatePicker } from '@/components/common/DatePicker';
@@ -10,6 +11,7 @@ import { RichTextEditor } from '@/components/common/RichTextEditor';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
+import { TaskAmountDisplay } from '@/components/tasks/TaskAmountDisplay';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -53,6 +55,10 @@ type TaskCreateForm = {
     collaboratorEmployeeNos: string[];
     attachments: UploadedTaskAttachment[];
 };
+
+// Phase 1 尚未开放任务完成和取消流程，因此任务大厅暂时不提供对应筛选入口。
+// 状态类型和后端查询能力继续保留，后续实现业务流程后可以直接重新开放。
+const phaseOneVisibleStatuses = new Set(['ALL', 'OPEN', 'PENDING_SELECTION', 'ASSIGNED', 'FAILED']);
 
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
     // 快捷筛选要保留其它筛选条件，只替换用户当前点击的那一项。
@@ -467,7 +473,7 @@ export default function TaskIndex({
                     </form>
 
                     <div className="mt-3 flex flex-wrap gap-2">
-                        {statusOptions.map((option) => {
+                        {statusOptions.filter((option) => phaseOneVisibleStatuses.has(option.value)).map((option) => {
                             // 快捷筛选和上面的 select 使用同一套 filters，避免两个状态源不同步。
                             const isActive = filters.status === option.value;
 
@@ -506,14 +512,14 @@ export default function TaskIndex({
                         const remainingLabel = biddingRemainingLabel(task.biddingDeadline);
 
                         return (
-                            // 三块式卡片把任务、时间和预算信息固定在各自区域，便于纵向扫描比较。
+                            // 卡片按标题、描述和底部信息带组织，不再用固定三栏挤压发布者部门名称。
                             <article key={task.id}>
                                 <Card className="p-4 transition hover:border-[#c7d2fe] hover:shadow-sm sm:p-5">
-                                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_13rem_10rem] lg:items-stretch lg:gap-0">
-                                        {/* 左侧：标题、状态、复杂度、紧急情况、描述摘要和交付日期。 */}
-                                        <section className="min-w-0 lg:pr-6">
+                                    {/* 头部让标题和状态占据主要空间，金额保持固定且便于纵向比较。 */}
+                                    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="min-w-0 flex-1">
                                             <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                                <h2 className="m-0 min-w-0 text-base font-semibold">
+                                                <h2 className="m-0 min-w-0 text-base font-semibold text-[#1f2937]">
                                                     <Link
                                                         className="block truncate hover:text-[#5e6ad2] hover:underline"
                                                         href={taskDetailUrl(task.id)}
@@ -529,79 +535,85 @@ export default function TaskIndex({
                                             </div>
 
                                             <RichTextViewer
-                                                className="mt-2 line-clamp-2 max-w-none text-sm leading-5 [&_*]:m-0"
+                                                className="mt-2 line-clamp-2 max-w-none text-sm leading-6 text-[#6b7280] [&_*]:m-0"
                                                 html={task.description}
                                             />
+                                        </div>
 
-                                            <div className="mt-3 flex items-center gap-2 text-xs text-[#6e6e80]">
-                                                <span className="text-[#9ca3af]">预计交付</span>
-                                                <span className="font-medium text-[#374151]">
-                                                    {task.finalDelivery ?? task.expectedDelivery ?? '-'}
-                                                </span>
-                                            </div>
-                                        </section>
+                                        <TaskAmountDisplay
+                                            amountLabel={task.amountLabel}
+                                            amountType={task.amountType}
+                                            className="shrink-0 sm:text-right"
+                                            size="lg"
+                                        />
+                                    </header>
 
-                                        {/* 中间：只展示人员和招标时间，避免与左右两侧信息重复。 */}
-                                        <section className="min-w-0 border-t border-[#eef0f3] pt-4 text-sm lg:border-l lg:border-t-0 lg:px-6 lg:pt-0">
-                                            <div>
-                                                <span className="block text-xs text-[#9ca3af]">发布者</span>
-                                                <div className="mt-1 flex min-w-0 items-center gap-2">
-                                                    <UserAvatar
-                                                        avatarId={task.createdByAvatarId}
-                                                        displayName={task.createdByName}
-                                                        employeeNo={task.createdBy}
-                                                        size="sm"
-                                                    />
-                                                    <div className="min-w-0">
-                                                        <div className="truncate font-medium text-[#1f2937]">
+                                    {/* 底部信息带让发布者和部门使用剩余宽度，日期与操作保持紧凑。 */}
+                                    <footer className="mt-4 border-t border-[#eef0f3] pt-4">
+                                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center">
+                                            <div className="flex min-w-0 flex-1 items-start gap-3">
+                                                <UserAvatar
+                                                    avatarId={task.createdByAvatarId}
+                                                    displayName={task.createdByName}
+                                                    employeeNo={task.createdBy}
+                                                    size="md"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                                        <span className="text-xs text-[#9ca3af]">发布者</span>
+                                                        <span className="text-sm font-semibold text-[#1f2937]">
                                                             {task.createdByName}
-                                                        </div>
-                                                        {task.departmentName ? (
-                                                            <div className="truncate text-xs text-[#9ca3af]">
+                                                        </span>
+                                                    </div>
+                                                    {task.departmentName ? (
+                                                        <div
+                                                            className="mt-1 flex min-w-0 items-start gap-1.5 text-sm leading-5 text-[#6b7280]"
+                                                            title={formatDepartmentName(task.departmentName)}
+                                                        >
+                                                            <Building2 className="mt-0.5 size-4 shrink-0 text-[#9ca3af]" />
+                                                            <span className="line-clamp-2 break-words">
                                                                 {formatDepartmentName(task.departmentName)}
-                                                            </div>
-                                                        ) : null}
+                                                            </span>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4 xl:shrink-0 xl:grid-cols-[8rem_10.5rem_7rem_auto]">
+                                                <div>
+                                                    <div className="text-xs text-[#9ca3af]">预计交付</div>
+                                                    <div className="mt-1 font-medium text-[#374151]">
+                                                        {task.finalDelivery ?? task.expectedDelivery ?? '-'}
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            <div className="mt-3">
-                                                <span className="block text-xs text-[#9ca3af]">招标截止</span>
-                                                <div className="mt-1 font-medium text-[#1f2937]">
-                                                    {task.biddingDeadline ?? '-'}
+                                                <div>
+                                                    <div className="text-xs text-[#9ca3af]">招标截止</div>
+                                                    <div className="mt-1 font-medium text-[#374151]">
+                                                        {task.biddingDeadline ?? '-'}
+                                                    </div>
+                                                    {remainingLabel ? (
+                                                        <div className="mt-0.5 text-xs text-[#5e6ad2]">{remainingLabel}</div>
+                                                    ) : null}
                                                 </div>
-                                                {remainingLabel ? (
-                                                    <div className="mt-0.5 text-xs text-[#5e6ad2]">{remainingLabel}</div>
-                                                ) : null}
+                                                <div>
+                                                    <div className="text-xs text-[#9ca3af]">投标情况</div>
+                                                    <div className="mt-1 font-medium text-[#374151]">
+                                                        {task.assignmentType === 'DIRECT'
+                                                            ? '直接指派'
+                                                            : `${task.bidCount} 份投标`}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-end sm:justify-end">
+                                                    <Link
+                                                        className="whitespace-nowrap text-sm font-medium text-[#5e6ad2] hover:underline"
+                                                        href={taskDetailUrl(task.id)}
+                                                    >
+                                                        查看详情
+                                                    </Link>
+                                                </div>
                                             </div>
-                                        </section>
-
-                                        {/* 右侧：突出金额，并展示不会因选标状态流转而归零的累计投标数。 */}
-                                        <section className="flex min-w-0 flex-col border-t border-[#eef0f3] pt-4 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 lg:text-right">
-                                            <span className="text-xs text-[#9ca3af]">
-                                                {task.amountType === 'FINAL' ? '成交金额' : '任务预算'}
-                                            </span>
-                                            <strong
-                                                className={cn(
-                                                    'mt-1 text-xl font-semibold',
-                                                    task.amountType === 'FINAL' ? 'text-[#4f46a5]' : 'text-[#111827]',
-                                                )}
-                                            >
-                                                {task.amountLabel}
-                                            </strong>
-                                            <span className="mt-2 text-sm text-[#6e6e80]">
-                                                {task.assignmentType === 'DIRECT'
-                                                    ? '直接指派'
-                                                    : `共 ${task.bidCount} 份投标`}
-                                            </span>
-                                            <Link
-                                                className="mt-auto pt-3 text-sm font-medium text-[#5e6ad2] hover:underline"
-                                                href={taskDetailUrl(task.id)}
-                                            >
-                                                查看详情
-                                            </Link>
-                                        </section>
-                                    </div>
+                                        </div>
+                                    </footer>
                                 </Card>
                             </article>
                         );

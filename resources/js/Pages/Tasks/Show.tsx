@@ -19,6 +19,7 @@ import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { SelectBidDialog } from '@/components/tasks/SelectBidDialog';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
+import { TaskAmountDisplay } from '@/components/tasks/TaskAmountDisplay';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { WithdrawBidDialog } from '@/components/tasks/WithdrawBidDialog';
 import { Badge } from '@/components/ui/badge';
@@ -179,24 +180,12 @@ export default function TaskShow({
                                         </span>
                                     </div>
                                 </div>
-                                <div
-                                    className={cn(
-                                        'rounded-md px-4 py-3 text-right',
-                                        task.amountType === 'FINAL' ? 'bg-[#f5f3ff]' : 'bg-[#f7f7f8]',
-                                    )}
-                                >
-                                    <div className="text-xs text-[#6e6e80]">
-                                        {task.amountType === 'FINAL' ? '成交金额' : '任务预算'}
-                                    </div>
-                                    <div
-                                        className={cn(
-                                            'text-xl font-semibold',
-                                            task.amountType === 'FINAL' ? 'text-[#4f46a5]' : 'text-[#1a1a1a]',
-                                        )}
-                                    >
-                                        {task.amountLabel}
-                                    </div>
-                                </div>
+                                <TaskAmountDisplay
+                                    amountLabel={task.amountLabel}
+                                    amountType={task.amountType}
+                                    className="shrink-0 text-right"
+                                    size="lg"
+                                />
                             </div>
 
                             <div className="mt-6 grid gap-4 text-sm md:grid-cols-2 xl:grid-cols-4">

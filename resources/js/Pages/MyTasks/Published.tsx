@@ -5,6 +5,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { MyTaskFilters } from '@/components/my-tasks/MyTaskFilters';
 import { PaginationNav } from '@/components/common/PaginationNav';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
+import { TaskAmountDisplay } from '@/components/tasks/TaskAmountDisplay';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,9 +17,7 @@ const statusOptions = [
     { label: '招标中', value: 'OPEN' },
     { label: '待选标', value: 'PENDING_SELECTION' },
     { label: '进行中', value: 'ASSIGNED' },
-    { label: '已完成', value: 'COMPLETED' },
     { label: '已流标', value: 'FAILED' },
-    { label: '已取消', value: 'CANCELLED' },
 ];
 
 /**
@@ -78,10 +77,11 @@ export default function PublishedTasks({ filters, tasks }: PublishedTasksProps) 
                                         </div>
 
                                         <div className="flex items-center justify-between gap-4 lg:block lg:text-right">
-                                            <div>
-                                                <div className="text-xs text-[#6e6e80]">{task.amountType === 'FINAL' ? '成交金额' : '任务预算'}</div>
-                                                <div className="mt-1 text-lg font-semibold text-[#374151]">{task.amountLabel}</div>
-                                            </div>
+                                            <TaskAmountDisplay
+                                                amountLabel={task.amountLabel}
+                                                amountType={task.amountType}
+                                                className="lg:ml-auto lg:text-right"
+                                            />
                                             <Button asChild className="mt-0 lg:mt-3" size="sm" variant={task.displayStatus === 'PENDING_SELECTION' ? 'primary' : 'outline'}>
                                                 <Link href={taskDetailUrl(task.id)}>
                                                     {task.displayStatus === 'PENDING_SELECTION' ? <Gavel className="mr-1.5 size-4" /> : <ArrowRight className="mr-1.5 size-4" />}
