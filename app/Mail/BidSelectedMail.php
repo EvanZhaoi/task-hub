@@ -34,12 +34,12 @@ class BidSelectedMail extends Mailable
     }
 
     /**
-     * 指定 Markdown 邮件模板。
+     * 指定纯文本邮件模板，避免不同邮件客户端渲染出复杂网页样式。
      */
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.tasks.bid-selected',
+            text: 'mail.tasks.bid-selected',
         );
     }
 }

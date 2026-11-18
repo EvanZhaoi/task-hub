@@ -33,12 +33,12 @@ class TaskCompletedMail extends Mailable
     }
 
     /**
-     * 指定任务完成 Markdown 邮件模板。
+     * 指定任务完成纯文本邮件模板。
      */
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.tasks.task-completed',
+            text: 'mail.tasks.task-completed',
         );
     }
 }

@@ -10,9 +10,11 @@ use App\Integrations\Sso\SsoClient;
 use App\Integrations\Sso\SsoException;
 use App\Integrations\Sso\SsoToken;
 use App\Integrations\Sso\SsoUser;
+use App\Mail\BiddingSelectionRequiredMail;
 use App\Mail\BidSelectedMail;
 use App\Mail\BidSubmittedMail;
 use App\Mail\TaskCompletedMail;
+use App\Mail\TaskFailedNoBidMail;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
@@ -2572,6 +2574,33 @@ test('task return navigation only accepts known internal list pages', function (
         ->and($navigation->safeUrl('/\\evil.example.test'))->toBeNull()
         ->and($navigation->safeUrl('/unknown'))->toBeNull()
         ->and($navigation->resolve('/unknown')['backUrl'])->toBe('/tasks');
+});
+
+test('business notification mails use plain text templates with task links', function (): void {
+    $taskUrl = 'http://taskhub.example.test/tasks/10001';
+    $mails = [
+        new BidSubmittedMail('接口改造', $taskUrl, '张三', '¥1,000.00', '2026-12-01'),
+        new BidSelectedMail('李四', '负责人', '接口改造', $taskUrl, '¥1,000.00', '2026-12-01'),
+        new BiddingSelectionRequiredMail('接口改造', $taskUrl, '2026-11-30 17:00', 2),
+        new TaskFailedNoBidMail('接口改造', $taskUrl, '2026-11-30 17:00', '截止时没有有效投标'),
+        new TaskCompletedMail('李四', '负责人', '接口改造', $taskUrl, '2026-12-01 12:00'),
+    ];
+
+    foreach ($mails as $mail) {
+        $content = $mail->content();
+
+        // 业务邮件只声明纯文本视图，不再生成 Markdown 对应的 HTML 网页版本。
+        expect($content->text)->not->toBeNull()
+            ->and($content->view)->toBeNull()
+            ->and($content->html)->toBeNull()
+            ->and($content->markdown)->toBeNull();
+
+        $rendered = view($content->text, get_object_vars($mail))->render();
+
+        expect($rendered)->toContain($taskUrl)
+            ->and($rendered)->not->toContain('<x-mail::')
+            ->and(strip_tags($rendered))->toBe($rendered);
+    }
 });
 
 test('task model maps to the existing task table', function (): void {

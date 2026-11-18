@@ -34,12 +34,12 @@ class BiddingSelectionRequiredMail extends Mailable
     }
 
     /**
-     * 指定待选标 Markdown 邮件模板。
+     * 指定待选标纯文本邮件模板。
      */
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.tasks.bidding-selection-required',
+            text: 'mail.tasks.bidding-selection-required',
         );
     }
 }

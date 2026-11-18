@@ -35,12 +35,12 @@ class BidSubmittedMail extends Mailable
     }
 
     /**
-     * 指定 Markdown 邮件模板。
+     * 指定纯文本邮件模板，正文只保留关键投标信息和任务链接。
      */
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.tasks.bid-submitted',
+            text: 'mail.tasks.bid-submitted',
         );
     }
 }

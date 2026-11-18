@@ -32,12 +32,12 @@ class TaskFailedNoBidMail extends Mailable
     }
 
     /**
-     * 指定自动流标 Markdown 邮件模板。
+     * 指定自动流标纯文本邮件模板。
      */
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.tasks.task-failed-no-bid',
+            text: 'mail.tasks.task-failed-no-bid',
         );
     }
 }
