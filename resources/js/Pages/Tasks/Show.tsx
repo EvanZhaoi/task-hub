@@ -18,6 +18,7 @@ import { PersonnelMultiSelect } from '@/components/common/PersonnelMultiSelect';
 import { RichTextViewer } from '@/components/common/RichTextViewer';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { SelectBidDialog } from '@/components/tasks/SelectBidDialog';
+import { CompleteTaskDialog } from '@/components/tasks/CompleteTaskDialog';
 import { TaskAttachmentUploader } from '@/components/tasks/TaskAttachmentUploader';
 import { TaskAmountDisplay } from '@/components/tasks/TaskAmountDisplay';
 import { TaskAttributeBadges } from '@/components/tasks/TaskAttributeBadges';
@@ -95,6 +96,7 @@ type BidForm = {
 
 export default function TaskShow({
     bidOverview,
+    canComplete,
     canPlaceBid,
     currentEmployeeNo,
     events,
@@ -115,13 +117,21 @@ export default function TaskShow({
     return (
         <AppLayout
             actions={
-                <PlaceBidDialog
-                    canPlaceBid={canPlaceBid}
-                    currentEmployeeNo={currentEmployeeNo}
-                    personnelOptions={personnelOptions}
-                    returnTo={navigation.returnTo}
-                    taskId={task.id}
-                />
+                canComplete ? (
+                    <CompleteTaskDialog
+                        returnTo={navigation.returnTo}
+                        taskId={task.id}
+                        version={task.version}
+                    />
+                ) : (
+                    <PlaceBidDialog
+                        canPlaceBid={canPlaceBid}
+                        currentEmployeeNo={currentEmployeeNo}
+                        personnelOptions={personnelOptions}
+                        returnTo={navigation.returnTo}
+                        taskId={task.id}
+                    />
+                )
             }
             activeNav={navigation.activeNav}
             subtitle="查看任务完整信息、投标记录和业务时间线"
@@ -145,6 +155,12 @@ export default function TaskShow({
             {errors?.bid ? (
                 <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {errors.bid}
+                </div>
+            ) : null}
+
+            {errors?.task || errors?.version ? (
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {errors.task ?? errors.version}
                 </div>
             ) : null}
 
@@ -250,6 +266,7 @@ export default function TaskShow({
                             <InfoItem label="付款部门" value={task.paymentDepartmentName ?? '-'} />
                             <InfoItem label="发布时间" value={task.createdAt ?? '-'} />
                             <InfoItem label="更新时间" value={task.updatedAt ?? '-'} />
+                            {task.completedAt ? <InfoItem label="完成时间" value={task.completedAt} /> : null}
                         </CardContent>
                     </Card>
 

@@ -8,6 +8,7 @@ use App\Integrations\Sso\SsoUser;
 use App\Mail\BiddingSelectionRequiredMail;
 use App\Mail\BidSelectedMail;
 use App\Mail\BidSubmittedMail;
+use App\Mail\TaskCompletedMail;
 use App\Mail\TaskFailedNoBidMail;
 use App\Models\Bid;
 use App\Models\Task;
@@ -143,6 +144,64 @@ class TaskEmailNotificationService
     }
 
     /**
+     * 发布者确认任务完成后，分别通知全部正式执行成员。
+     *
+     * 每位成员单独发送，避免通过收件人列表泄露其他员工邮箱；同一邮箱只发送一次。
+     *
+     * @param  list<array{employeeNo: string, role: string}>  $members
+     */
+    public function notifyTaskCompleted(Task $task, array $members, string $accessToken): void
+    {
+        $directory = $this->personnelDirectory($accessToken, (string) $task->id);
+        $sentEmails = [];
+
+        foreach ($members as $member) {
+            $employeeNo = PersonnelUser::normalizeEmployeeNo($member['employeeNo'] ?? null);
+
+            if ($employeeNo === null) {
+                continue;
+            }
+
+            $person = $directory[$employeeNo] ?? null;
+            $email = $this->validEmail($person?->eibEmail());
+
+            if ($email === null) {
+                Log::warning('完成邮件未发送：执行成员没有可用邮箱。', [
+                    'task_id' => (string) $task->id,
+                    'recipient_employee_no' => $employeeNo,
+                    'notification_type' => 'TASK_COMPLETED',
+                ]);
+
+                continue;
+            }
+
+            $emailKey = strtolower($email);
+
+            if (isset($sentEmails[$emailKey])) {
+                continue;
+            }
+
+            $sentEmails[$emailKey] = true;
+            $role = ($member['role'] ?? '') === 'OWNER' ? '负责人' : '协作成员';
+
+            $this->sendSafely(
+                email: $email,
+                recipientName: $person?->displayName() ?? $employeeNo,
+                mail: new TaskCompletedMail(
+                    recipientName: $person?->displayName() ?? $employeeNo,
+                    memberRole: $role,
+                    taskTitle: (string) $task->title,
+                    taskUrl: route('tasks.show', $task),
+                    completedAt: $task->completed_at?->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
+                ),
+                taskId: (string) $task->id,
+                employeeNo: $employeeNo,
+                notificationType: 'TASK_COMPLETED',
+            );
+        }
+    }
+
+    /**
      * 招标截止且存在有效投标时，提醒任务发布者完成选标。
      *
      * Scheduler 没有浏览器 Session，也拿不到动态 SSO accessToken，因此这里只使用发布任务时
@@ -257,7 +316,7 @@ class TaskEmailNotificationService
         try {
             $people = $this->personnel->fetchAll($accessToken);
         } catch (Throwable $exception) {
-            Log::warning('选标邮件收件人列表查询失败。', [
+            Log::warning('业务邮件收件人列表查询失败。', [
                 'task_id' => $taskId,
                 'exception' => $exception::class,
                 'message' => $exception->getMessage(),

@@ -12,6 +12,7 @@ use App\Integrations\Sso\SsoToken;
 use App\Integrations\Sso\SsoUser;
 use App\Mail\BidSelectedMail;
 use App\Mail\BidSubmittedMail;
+use App\Mail\TaskCompletedMail;
 use App\Models\Task;
 use App\Models\TaskhubUserRole;
 use App\Services\CurrentUserService;
@@ -1902,6 +1903,152 @@ test('task creator can select a bid and assign all bid members', function (): vo
         ->and(DB::table('task_event')->where('task_id', 10006)->count())->toBe(2);
 });
 
+test('task creator can manually complete an assigned task in phase one', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+    Mail::fake();
+
+    // 完成任务后需要查询执行成员邮箱；测试使用内存对象替代真实人员接口。
+    $this->app->instance(PersonnelClient::class, new class extends PersonnelClient
+    {
+        /**
+         * 返回任务负责人和协作成员的姓名、邮箱。
+         */
+        public function fetchAll(?string $accessToken = null): array
+        {
+            expect($accessToken)->toBe('token-complete-task');
+
+            return [
+                new PersonnelUser(
+                    eibEmail: 'owner@example.test',
+                    eibNameCn: '主开发',
+                    eibNumCn: 'E20001',
+                ),
+                new PersonnelUser(
+                    eibEmail: 'collaborator@example.test',
+                    eibNameCn: '协作开发',
+                    eibNumCn: 'E20002',
+                ),
+            ];
+        }
+    });
+
+    insertAssignedTaskForCompletion(10020, 3);
+
+    $session = taskCreatorSession('token-complete-task');
+    $headers = [
+        'X-Inertia' => 'true',
+        'X-Inertia-Version' => inertiaVersionForTest(),
+    ];
+
+    // 完成前只有发布者能看到入口，同时页面取得当前 version 供乐观锁校验。
+    $this->withSession($session)
+        ->withHeaders($headers)
+        ->get('/tasks/10020')
+        ->assertOk()
+        ->assertJsonPath('props.canComplete', true)
+        ->assertJsonPath('props.task.status', 'ASSIGNED')
+        ->assertJsonPath('props.task.version', 3);
+
+    $this->withSession($session)
+        ->post('/tasks/10020/complete', [
+            'version' => 3,
+            'returnTo' => '/my-tasks/published?status=ASSIGNED',
+        ])
+        ->assertRedirect(route('tasks.show', [
+            'task' => 10020,
+            'returnTo' => '/my-tasks/published?status=ASSIGNED',
+        ]))
+        ->assertSessionHas('success', '任务已完成。');
+
+    $task = DB::table('task')->where('id', 10020)->first();
+
+    expect($task)->toMatchObject([
+        'status' => 'COMPLETED',
+        'version' => 4,
+        'updated_by' => 'E10001',
+    ])->and($task->completed_at)->not->toBeNull();
+
+    $event = DB::table('task_event')
+        ->where('task_id', 10020)
+        ->where('event_type', 'TASK_COMPLETED')
+        ->first();
+    $eventData = json_decode((string) $event->event_data, true, flags: JSON_THROW_ON_ERROR);
+
+    expect($event)->toMatchObject([
+        'operator_id' => 'E10001',
+        'operator_name' => '任务发布者',
+        'from_status' => 'ASSIGNED',
+        'to_status' => 'COMPLETED',
+    ])->and($eventData['completionMode'])->toBe('MANUAL_PHASE_ONE');
+
+    // 每位成员独立收件，避免通过抄送暴露其他成员邮箱。
+    Mail::assertSent(TaskCompletedMail::class, 2);
+    Mail::assertSent(TaskCompletedMail::class, function (TaskCompletedMail $mail): bool {
+        return $mail->hasTo('owner@example.test')
+            && $mail->recipientName === '主开发'
+            && $mail->memberRole === '负责人';
+    });
+    Mail::assertSent(TaskCompletedMail::class, function (TaskCompletedMail $mail): bool {
+        return $mail->hasTo('collaborator@example.test')
+            && $mail->recipientName === '协作开发'
+            && $mail->memberRole === '协作成员';
+    });
+
+    // 完成后入口关闭，详情页展示完成状态、完成时间和最新时间线事件。
+    $this->withSession($session)
+        ->withHeaders($headers)
+        ->get('/tasks/10020')
+        ->assertOk()
+        ->assertJsonPath('props.canComplete', false)
+        ->assertJsonPath('props.task.status', 'COMPLETED')
+        ->assertJsonPath('props.task.version', 4)
+        ->assertJsonPath('props.events.0.eventType', 'TASK_COMPLETED');
+});
+
+test('users other than the task creator cannot complete an assigned task', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+    Mail::fake();
+    insertAssignedTaskForCompletion(10021, 2);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E99999', 'displayName' => '其他用户'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-other-user',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10021')
+        ->post('/tasks/10021/complete', ['version' => 2])
+        ->assertRedirect('/tasks/10021')
+        ->assertSessionHasErrors(['task' => '只有任务发布者可以确认任务完成。']);
+
+    expect(DB::table('task')->where('id', 10021)->first())
+        ->toMatchObject(['status' => 'ASSIGNED', 'version' => 2])
+        ->and(DB::table('task_event')->where('event_type', 'TASK_COMPLETED')->exists())->toBeFalse();
+    Mail::assertNothingSent();
+});
+
+test('task completion rejects a stale task version', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+    Mail::fake();
+    insertAssignedTaskForCompletion(10022, 5);
+
+    $this->withSession(taskCreatorSession('token-stale-version'))
+        ->from('/tasks/10022')
+        ->post('/tasks/10022/complete', ['version' => 4])
+        ->assertRedirect('/tasks/10022')
+        ->assertSessionHasErrors(['version' => '任务数据已经发生变化，请刷新页面后重试。']);
+
+    expect(DB::table('task')->where('id', 10022)->first())
+        ->toMatchObject(['status' => 'ASSIGNED', 'version' => 5])
+        ->and(DB::table('task_event')->where('event_type', 'TASK_COMPLETED')->exists())->toBeFalse();
+    Mail::assertNothingSent();
+});
+
 test('users other than the task creator cannot select a bid', function (): void {
     $this->withoutVite();
     createTaskHallTables();
@@ -2447,6 +2594,68 @@ test('snowflake id generates increasing ids in the same application process', fu
     expect($second)->toBeGreaterThan($first)
         ->and($third)->toBeGreaterThan($second);
 });
+
+/**
+ * 插入一期手动完成测试使用的进行中任务和执行成员。
+ *
+ * 使用 DIRECT 模式可以让测试只聚焦“完成任务”动作，不依赖选标流程的前置数据。
+ */
+function insertAssignedTaskForCompletion(int $taskId, int $version): void
+{
+    DB::table('task')->insert([
+        'id' => $taskId,
+        'title' => '一期手动完成测试',
+        'description' => '验证发布者可以将进行中的任务确认完成。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 5000,
+        'final_amount' => 4500,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'final_delivery' => now()->addDays(7)->toDateString(),
+        'status' => 'ASSIGNED',
+        'assignment_type' => 'DIRECT',
+        'complexity' => 'MEDIUM',
+        'created_by' => 'E10001',
+        'primary_assignee_id' => 'E20001',
+        'version' => $version,
+        'created_at' => now()->subDay(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('task_assignee')->insert([
+        [
+            'id' => $taskId * 10 + 1,
+            'task_id' => $taskId,
+            'user_id' => 'E20001',
+            'role' => 'OWNER',
+            'created_at' => now(),
+        ],
+        [
+            'id' => $taskId * 10 + 2,
+            'task_id' => $taskId,
+            'user_id' => 'E20002',
+            'role' => 'COLLABORATOR',
+            'created_at' => now(),
+        ],
+    ]);
+}
+
+/**
+ * 返回任务发布者的测试 Session，避免完成流程测试重复拼装认证上下文。
+ */
+function taskCreatorSession(string $accessToken): array
+{
+    return [
+        CurrentUserService::SESSION_KEY => [
+            'employeeNo' => 'E10001',
+            'displayName' => '任务发布者',
+        ],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => $accessToken,
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ];
+}
 
 /**
  * 为任务大厅相关测试创建最小 SQLite 表结构。

@@ -16,6 +16,7 @@ import { taskDetailUrl } from '@/utils/task-navigation';
 const statusOptions = [
     { label: '全部', value: 'ALL' },
     { label: '进行中', value: 'ASSIGNED' },
+    { label: '已完成', value: 'COMPLETED' },
 ];
 
 /**
@@ -25,7 +26,7 @@ const statusOptions = [
  */
 export default function AssignedTasks({ assignments, filters }: AssignedTasksProps) {
     return (
-        <AppLayout activeNav="my-tasks" subtitle="集中查看你作为负责人或协作成员正在执行的任务。" title="执行任务">
+        <AppLayout activeNav="my-tasks" subtitle="集中查看你作为负责人或协作成员正在执行及已经完成的任务。" title="执行任务">
             <div className="space-y-5">
                 <MyTaskFilters action="/my-tasks/assignments" filters={filters} placeholder="搜索任务标题或描述" statusOptions={statusOptions} />
 

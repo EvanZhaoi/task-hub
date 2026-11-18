@@ -56,9 +56,16 @@ type TaskCreateForm = {
     attachments: UploadedTaskAttachment[];
 };
 
-// Phase 1 尚未开放任务完成和取消流程，因此任务大厅暂时不提供对应筛选入口。
-// 状态类型和后端查询能力继续保留，后续实现业务流程后可以直接重新开放。
-const phaseOneVisibleStatuses = new Set(['ALL', 'OPEN', 'PENDING_SELECTION', 'ASSIGNED', 'FAILED']);
+// Phase 1 已开放发布者手动完成，因此显示 COMPLETED；取消流程尚未实现，继续隐藏 CANCELLED。
+// 状态类型和后端查询能力仍完整保留，后续实现取消流程后可以直接重新开放。
+const phaseOneVisibleStatuses = new Set([
+    'ALL',
+    'OPEN',
+    'PENDING_SELECTION',
+    'ASSIGNED',
+    'COMPLETED',
+    'FAILED',
+]);
 
 function filterUrl(nextFilters: Partial<TaskFilters>, filters: TaskFilters): string {
     // 快捷筛选要保留其它筛选条件，只替换用户当前点击的那一项。

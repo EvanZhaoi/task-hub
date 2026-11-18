@@ -198,6 +198,9 @@ export type TaskDetail = {
     paymentDepartmentName: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    completedAt: string | null;
+    // version 随影响任务当前状态的写操作递增，完成任务时作为乐观锁提交。
+    version: number;
     activeBidCount: number;
     isCreatedByCurrentUser: boolean;
     // 正式执行成员来自 task_assignee，不从中标 Bid 临时推导。
@@ -216,6 +219,8 @@ export type TaskShowProps = {
         totalCount: number;
         visibleCount: number;
     };
+    // canComplete 仅控制页面入口，后端事务仍会重新校验发布者、状态和版本。
+    canComplete: boolean;
     canPlaceBid: boolean;
     currentEmployeeNo: string;
     events: TaskEventItem[];

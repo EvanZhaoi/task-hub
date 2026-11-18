@@ -238,6 +238,8 @@ class TaskController extends Controller
             // 投标事件在查询层按权限过滤，不把无权查看的事件发送到浏览器。
             'events' => $this->visibleEvents($task, $employeeNo, $visibleBidIds),
             'canPlaceBid' => $canPlaceBid,
+            // 前端只据此展示入口；最终权限、状态和版本仍由 CompleteTaskService 在事务内校验。
+            'canComplete' => $task->created_by === $employeeNo && $task->status === 'ASSIGNED',
             'currentEmployeeNo' => PersonnelUser::normalizeEmployeeNo($employeeNo) ?? $employeeNo,
             // 已有投标只需要人员名称映射；只有仍可投标时才把大候选列表传给浏览器。
             'personnelOptions' => $canPlaceBid ? $personnelDirectory['options'] : [],
@@ -389,6 +391,8 @@ class TaskController extends Controller
             'paymentDepartmentName' => $paymentAccountSnapshot['departmentName'] ?? null,
             'createdAt' => $task->created_at?->format('Y-m-d H:i'),
             'updatedAt' => $task->updated_at?->format('Y-m-d H:i'),
+            'completedAt' => $task->completed_at?->format('Y-m-d H:i'),
+            'version' => $task->version,
             'activeBidCount' => (int) ($task->active_bid_count ?? 0),
             'isCreatedByCurrentUser' => $task->created_by === $employeeNo,
             'currentUserAssigneeRole' => $task->assignees

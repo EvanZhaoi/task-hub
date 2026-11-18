@@ -17,6 +17,7 @@ const statusOptions = [
     { label: '招标中', value: 'OPEN' },
     { label: '待选标', value: 'PENDING_SELECTION' },
     { label: '进行中', value: 'ASSIGNED' },
+    { label: '已完成', value: 'COMPLETED' },
     { label: '已流标', value: 'FAILED' },
 ];
 

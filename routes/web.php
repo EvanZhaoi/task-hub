@@ -6,6 +6,7 @@ use App\Http\Controllers\BidController;
 use App\Http\Controllers\MyBidController;
 use App\Http\Controllers\PublishedTaskController;
 use App\Http\Controllers\SsoController;
+use App\Http\Controllers\TaskCompletionController;
 use App\Http\Controllers\TaskController;
 use App\Http\Middleware\EnsureSsoAuthenticated;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,8 @@ Route::middleware(EnsureSsoAuthenticated::class)->group(function (): void {
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
     // 任务详情页承载投标、选标、交付、事件时间线等后续业务动作。
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+    // Phase 1 由发布者确认进行中的任务完成；状态、版本和事件由 CompleteTaskService 事务处理。
+    Route::post('/tasks/{task}/complete', TaskCompletionController::class)->name('tasks.complete');
     // 投标在任务详情页模态框内提交，完整事务由 PlaceBidService 控制。
     Route::post('/tasks/{task}/bids', [BidController::class, 'store'])->name('tasks.bids.store');
     // 只有主投标人可以在截止前撤回 ACTIVE 投标，撤回事务由 WithdrawBidService 控制。
