@@ -47,6 +47,8 @@ class StoreTaskRequest extends FormRequest
             'complexity' => ['required', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
             // 是否紧急是独立布尔值，不再使用 LOW、MEDIUM、HIGH 三级枚举。
             'isUrgent' => ['required', 'boolean'],
+            // 影响范围描述任务成果预期覆盖的组织层级，不用于权限控制。
+            'impactScope' => ['required', 'string', Rule::in(['DEPARTMENT', 'DIVISION', 'COMPANY'])],
             // 付款账号来自外部系统；前端只提交 ID，名称和部门由后端调用外部接口获取。
             'paymentAccountId' => ['required', 'string', 'max:64'],
             // 直接指派必须选择一个负责人；工号是否属于人员目录由 Service 再次校验。
@@ -105,6 +107,9 @@ class StoreTaskRequest extends FormRequest
             'complexity.in' => '任务复杂度只能选择简单、中等或复杂。',
             'isUrgent.required' => '请确认任务是否紧急。',
             'isUrgent.boolean' => '任务紧急标记格式不正确。',
+            'impactScope.required' => '请选择任务影响范围。',
+            'impactScope.string' => '任务影响范围格式不正确。',
+            'impactScope.in' => '任务影响范围只能选择本部门、本 Division 或全公司。',
             'paymentAccountId.required' => '请选择付款账号。',
             'paymentAccountId.string' => '付款账号格式不正确。',
             'paymentAccountId.max' => '付款账号编码不能超过 64 个字符。',

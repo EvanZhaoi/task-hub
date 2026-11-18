@@ -62,7 +62,12 @@ export default function PublishedTasks({ filters, tasks }: PublishedTasksProps) 
                                                 <Link className="truncate text-base font-semibold hover:text-[#5e6ad2]" href={taskDetailUrl(task.id)}>
                                                     {task.title}
                                                 </Link>
-                                                <TaskAttributeBadges complexity={task.complexity} displayStatus={task.displayStatus} isUrgent={task.isUrgent} />
+                                                <TaskAttributeBadges
+                                                    complexity={task.complexity}
+                                                    displayStatus={task.displayStatus}
+                                                    impactScope={task.impactScope}
+                                                    isUrgent={task.isUrgent}
+                                                />
                                             </div>
                                             <RichTextViewer className="mt-2 line-clamp-2" html={task.description} />
                                             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#6e6e80]">

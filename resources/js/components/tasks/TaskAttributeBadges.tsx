@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { TaskComplexity, TaskStatus } from '@/types/task';
+import type { TaskComplexity, TaskImpactScope, TaskStatus } from '@/types/task';
 
 // 状态文案和视觉类型集中维护，保证任务大厅与详情页不会出现两套显示规则。
 const statusDisplay: Record<
@@ -34,11 +34,18 @@ const complexityDisplay: Record<TaskComplexity, { className: string; label: stri
     },
 };
 
+const impactScopeDisplay: Record<TaskImpactScope, string> = {
+    DEPARTMENT: '本部门',
+    DIVISION: '本 Division',
+    COMPANY: '全公司',
+};
+
 type TaskAttributeBadgesProps = {
     className?: string;
     complexity: TaskComplexity;
     displayStatus: TaskStatus;
     isUrgent: boolean;
+    impactScope: TaskImpactScope;
 };
 
 /**
@@ -51,6 +58,7 @@ export function TaskAttributeBadges({
     complexity,
     displayStatus,
     isUrgent,
+    impactScope,
 }: TaskAttributeBadgesProps) {
     const status = statusDisplay[displayStatus];
     const complexityInfo = complexityDisplay[complexity];
@@ -66,6 +74,12 @@ export function TaskAttributeBadges({
                 variant={isUrgent ? 'danger' : 'default'}
             >
                 {isUrgent ? '紧急' : '非紧急'}
+            </Badge>
+            <Badge
+                className="whitespace-nowrap border border-sky-200 bg-sky-50 text-sky-700"
+                variant="default"
+            >
+                范围：{impactScopeDisplay[impactScope]}
             </Badge>
         </div>
     );

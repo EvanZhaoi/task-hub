@@ -1,4 +1,5 @@
 import { CalendarIcon } from 'lucide-react';
+import { zhCN } from 'react-day-picker/locale';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -46,6 +47,11 @@ function displayDate(value: string): string {
 
 export function DatePicker({ disabled = false, name, onChange, placeholder = '请选择日期', value }: DatePickerProps) {
     const selectedDate = parseDate(value);
+    const currentYear = new Date().getFullYear();
+    const selectedYear = selectedDate?.getFullYear() ?? currentYear;
+    // 默认提供当前年前一年到未来十年；回填值超出范围时自动把该年份包含进下拉列表。
+    const startMonth = new Date(Math.min(currentYear - 1, selectedYear), 0, 1);
+    const endMonth = new Date(Math.max(currentYear + 10, selectedYear), 11, 31);
 
     return (
         <Popover>
@@ -62,12 +68,17 @@ export function DatePicker({ disabled = false, name, onChange, placeholder = '�
             </PopoverTrigger>
             <PopoverContent className="z-[70] w-auto">
                 <Calendar
+                    captionLayout="dropdown"
+                    endMonth={endMonth}
+                    locale={zhCN}
                     mode="single"
+                    navLayout="around"
                     onSelect={(date) => {
                         // 用户清空选择时 date 可能为 undefined；表单值同步清空。
                         onChange(date ? formatDate(date) : '');
                     }}
                     selected={selectedDate}
+                    startMonth={startMonth}
                 />
             </PopoverContent>
 

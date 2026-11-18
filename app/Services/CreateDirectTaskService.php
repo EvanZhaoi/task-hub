@@ -152,6 +152,7 @@ class CreateDirectTaskService
             'assignment_type' => 'DIRECT',
             'complexity' => $validated['complexity'],
             'is_urgent' => $validated['isUrgent'],
+            'impact_scope' => $validated['impactScope'],
             'created_by' => $employeeNo,
             'created_by_snapshot' => $this->createdBySnapshot($user),
             'assigned_bid_id' => null,
@@ -249,6 +250,7 @@ class CreateDirectTaskService
                 'budget' => $task->budget,
                 'complexity' => $task->complexity,
                 'isUrgent' => $task->is_urgent,
+                'impactScope' => $task->impact_scope,
             ],
             'remark' => '发布者创建直接指派任务',
         ]);

@@ -34,6 +34,7 @@ import type {
     TaskAssignmentType,
     TaskComplexity,
     TaskFilters,
+    TaskImpactScope,
     TaskIndexProps,
     UploadedTaskAttachment,
 } from '@/types/task';
@@ -50,6 +51,7 @@ type TaskCreateForm = {
     biddingDeadline: string;
     complexity: TaskComplexity;
     isUrgent: boolean;
+    impactScope: TaskImpactScope;
     paymentAccountId: string;
     ownerEmployeeNo: string;
     collaboratorEmployeeNos: string[];
@@ -124,6 +126,7 @@ export default function TaskIndex({
         biddingDeadline: '',
         complexity: 'MEDIUM',
         isUrgent: false,
+        impactScope: 'DEPARTMENT',
         paymentAccountId: '',
         ownerEmployeeNo: '',
         collaboratorEmployeeNos: [],
@@ -252,8 +255,8 @@ export default function TaskIndex({
                                     />
                                 </Field>
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                                    <div className="min-w-0 sm:col-span-2">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="min-w-0">
                                         <Field label="预算金额" message={form.errors.budget} required>
                                             <Input
                                                 className="w-full"
@@ -282,7 +285,9 @@ export default function TaskIndex({
                                             <option value="HIGH">复杂</option>
                                         </NativeSelect>
                                     </Field>
+                                </div>
 
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <Field label="是否紧急" message={form.errors.isUrgent}>
                                         <label className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-[#d9dce3] bg-white px-3 text-sm text-[#374151] hover:bg-[#fafafa]">
                                             <input
@@ -294,6 +299,21 @@ export default function TaskIndex({
                                             />
                                             <span>标记为紧急任务</span>
                                         </label>
+                                    </Field>
+
+                                    <Field label="影响范围" message={form.errors.impactScope} required>
+                                        <NativeSelect
+                                            className="w-full min-w-0"
+                                            name="impactScope"
+                                            onChange={(event) =>
+                                                form.setData('impactScope', event.target.value as TaskImpactScope)
+                                            }
+                                            value={form.data.impactScope}
+                                        >
+                                            <option value="DEPARTMENT">本部门</option>
+                                            <option value="DIVISION">本 Division</option>
+                                            <option value="COMPANY">全公司</option>
+                                        </NativeSelect>
                                     </Field>
                                 </div>
 
@@ -537,6 +557,7 @@ export default function TaskIndex({
                                                 <TaskAttributeBadges
                                                     complexity={task.complexity}
                                                     displayStatus={task.displayStatus}
+                                                    impactScope={task.impactScope}
                                                     isUrgent={task.isUrgent}
                                                 />
                                             </div>

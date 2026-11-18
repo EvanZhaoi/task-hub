@@ -174,6 +174,7 @@ export default function TaskShow({
                                         <TaskAttributeBadges
                                             complexity={task.complexity}
                                             displayStatus={task.displayStatus}
+                                            impactScope={task.impactScope}
                                             isUrgent={task.isUrgent}
                                         />
                                         <Badge variant="default">

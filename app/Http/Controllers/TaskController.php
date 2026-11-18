@@ -74,6 +74,7 @@ class TaskController extends Controller
                 'assignment_type',
                 'complexity',
                 'is_urgent',
+                'impact_scope',
                 'created_by',
                 'created_by_snapshot',
                 'payment_account_snapshot',
@@ -336,6 +337,7 @@ class TaskController extends Controller
             'assignmentType' => $task->assignment_type,
             'complexity' => $task->complexity,
             'isUrgent' => $task->is_urgent,
+            'impactScope' => $task->impact_scope,
             'createdBy' => $task->created_by,
             'createdByName' => $createdBySnapshot['displayName'] ?? $task->created_by,
             // 优先使用当前人员目录头像；目录不可用时才回退到发布快照。
@@ -380,6 +382,7 @@ class TaskController extends Controller
             'assignmentType' => $task->assignment_type,
             'complexity' => $task->complexity,
             'isUrgent' => $task->is_urgent,
+            'impactScope' => $task->impact_scope,
             'createdBy' => $task->created_by,
             'createdByName' => $createdBySnapshot['displayName'] ?? $task->created_by,
             'createdByAvatarId' => $personnelNames[$task->created_by]['avatarId']

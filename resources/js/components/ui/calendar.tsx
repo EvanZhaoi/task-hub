@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { DayPicker } from 'react-day-picker';
 import type { DayButtonProps, NextMonthButtonProps, PreviousMonthButtonProps } from 'react-day-picker';
@@ -16,13 +16,21 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
                 // 这里直接把视觉样式集中在基础 Calendar 中，业务组件只负责传 selected/onSelect。
                 months: 'flex flex-col',
                 month: 'space-y-3',
-                month_caption: 'relative flex items-center justify-center',
-                caption_label: 'text-sm font-medium',
-                nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
+                month_caption: 'relative flex h-9 items-center justify-center px-11',
+                caption_label:
+                    'pointer-events-none inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-[#374151]',
+                dropdowns: 'flex items-center justify-center gap-1',
+                dropdown_root:
+                    'relative inline-flex h-8 cursor-pointer items-center rounded-md border border-[#e5e7eb] bg-white hover:bg-[#f8f9fb]',
+                // 原生 select 透明覆盖在显示文案上，点击整块区域即可选择月份或年份。
+                dropdown: 'absolute inset-0 z-10 size-full cursor-pointer opacity-0',
+                months_dropdown: 'cursor-pointer',
+                years_dropdown: 'cursor-pointer',
+                nav: 'pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between',
                 button_previous:
-                    'inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-[#6e6e80] hover:bg-[#f3f4f6] disabled:cursor-not-allowed disabled:opacity-40',
+                    'pointer-events-auto z-20 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-40',
                 button_next:
-                    'inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-[#6e6e80] hover:bg-[#f3f4f6] disabled:cursor-not-allowed disabled:opacity-40',
+                    'pointer-events-auto z-20 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-40',
                 month_grid: 'w-full border-collapse space-y-1',
                 weekdays: 'flex',
                 weekday: 'w-9 rounded-md text-center text-xs font-normal text-[#9ca3af]',
@@ -40,8 +48,19 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
             }}
             components={{
                 // 使用 lucide 图标替代默认箭头，保持项目图标风格统一。
-                Chevron: ({ orientation }) =>
-                    orientation === 'left' ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />,
+                Chevron: ({ className: chevronClassName, orientation }) => {
+                    const iconClassName = cn('pointer-events-none size-5', chevronClassName);
+
+                    if (orientation === 'left') {
+                        return <ChevronLeft aria-hidden="true" className={iconClassName} />;
+                    }
+
+                    if (orientation === 'down') {
+                        return <ChevronDown aria-hidden="true" className={iconClassName} />;
+                    }
+
+                    return <ChevronRight aria-hidden="true" className={iconClassName} />;
+                },
                 DayButton: ({ day: _day, modifiers: _modifiers, ...buttonProps }: DayButtonProps) => (
                     // 日历经常放在 form 里；button 默认 type 是 submit。
                     // 如果不显式写 type="button"，点击日期可能会提交发布任务表单，导致“点了日期但没有选中”的错觉。

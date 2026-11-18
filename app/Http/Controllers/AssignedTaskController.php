@@ -98,6 +98,7 @@ class AssignedTaskController extends Controller
             'finalDelivery' => $task?->final_delivery?->toDateString(),
             'complexity' => $task?->complexity ?? 'MEDIUM',
             'isUrgent' => (bool) ($task?->is_urgent ?? false),
+            'impactScope' => $task?->impact_scope ?? 'DEPARTMENT',
             'updatedAt' => $task?->updated_at?->format('Y-m-d H:i'),
             'assignees' => $task?->assignees->map(fn ($member): array => [
                 'userId' => $member->user_id,

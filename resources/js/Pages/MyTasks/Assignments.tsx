@@ -55,6 +55,7 @@ export default function AssignedTasks({ assignments, filters }: AssignedTasksPro
                                                 className="mt-2"
                                                 complexity={assignment.complexity}
                                                 displayStatus={assignment.status}
+                                                impactScope={assignment.impactScope}
                                                 isUrgent={assignment.isUrgent}
                                             />
                                             <RichTextViewer

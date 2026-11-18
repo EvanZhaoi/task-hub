@@ -107,6 +107,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         'assignment_type' => 'BIDDING',
         'complexity' => 'MEDIUM',
         'is_urgent' => true,
+        'impact_scope' => 'COMPANY',
         'created_by' => 'E10001',
         'created_by_snapshot' => json_encode([
             'displayName' => '陈PM',
@@ -162,6 +163,7 @@ test('authenticated users can view the task hall with filters', function (): voi
         ->assertJsonPath('props.tasks.data.0.displayStatus', 'PENDING_SELECTION')
         ->assertJsonPath('props.tasks.data.0.amountType', 'BUDGET')
         ->assertJsonPath('props.tasks.data.0.isUrgent', true)
+        ->assertJsonPath('props.tasks.data.0.impactScope', 'COMPANY')
         ->assertJsonPath('props.tasks.data.0.createdByAvatarId', 'photo-10001')
         ->assertJsonPath('props.tasks.data.0.activeBidCount', 1)
         ->assertJsonPath('props.tasks.data.0.bidCount', 1);
@@ -215,6 +217,7 @@ test('authenticated users can publish a bidding task with attachment id and name
             'biddingDeadline' => now()->addDay()->format('Y-m-d\TH:i'),
             'complexity' => 'MEDIUM',
             'isUrgent' => true,
+            'impactScope' => 'COMPANY',
             'paymentAccountId' => 'PAY001',
             'attachments' => [
                 ['id' => 'ATT001', 'name' => '需求说明.pdf'],
@@ -232,6 +235,7 @@ test('authenticated users can publish a bidding task with attachment id and name
         ->and($task->status)->toBe('OPEN')
         ->and($task->assignment_type)->toBe('BIDDING')
         ->and((bool) $task->is_urgent)->toBeTrue()
+        ->and($task->impact_scope)->toBe('COMPANY')
         ->and($task->created_by)->toBe('E10002');
 
     expect($task->description)
@@ -353,6 +357,7 @@ test('authenticated users can publish a direct task with owner and collaborators
             // DIRECT 不提交 biddingDeadline，后端也不会为它保存招标截止时间。
             'complexity' => 'HIGH',
             'isUrgent' => false,
+            'impactScope' => 'DIVISION',
             'paymentAccountId' => 'PAY001',
             'ownerEmployeeNo' => 'E20001',
             'collaboratorEmployeeNos' => ['E20002', 'E20003'],
@@ -371,6 +376,7 @@ test('authenticated users can publish a direct task with owner and collaborators
         ->and($task->assigned_bid_id)->toBeNull()
         ->and($task->primary_assignee_id)->toBe('E20001')
         ->and($task->bidding_deadline)->toBeNull()
+        ->and($task->impact_scope)->toBe('DIVISION')
         ->and((float) $task->final_amount)->toBe(5000.0)
         ->and($task->final_delivery)->toBe(now()->addDays(10)->toDateString());
 
@@ -451,6 +457,7 @@ test('direct task publishing rejects members outside the personnel directory', f
             'expectedDelivery' => now()->addDays(5)->toDateString(),
             'complexity' => 'LOW',
             'isUrgent' => false,
+            'impactScope' => 'DEPARTMENT',
             'paymentAccountId' => 'PAY001',
             'ownerEmployeeNo' => 'E99999',
             'collaboratorEmployeeNos' => [],
@@ -507,6 +514,7 @@ test('direct task publishing rejects an owner repeated as collaborator', functio
             'expectedDelivery' => now()->addDays(5)->toDateString(),
             'complexity' => 'LOW',
             'isUrgent' => false,
+            'impactScope' => 'DEPARTMENT',
             'paymentAccountId' => 'PAY001',
             'ownerEmployeeNo' => 'E20001',
             'collaboratorEmployeeNos' => ['E20001'],
@@ -2719,6 +2727,7 @@ function createTaskHallTables(): void
         $table->string('complexity', 20);
         // 是否紧急与复杂度独立，默认 false 兼容普通历史任务。
         $table->boolean('is_urgent')->default(false);
+        $table->string('impact_scope', 20)->default('DEPARTMENT');
         $table->string('created_by', 32);
         $table->json('created_by_snapshot')->nullable();
         $table->unsignedBigInteger('assigned_bid_id')->nullable();

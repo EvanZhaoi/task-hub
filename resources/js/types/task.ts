@@ -7,6 +7,9 @@ export type TaskDatabaseStatus = Exclude<TaskStatus, 'PENDING_SELECTION'>;
 
 export type TaskComplexity = 'LOW' | 'MEDIUM' | 'HIGH';
 
+// 影响范围只描述任务成果预计覆盖的组织层级，不作为数据可见性或权限枚举。
+export type TaskImpactScope = 'DEPARTMENT' | 'DIVISION' | 'COMPANY';
+
 export type TaskAssignmentType = 'BIDDING' | 'DIRECT';
 
 export type SelectOption = {
@@ -65,6 +68,7 @@ export type TaskListItem = {
     assignmentType: TaskAssignmentType;
     complexity: TaskComplexity;
     isUrgent: boolean;
+    impactScope: TaskImpactScope;
     // createdBy 是工号，createdByName 是快照中的展示名称。
     createdBy: string;
     createdByName: string;
@@ -189,6 +193,7 @@ export type TaskDetail = {
     assignmentType: TaskAssignmentType;
     complexity: TaskComplexity;
     isUrgent: boolean;
+    impactScope: TaskImpactScope;
     createdBy: string;
     createdByName: string;
     createdByAvatarId: string | null;
@@ -253,6 +258,7 @@ export type PublishedTaskItem = {
     assignmentType: TaskAssignmentType;
     complexity: TaskComplexity;
     isUrgent: boolean;
+    impactScope: TaskImpactScope;
     expectedDelivery: string | null;
     finalDelivery: string | null;
     biddingDeadline: string | null;
@@ -302,6 +308,7 @@ export type AssignedTaskItem = {
     finalDelivery: string | null;
     complexity: TaskComplexity;
     isUrgent: boolean;
+    impactScope: TaskImpactScope;
     updatedAt: string | null;
     assignees: MyBidMemberItem[];
 };

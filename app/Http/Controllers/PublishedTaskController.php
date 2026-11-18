@@ -106,6 +106,7 @@ class PublishedTaskController extends Controller
             'assignmentType' => $task->assignment_type,
             'complexity' => $task->complexity,
             'isUrgent' => $task->is_urgent,
+            'impactScope' => $task->impact_scope,
             'expectedDelivery' => $task->expected_delivery?->toDateString(),
             'finalDelivery' => $task->final_delivery?->toDateString(),
             'biddingDeadline' => $task->bidding_deadline?->format('Y-m-d H:i'),
