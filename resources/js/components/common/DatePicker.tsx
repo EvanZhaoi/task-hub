@@ -1,4 +1,5 @@
 import { CalendarIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { zhCN } from 'react-day-picker/locale';
 
 import { Button } from '@/components/ui/button';
@@ -49,12 +50,32 @@ export function DatePicker({ disabled = false, name, onChange, placeholder = '�
     const selectedDate = parseDate(value);
     const currentYear = new Date().getFullYear();
     const selectedYear = selectedDate?.getFullYear() ?? currentYear;
+    const [open, setOpen] = useState(false);
+    const [displayMonth, setDisplayMonth] = useState<Date>(selectedDate ?? new Date());
     // 默认提供当前年前一年到未来十年；回填值超出范围时自动把该年份包含进下拉列表。
     const startMonth = new Date(Math.min(currentYear - 1, selectedYear), 0, 1);
     const endMonth = new Date(Math.max(currentYear + 10, selectedYear), 11, 31);
 
+    useEffect(() => {
+        // 表单重置或后端回填日期后，让下次打开的日历定位到对应月份。
+        const nextSelectedDate = parseDate(value);
+
+        if (nextSelectedDate) {
+            setDisplayMonth(nextSelectedDate);
+        }
+    }, [value]);
+
+    function changeOpen(nextOpen: boolean): void {
+        setOpen(nextOpen);
+
+        if (nextOpen) {
+            // 每次打开都从当前已选日期开始；没有值时回到本月。
+            setDisplayMonth(selectedDate ?? new Date());
+        }
+    }
+
     return (
-        <Popover>
+        <Popover onOpenChange={changeOpen} open={open}>
             <PopoverTrigger asChild>
                 <Button
                     className={cn('w-full justify-start px-3 text-left font-normal', !value && 'text-[#9ca3af]')}
@@ -66,16 +87,19 @@ export function DatePicker({ disabled = false, name, onChange, placeholder = '�
                     <span className="min-w-0 truncate">{value ? displayDate(value) : placeholder}</span>
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="z-[70] w-auto">
+            <PopoverContent className="z-[70] w-auto rounded-lg p-3 shadow-xl">
                 <Calendar
                     captionLayout="dropdown"
                     endMonth={endMonth}
                     locale={zhCN}
                     mode="single"
-                    navLayout="around"
+                    month={displayMonth}
+                    navLayout="after"
+                    onMonthChange={setDisplayMonth}
                     onSelect={(date) => {
                         // 用户清空选择时 date 可能为 undefined；表单值同步清空。
                         onChange(date ? formatDate(date) : '');
+                        setOpen(false);
                     }}
                     selected={selectedDate}
                     startMonth={startMonth}

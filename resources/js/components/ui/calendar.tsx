@@ -15,22 +15,22 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
                 // month_grid/table/row/cell 是 react-day-picker v10 的结构类名。
                 // 这里直接把视觉样式集中在基础 Calendar 中，业务组件只负责传 selected/onSelect。
                 months: 'flex flex-col',
-                month: 'space-y-3',
-                month_caption: 'relative flex h-9 items-center justify-center px-11',
+                month: 'relative space-y-2',
+                month_caption: 'relative flex h-9 items-center justify-center px-10',
                 caption_label:
-                    'pointer-events-none inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium text-[#374151]',
-                dropdowns: 'flex items-center justify-center gap-1',
+                    'pointer-events-none inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-semibold text-[#374151]',
+                dropdowns: 'flex items-center justify-center gap-1.5',
                 dropdown_root:
-                    'relative inline-flex h-8 cursor-pointer items-center rounded-md border border-[#e5e7eb] bg-white hover:bg-[#f8f9fb]',
+                    'relative inline-flex h-8 cursor-pointer items-center rounded-md bg-[#f6f7f9] transition-colors hover:bg-[#eceef2]',
                 // 原生 select 透明覆盖在显示文案上，点击整块区域即可选择月份或年份。
                 dropdown: 'absolute inset-0 z-10 size-full cursor-pointer opacity-0',
                 months_dropdown: 'cursor-pointer',
                 years_dropdown: 'cursor-pointer',
-                nav: 'pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between',
+                nav: 'pointer-events-none absolute inset-x-0 top-0 z-20 flex h-9 items-center justify-between',
                 button_previous:
-                    'pointer-events-auto z-20 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-40',
+                    'pointer-events-auto inline-flex size-9 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-[#4b5563] shadow-none outline-none transition-colors hover:bg-[#f3f4f6] hover:text-[#111827] focus-visible:ring-2 focus-visible:ring-[#5e6ad2]/30 disabled:cursor-not-allowed disabled:opacity-40',
                 button_next:
-                    'pointer-events-auto z-20 inline-flex size-9 cursor-pointer items-center justify-center rounded-md text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-40',
+                    'pointer-events-auto inline-flex size-9 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-[#4b5563] shadow-none outline-none transition-colors hover:bg-[#f3f4f6] hover:text-[#111827] focus-visible:ring-2 focus-visible:ring-[#5e6ad2]/30 disabled:cursor-not-allowed disabled:opacity-40',
                 month_grid: 'w-full border-collapse space-y-1',
                 weekdays: 'flex',
                 weekday: 'w-9 rounded-md text-center text-xs font-normal text-[#9ca3af]',
