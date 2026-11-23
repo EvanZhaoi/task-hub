@@ -49,9 +49,10 @@ type TaskAttributeBadgesProps = {
 };
 
 /**
- * 统一展示任务状态、复杂度和紧急情况。
+ * 统一展示任务状态、复杂度、紧急标记和影响范围。
  *
- * 两个页面共同使用该业务组件，后续调整标签文案或颜色时只需要修改一个文件。
+ * 普通任务不展示“非紧急”标签，只在需要引起注意时展示“紧急”，
+ * 减少列表和详情页中的无效视觉信息。
  */
 export function TaskAttributeBadges({
     className,
@@ -69,12 +70,11 @@ export function TaskAttributeBadges({
             <Badge className={cn('whitespace-nowrap', complexityInfo.className)} variant="default">
                 复杂度：{complexityInfo.label}
             </Badge>
-            <Badge
-                className={cn('whitespace-nowrap', !isUrgent && 'bg-slate-50 text-slate-600')}
-                variant={isUrgent ? 'danger' : 'default'}
-            >
-                {isUrgent ? '紧急' : '非紧急'}
-            </Badge>
+            {isUrgent && (
+                <Badge className="whitespace-nowrap" variant="danger">
+                    紧急
+                </Badge>
+            )}
             <Badge
                 className="whitespace-nowrap border border-sky-200 bg-sky-50 text-sky-700"
                 variant="default"
