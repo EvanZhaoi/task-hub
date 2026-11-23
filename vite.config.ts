@@ -10,7 +10,7 @@ export default defineConfig({
         alias: {
             // 与 tsconfig.json 中的 @/* 保持一致。
             // TypeScript 负责类型检查，Vite 负责开发服务和生产构建解析。
-            '@': path.resolve(__dirname, 'resources/js'),
+            '@': path.resolve(import.meta.dirname, 'resources/js'),
         },
     },
     plugins: [

@@ -71,3 +71,7 @@ hs_err_pid*
 # 压缩包 / 临时产物
 *.tgz
 *.tar.gz
+*.tar
+
+# Docker 离线部署产物
+/deploy/artifacts/

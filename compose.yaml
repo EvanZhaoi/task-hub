@@ -1,0 +1,67 @@
+name: taskhub
+
+services:
+  app:
+    build:
+      context: .
+      target: app
+      args:
+        PHP_IMAGE: ${TASKHUB_PHP_IMAGE:-php:8.5.13-fpm-trixie}
+        NODE_IMAGE: ${TASKHUB_NODE_IMAGE:-node:24.22.3-alpine3.24}
+        COMPOSER_IMAGE: ${TASKHUB_COMPOSER_IMAGE:-composer:2.11.2}
+        NGINX_IMAGE: ${TASKHUB_NGINX_IMAGE:-nginx:1.30.7-alpine3.24}
+        REDIS_EXTENSION_VERSION: ${TASKHUB_REDIS_EXTENSION_VERSION:-6.3.0}
+    image: taskhub-app:${TASKHUB_VERSION:-1.0.0}
+    pull_policy: never
+    env_file:
+      # 联网构建脚本使用公开模板；离线启动默认切回真实生产配置。
+      - ${TASKHUB_ENV_FILE:-.env.production}
+    restart: unless-stopped
+    volumes:
+      # 文件 Session、缓存和日志必须跨容器重启保留，并与 Scheduler 共享。
+      - taskhub_storage:/var/www/html/storage
+    networks:
+      - taskhub
+    stop_grace_period: 30s
+
+  scheduler:
+    image: taskhub-app:${TASKHUB_VERSION:-1.0.0}
+    pull_policy: never
+    env_file:
+      - ${TASKHUB_ENV_FILE:-.env.production}
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work", "--no-interaction"]
+    depends_on:
+      - app
+    volumes:
+      - taskhub_storage:/var/www/html/storage
+    networks:
+      - taskhub
+    stop_grace_period: 30s
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        PHP_IMAGE: ${TASKHUB_PHP_IMAGE:-php:8.5.13-fpm-trixie}
+        NODE_IMAGE: ${TASKHUB_NODE_IMAGE:-node:24.22.3-alpine3.24}
+        COMPOSER_IMAGE: ${TASKHUB_COMPOSER_IMAGE:-composer:2.11.2}
+        NGINX_IMAGE: ${TASKHUB_NGINX_IMAGE:-nginx:1.30.7-alpine3.24}
+    image: taskhub-web:${TASKHUB_VERSION:-1.0.0}
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      # 现有 Nginx 已占用 80/443，TaskHub 第一版默认使用宿主机 18080。
+      - "${TASKHUB_HTTP_PORT:-18080}:80"
+    networks:
+      - taskhub
+
+networks:
+  taskhub:
+    driver: bridge
+
+volumes:
+  taskhub_storage:
