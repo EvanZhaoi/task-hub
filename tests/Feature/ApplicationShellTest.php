@@ -1253,6 +1253,158 @@ test('authenticated users can place a bid for an open task', function (): void {
         ->assertJsonPath('props.events.0.eventType', 'BID_SUBMITTED');
 });
 
+test('bid submission rejects publisher expired task and duplicate active bid', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    $futureDeadline = now()->addDay();
+    $commonTask = [
+        'description' => '验证投标入口的权限和状态边界。',
+        'payment_account_id' => 'PAY001',
+        'budget' => 3000,
+        'expected_delivery' => now()->addDays(10)->toDateString(),
+        'status' => 'OPEN',
+        'assignment_type' => 'BIDDING',
+        'complexity' => 'MEDIUM',
+        'version' => 0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ];
+
+    DB::table('task')->insert([
+        [
+            ...$commonTask,
+            'id' => 10020,
+            'title' => '发布者禁止自投测试',
+            'bidding_deadline' => $futureDeadline,
+            'created_by' => 'E10001',
+        ],
+        [
+            ...$commonTask,
+            'id' => 10021,
+            'title' => '截止后禁止投标测试',
+            'bidding_deadline' => now()->subMinute(),
+            'created_by' => 'E10002',
+        ],
+        [
+            ...$commonTask,
+            'id' => 10022,
+            'title' => '重复有效投标测试',
+            'bidding_deadline' => $futureDeadline,
+            'created_by' => 'E10002',
+        ],
+    ]);
+
+    DB::table('bid')->insert([
+        'id' => 21020,
+        'task_id' => 10022,
+        'amount' => 2800,
+        'delivery_date' => now()->addDays(7)->toDateString(),
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10022:E10001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    DB::table('bid_member')->insert([
+        'id' => 22020,
+        'bid_id' => 21020,
+        'user_id' => 'E10001',
+        'role' => 'OWNER',
+        'created_at' => now(),
+    ]);
+
+    $session = taskCreatorSession('token-bid-boundary');
+    $payload = [
+        'amount' => '2500.00',
+        'deliveryDate' => now()->addDays(6)->toDateString(),
+        'proposal' => '边界测试投标方案。',
+    ];
+
+    // 即使页面入口被手工构造，发布者也不能给自己发布的任务投标。
+    $this->withSession($session)
+        ->from('/tasks/10020')
+        ->post('/tasks/10020/bids', $payload)
+        ->assertRedirect('/tasks/10020')
+        ->assertSessionHasErrors(['amount' => '任务发布者不能投自己的任务。']);
+
+    // OPEN 只是数据库状态；截止时间到达后同样必须拒绝新增投标。
+    $this->withSession($session)
+        ->from('/tasks/10021')
+        ->post('/tasks/10021/bids', $payload)
+        ->assertRedirect('/tasks/10021')
+        ->assertSessionHasErrors(['amount' => '招标已截止，不能继续提交投标。']);
+
+    // 同一 OWNER 在同一任务上最多只能保留一条 ACTIVE 投标。
+    $this->withSession($session)
+        ->from('/tasks/10022')
+        ->post('/tasks/10022/bids', $payload)
+        ->assertRedirect('/tasks/10022')
+        ->assertSessionHasErrors(['amount' => '你已经对该任务提交过有效投标，请先撤回后再重新投标。']);
+
+    expect(DB::table('bid')->count())->toBe(1)
+        ->and(DB::table('task_event')->where('event_type', 'BID_SUBMITTED')->exists())->toBeFalse();
+});
+
+test('bid owner cannot withdraw a bid through another task route', function (): void {
+    $this->withoutVite();
+    createTaskHallTables();
+
+    foreach ([10023, 10024] as $taskId) {
+        DB::table('task')->insert([
+            'id' => $taskId,
+            'title' => "跨任务撤回校验 {$taskId}",
+            'description' => '验证路由中的 task 和 bid 必须属于同一业务对象。',
+            'payment_account_id' => 'PAY001',
+            'budget' => 3000,
+            'expected_delivery' => now()->addDays(10)->toDateString(),
+            'bidding_deadline' => now()->addDay(),
+            'status' => 'OPEN',
+            'assignment_type' => 'BIDDING',
+            'complexity' => 'MEDIUM',
+            'created_by' => 'E10001',
+            'version' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    DB::table('bid')->insert([
+        'id' => 21023,
+        'task_id' => 10023,
+        'amount' => 2800,
+        'delivery_date' => now()->addDays(7)->toDateString(),
+        'status' => 'ACTIVE',
+        'revision_no' => 1,
+        'active_key' => '10023:E20001',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    DB::table('bid_member')->insert([
+        'id' => 22023,
+        'bid_id' => 21023,
+        'user_id' => 'E20001',
+        'role' => 'OWNER',
+        'created_at' => now(),
+    ]);
+
+    $this->withSession([
+        CurrentUserService::SESSION_KEY => ['employeeNo' => 'E20001', 'displayName' => '主投标人'],
+        CurrentUserService::ROLE_SESSION_KEY => [],
+        CurrentUserService::TOKEN_SESSION_KEY => [
+            'accessToken' => 'token-cross-task-withdraw',
+            'expiresAt' => now()->addHour()->toISOString(),
+        ],
+    ])
+        ->from('/tasks/10024')
+        ->post('/tasks/10024/bids/21023/withdraw')
+        ->assertRedirect('/tasks/10024')
+        ->assertSessionHasErrors(['bid' => '目标投标不属于当前任务。']);
+
+    expect(DB::table('bid')->where('id', 21023)->value('status'))->toBe('ACTIVE')
+        ->and(DB::table('task_event')->where('event_type', 'BID_WITHDRAWN')->exists())->toBeFalse();
+});
+
 test('authenticated users can place a joint bid with collaborators', function (): void {
     $this->withoutVite();
     createTaskHallTables();
