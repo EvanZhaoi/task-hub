@@ -123,30 +123,41 @@ export function PersonnelMultiSelect({
     return (
         <div className="space-y-2" onBlur={handleBlur}>
             {value.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                    {value.map((employeeNo) => {
-                        const option = optionMap.get(employeeNo);
+                <div className="rounded-md border border-[#e5e7eb] bg-[#fafafa] p-2">
+                    {value.length > 1 ? (
+                        <div className="mb-1.5 flex items-center justify-between px-0.5 text-xs text-[#6e6e80]">
+                            <span>已选 {value.length} 人</span>
+                            <span>可继续搜索添加</span>
+                        </div>
+                    ) : null}
 
-                        return (
-                            <span
-                                className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-[#f5f3ff] px-2.5 py-1 text-sm text-[#4f46a5]"
-                                key={employeeNo}
-                            >
-                                <span className="max-w-52 truncate">
-                                    {option?.displayName ?? employeeNo}（{employeeNo}）
-                                </span>
-                                <button
-                                    aria-label={`移除${selectionLabel} ${option?.displayName ?? employeeNo}`}
-                                    className="rounded-sm p-0.5 hover:bg-[#e9e5ff]"
-                                    disabled={disabled}
-                                    onClick={() => removeEmployee(employeeNo)}
-                                    type="button"
+                    {/* 多人时限制已选区高度，避免成员标签将搜索框不断向下挤。 */}
+                    <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto pr-0.5">
+                        {value.map((employeeNo) => {
+                            const option = optionMap.get(employeeNo);
+
+                            return (
+                                <span
+                                    className="inline-flex h-7 max-w-44 items-center gap-1.5 rounded-md bg-[#f0edff] px-2 text-sm text-[#4f46a5]"
+                                    key={employeeNo}
+                                    title={`${option?.displayName ?? employeeNo}（${employeeNo}）`}
                                 >
-                                    <X className="size-3.5" />
-                                </button>
-                            </span>
-                        );
-                    })}
+                                    <span className="min-w-0 truncate">
+                                        {option?.displayName ?? employeeNo}（{employeeNo}）
+                                    </span>
+                                    <button
+                                        aria-label={`移除${selectionLabel} ${option?.displayName ?? employeeNo}`}
+                                        className="shrink-0 rounded-sm p-0.5 text-[#6e6ad2] hover:bg-[#dfd9ff] hover:text-[#4338a0]"
+                                        disabled={disabled}
+                                        onClick={() => removeEmployee(employeeNo)}
+                                        type="button"
+                                    >
+                                        <X className="size-3.5" />
+                                    </button>
+                                </span>
+                            );
+                        })}
+                    </div>
                 </div>
             ) : null}
 
@@ -166,14 +177,14 @@ export function PersonnelMultiSelect({
             ) : null}
 
             {showOptions && !disabled && (maxSelections === undefined || value.length < maxSelections) ? (
-                <div className="max-h-52 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white p-1 shadow-sm">
+                <div className="max-h-48 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white p-1 shadow-sm">
                     {filteredOptions.length === 0 ? (
                         <div className="px-3 py-5 text-center text-sm text-[#9ca3af]">没有可选择的人员</div>
                     ) : (
                         filteredOptions.map((option) => (
                             <Button
                                 className={cn(
-                                    'h-auto w-full justify-start gap-3 px-3 py-2 text-left font-normal',
+                                    'h-auto w-full justify-start gap-3 px-3 py-1.5 text-left font-normal',
                                     'hover:bg-[#f5f3ff] hover:text-[#1a1a1a]',
                                 )}
                                 key={option.employeeNo}
