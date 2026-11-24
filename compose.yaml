@@ -15,7 +15,7 @@ services:
     image: taskhub-app:${TASKHUB_VERSION:-1.0.0}
     pull_policy: never
     env_file:
-      # 联网构建脚本使用公开模板；离线启动默认切回真实生产配置。
+      # 构建镜像时使用公开模板；正式启动时读取真实生产配置。
       - ${TASKHUB_ENV_FILE:-.env.production}
     restart: unless-stopped
     volumes:
