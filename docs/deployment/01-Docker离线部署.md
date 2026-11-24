@@ -24,7 +24,7 @@ Docker Engine
 至少 15GB 可用磁盘空间
 ```
 
-宿主机不需要安装 PHP、Composer、Node.js、npm 或 Nginx。Docker Compose 或 Buildx 缺失时，联网脚本会自动下载官方固定版本并安装到当前用户的 Docker CLI 插件目录。
+宿主机不需要安装 PHP、Composer、Node.js、npm 或 Nginx。已有 Docker Compose 和 Buildx 时直接使用；缺失时，联网脚本才会下载官方固定版本并安装到当前用户的 Docker CLI 插件目录。
 
 当前部署目标已经固定为 `x86_64`。脚本检测到其他 CPU 架构时会直接停止，避免下载错误架构的二进制文件。
 

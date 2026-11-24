@@ -38,7 +38,7 @@ temporary_dir="$(mktemp -d)"
 trap 'rm -rf "${temporary_dir}"' EXIT
 
 current_compose_version="$(docker compose version --short 2>/dev/null || true)"
-if [[ "v${current_compose_version#v}" != "${COMPOSE_VERSION}" ]]; then
+if [[ -z "${current_compose_version}" ]]; then
     compose_name="docker-compose-linux-x86_64"
 
     printf '下载 Docker Compose %s...\n' "${COMPOSE_VERSION}"
@@ -53,7 +53,7 @@ if [[ "v${current_compose_version#v}" != "${COMPOSE_VERSION}" ]]; then
 fi
 
 current_buildx_version="$(docker buildx version 2>/dev/null | awk '{print $2}' || true)"
-if [[ "${current_buildx_version}" != "${BUILDX_VERSION}" ]]; then
+if [[ -z "${current_buildx_version}" ]]; then
     buildx_name="buildx-v0.39.1.linux-amd64"
 
     printf '下载 Docker Buildx %s...\n' "${BUILDX_VERSION}"
