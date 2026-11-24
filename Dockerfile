@@ -25,13 +25,16 @@ RUN npm run typecheck \
 # PHP 运行阶段安装 TaskHub 真正需要的扩展。
 FROM ${PHP_IMAGE} AS php-runtime
 
-ARG REDIS_EXTENSION_VERSION=6.3.0
+ARG REDIS_EXTENSION_URL=https://pecl.php.net/get/redis-6.3.0.tgz
+ARG REDIS_EXTENSION_SHA256=0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5
 
 RUN set -eux; \
     docker-php-ext-install -j"$(nproc)" \
         opcache \
         pdo_mysql; \
-    yes '' | pecl install "redis-${REDIS_EXTENSION_VERSION}"; \
+    curl --fail --location --retry 3 --output /tmp/redis-6.3.0.tgz "${REDIS_EXTENSION_URL}"; \
+    echo "${REDIS_EXTENSION_SHA256}  /tmp/redis-6.3.0.tgz" | sha256sum --check; \
+    yes '' | pecl install /tmp/redis-6.3.0.tgz; \
     docker-php-ext-enable redis; \
     apt-get purge -y --auto-remove ${PHPIZE_DEPS}; \
     rm -rf /var/lib/apt/lists/* /tmp/pear ~/.pearrc

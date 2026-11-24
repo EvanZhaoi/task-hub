@@ -26,6 +26,8 @@ Docker Engine
 
 宿主机不需要安装 PHP、Composer、Node.js、npm 或 Nginx。Docker Compose 或 Buildx 缺失时，联网脚本会自动下载官方固定版本并安装到当前用户的 Docker CLI 插件目录。
 
+当前部署目标已经固定为 `x86_64`。脚本检测到其他 CPU 架构时会直接停止，避免下载错误架构的二进制文件。
+
 ### 2.2 上传项目
 
 把完整项目上传到服务器，例如：
@@ -90,6 +92,52 @@ php artisan key:generate --show
 | Packagist、GitHub | `composer.lock` 中的 PHP 依赖 |
 | npm Registry | `package-lock.json` 中的前端依赖 |
 | Bunny Fonts | Instrument Sans 字体文件 |
+
+### 3.1 x86_64 固定下载地址
+
+Docker Compose `v5.7.1`：
+
+```text
+https://github.com/docker/compose/releases/download/v5.7.1/docker-compose-linux-x86_64
+```
+
+SHA-256：
+
+```text
+af426722a8af5de812fcee30cc1c39f0639f5f723cbadefb25e5d4db054064cf
+```
+
+Docker Buildx `v0.39.1`：
+
+```text
+https://github.com/docker/buildx/releases/download/v0.39.1/buildx-v0.39.1.linux-amd64
+```
+
+SHA-256：
+
+```text
+903090816da68f8bc1a2ff5346dd163a5adacfce4548d003c75df42cd47a9bf4
+```
+
+PHP Redis 扩展 `6.3.0`：
+
+```text
+https://pecl.php.net/get/redis-6.3.0.tgz
+```
+
+SHA-256：
+
+```text
+0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5
+```
+
+Instrument Sans 字体 CSS：
+
+```text
+https://fonts.bunny.net/css2?family=Instrument+Sans:wght@400;500;600&display=swap&subset=latin
+```
+
+Composer 和 npm 的每个压缩包地址分别固定在 `composer.lock` 和 `package-lock.json` 中。用于申请的确定仓库入口已经整理在 `deploy/external-download-urls.txt`。
 
 最稳妥的网络申请方式是临时开放服务器出站 TCP 80/443。软件仓库和镜像仓库可能跳转到 CDN，只开放单个域名容易遗漏。
 
