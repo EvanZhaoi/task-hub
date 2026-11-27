@@ -73,5 +73,6 @@ hs_err_pid*
 *.tar.gz
 *.tar
 
-# Docker 离线部署产物
+# Docker 离线部署下载文件
+/deploy/cache/
 /deploy/artifacts/
