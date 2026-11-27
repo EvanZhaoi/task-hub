@@ -18,26 +18,39 @@ public/build/manifest.json
 
 然后把完整项目上传到服务器。`vendor/`、`public/build/`、隐藏文件 `.dockerignore` 必须一起上传；真实 `.env` 不要上传。
 
-## 2. 服务器联网下载
+## 2. 准备 Redis 扩展
 
-服务器只需要下载：
+使用可联网电脑的浏览器下载：
 
 ```text
-php:8.5.13-fpm-trixie
-nginx:1.30.7-alpine3.24
 https://pecl.php.net/get/redis-6.3.0.tgz
 ```
 
-进入服务器项目目录执行：
+上传到服务器项目目录：
+
+```text
+/opt/taskhub/deploy/cache/redis-6.3.0.tgz
+```
+
+文件 SHA-256 应为：
+
+```text
+0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5
+```
+
+## 3. 服务器联网拉取镜像
+
+进入服务器项目目录，手工拉取两个镜像：
 
 ```bash
 cd /opt/taskhub
-bash deploy/download-dependencies.sh
+docker pull php:8.5.13-fpm-trixie
+docker pull nginx:1.30.7-alpine3.24
 ```
 
-脚本只下载，不构建、不安装、不启动 TaskHub。脚本成功结束后即可断开公网。
+两条命令都成功后即可断开公网，不需要执行其他下载。
 
-## 3. 断网后构建
+## 4. 断网后构建
 
 执行：
 
@@ -55,7 +68,7 @@ taskhub-web:1.0.0
 
 脚本不会启动容器。
 
-## 4. 配置
+## 5. 配置
 
 复制生产配置：
 
@@ -71,7 +84,7 @@ cp .env.production.example .env.production
 mysql -h 数据库地址 -u 用户名 -p 数据库名 < database/schema.sql
 ```
 
-## 5. 启动
+## 6. 启动
 
 执行：
 
