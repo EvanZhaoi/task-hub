@@ -7,10 +7,7 @@ services:
       target: app
       args:
         PHP_IMAGE: ${TASKHUB_PHP_IMAGE:-php:8.5.13-fpm-trixie}
-        NODE_IMAGE: ${TASKHUB_NODE_IMAGE:-node:24.22.3-alpine3.24}
-        COMPOSER_IMAGE: ${TASKHUB_COMPOSER_IMAGE:-composer:2.11.2}
         NGINX_IMAGE: ${TASKHUB_NGINX_IMAGE:-nginx:1.30.7-alpine3.24}
-        REDIS_EXTENSION_URL: ${TASKHUB_REDIS_EXTENSION_URL:-https://pecl.php.net/get/redis-6.3.0.tgz}
         REDIS_EXTENSION_SHA256: ${TASKHUB_REDIS_EXTENSION_SHA256:-0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5}
     image: taskhub-app:${TASKHUB_VERSION:-1.0.0}
     pull_policy: never
@@ -46,8 +43,6 @@ services:
       target: web
       args:
         PHP_IMAGE: ${TASKHUB_PHP_IMAGE:-php:8.5.13-fpm-trixie}
-        NODE_IMAGE: ${TASKHUB_NODE_IMAGE:-node:24.22.3-alpine3.24}
-        COMPOSER_IMAGE: ${TASKHUB_COMPOSER_IMAGE:-composer:2.11.2}
         NGINX_IMAGE: ${TASKHUB_NGINX_IMAGE:-nginx:1.30.7-alpine3.24}
     image: taskhub-web:${TASKHUB_VERSION:-1.0.0}
     pull_policy: never

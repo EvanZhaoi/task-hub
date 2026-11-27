@@ -7,11 +7,13 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 readonly TASKHUB_VERSION="${TASKHUB_VERSION:-1.0.0}"
 readonly OUTPUT_DIR="${1:-deploy/artifacts}"
-readonly PACKAGE_NAME="taskhub-${TASKHUB_VERSION}-x86_64.tar"
+readonly PACKAGE_NAME="taskhub-base-images-${TASKHUB_VERSION}-x86_64.tar"
+readonly REDIS_DIR="deploy/cache"
+readonly REDIS_PACKAGE="${REDIS_DIR}/redis-6.3.0.tgz"
+readonly REDIS_URL="https://pecl.php.net/get/redis-6.3.0.tgz"
+readonly REDIS_SHA256="0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5"
 readonly BASE_IMAGES=(
     "php:8.5.13-fpm-trixie"
-    "node:24.22.3-alpine3.24"
-    "composer:2.11.2"
     "nginx:1.30.7-alpine3.24"
 )
 
@@ -21,29 +23,25 @@ if [[ "$(uname -m)" != "x86_64" ]]; then
     exit 1
 fi
 
-# 服务器必须已经具备 Docker、Compose 和 Buildx；本脚本不会安装任何工具。
+# 服务器必须已经具备 Docker；本脚本不会安装任何工具。
 docker version >/dev/null
-docker compose version >/dev/null
-docker buildx version >/dev/null
 
-mkdir -p "${OUTPUT_DIR}"
+mkdir -p "${OUTPUT_DIR}" "${REDIS_DIR}"
 
-# 拉取 Dockerfile 使用的四个固定版本基础镜像。
+# 拉取 Dockerfile 使用的两个固定版本基础镜像。
 for image in "${BASE_IMAGES[@]}"; do
     docker pull "${image}"
 done
 
-# 构建过程会把 Composer 依赖、npm 依赖、字体和 Redis 扩展下载并封装进最终镜像。
-# 此命令只构建镜像，不会创建或启动 TaskHub 容器。
-TASKHUB_VERSION="${TASKHUB_VERSION}" \
-TASKHUB_ENV_FILE=.env.production.example \
-DOCKER_BUILDKIT=1 \
-    docker compose build app web
+# 下载离线构建 PHP 镜像时需要的 Redis 扩展源码。
+curl --fail --location --retry 3 --connect-timeout 10 \
+    --output "${REDIS_PACKAGE}" \
+    "${REDIS_URL}"
+printf '%s  %s\n' "${REDIS_SHA256}" "${REDIS_PACKAGE}" | sha256sum --check
 
-# 导出离线服务器真正需要的两个最终镜像。
+# 保存基础镜像，确保断网后仍可重新加载并构建。
 docker image save \
-    "taskhub-app:${TASKHUB_VERSION}" \
-    "taskhub-web:${TASKHUB_VERSION}" \
+    "${BASE_IMAGES[@]}" \
     --output "${OUTPUT_DIR}/${PACKAGE_NAME}"
 
 # 生成校验文件，供断网后确认镜像包在复制过程中没有损坏。
@@ -52,6 +50,7 @@ docker image save \
     sha256sum "${PACKAGE_NAME}" > "${PACKAGE_NAME}.sha256"
 )
 
-printf '下载包已生成：%s/%s\n' "${OUTPUT_DIR}" "${PACKAGE_NAME}"
+printf '基础镜像包已生成：%s/%s\n' "${OUTPUT_DIR}" "${PACKAGE_NAME}"
+printf 'Redis 扩展已下载：%s\n' "${REDIS_PACKAGE}"
 printf '校验文件已生成：%s/%s.sha256\n' "${OUTPUT_DIR}" "${PACKAGE_NAME}"
 

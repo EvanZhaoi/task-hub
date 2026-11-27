@@ -10,9 +10,7 @@
 !.env.example
 !.env.production.example
 
-vendor
 node_modules
-public/build
 public/hot
 public/storage
 
@@ -30,4 +28,5 @@ tests
 *.tar
 *.tar.gz
 *.tgz
+!deploy/cache/redis-6.3.0.tgz
 .DS_Store

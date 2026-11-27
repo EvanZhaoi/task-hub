@@ -1,38 +1,19 @@
-# 所有外部镜像都固定到明确版本，联网构建完成后不再依赖浮动的 latest 标签。
+# 所有外部镜像都固定到明确版本，离线构建时只使用已经下载到服务器的镜像。
 ARG PHP_IMAGE=php:8.5.13-fpm-trixie
-ARG NODE_IMAGE=node:24.22.3-alpine3.24
-ARG COMPOSER_IMAGE=composer:2.11.2
 ARG NGINX_IMAGE=nginx:1.30.7-alpine3.24
-
-# Composer 镜像只提供经过官方打包的 Composer 可执行文件。
-FROM ${COMPOSER_IMAGE} AS composer-binary
-
-# 前端阶段安装锁文件中的全部 npm 依赖，并生成可直接交给 Nginx 的静态文件。
-FROM ${NODE_IMAGE} AS frontend-build
-WORKDIR /app
-
-COPY package.json package-lock.json .npmrc ./
-RUN npm ci --no-audit --no-fund
-
-COPY resources ./resources
-COPY public ./public
-COPY components.json tsconfig.json vite.config.ts ./
-
-# typecheck 先阻止类型错误进入镜像，build 会同时下载并打包当前配置的 Bunny 字体。
-RUN npm run typecheck \
-    && npm run build
 
 # PHP 运行阶段安装 TaskHub 真正需要的扩展。
 FROM ${PHP_IMAGE} AS php-runtime
 
-ARG REDIS_EXTENSION_URL=https://pecl.php.net/get/redis-6.3.0.tgz
 ARG REDIS_EXTENSION_SHA256=0d5141f634bd1db6c1ddcda053d25ecf2c4fc1c395430d534fd3f8d51dd7f0b5
+
+# Redis 扩展由联网下载脚本提前保存，离线构建时不再访问 PECL。
+COPY deploy/cache/redis-6.3.0.tgz /tmp/redis-6.3.0.tgz
 
 RUN set -eux; \
     docker-php-ext-install -j"$(nproc)" \
         opcache \
         pdo_mysql; \
-    curl --fail --location --retry 3 --output /tmp/redis-6.3.0.tgz "${REDIS_EXTENSION_URL}"; \
     echo "${REDIS_EXTENSION_SHA256}  /tmp/redis-6.3.0.tgz" | sha256sum --check; \
     yes '' | pecl install /tmp/redis-6.3.0.tgz; \
     docker-php-ext-enable redis; \
@@ -44,20 +25,13 @@ COPY docker/php/taskhub-fpm.conf /usr/local/etc/php-fpm.d/zz-taskhub.conf
 
 WORKDIR /var/www/html
 
-# 最终 PHP 应用镜像包含完整代码、生产 Composer 依赖和前端构建结果。
+# 最终 PHP 应用镜像直接使用开发机生成的 vendor 和 public/build。
 FROM php-runtime AS app
 
-COPY --from=composer-binary /usr/bin/composer /usr/local/bin/composer
 COPY . .
 
-RUN composer install \
-        --no-dev \
-        --no-interaction \
-        --no-progress \
-        --prefer-dist \
-        --optimize-autoloader \
-    && composer check-platform-reqs --no-dev \
-    && rm -rf public/build \
+RUN test -f vendor/autoload.php \
+    && test -f public/build/manifest.json \
     && mkdir -p \
         storage/app/private \
         storage/app/public \
@@ -67,7 +41,6 @@ RUN composer install \
         storage/logs \
         bootstrap/cache
 
-COPY --from=frontend-build /app/public/build ./public/build
 COPY docker/scripts/container-entrypoint.sh /usr/local/bin/taskhub-entrypoint
 
 RUN chmod +x /usr/local/bin/taskhub-entrypoint \
@@ -81,7 +54,6 @@ FROM ${NGINX_IMAGE} AS web
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY public /var/www/html/public
-COPY --from=frontend-build /app/public/build /var/www/html/public/build
 
 EXPOSE 80
 
